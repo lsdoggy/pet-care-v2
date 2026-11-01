@@ -52,8 +52,8 @@ public class VetAppointmentEntity {
     @Column(columnDefinition = "numeric(10,2)")
     private BigDecimal cost;
 
-    /** ISO-4217 code, e.g. USD. Stored as CHAR(3). */
-    @Column(length = 3)
+    /** ISO-4217 code, e.g. USD. Stored as CHAR(3); columnDefinition keeps Hibernate schema-validation in sync with the migration. */
+    @Column(columnDefinition = "char(3)")
     private String currency;
 
     @Column(columnDefinition = "text")

@@ -3,9 +3,6 @@ package com.petcare.backend.vet;
 import java.time.Instant;
 import java.time.LocalDate;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,10 +44,11 @@ public class VetRecordEntity {
     private String prescriptionsText;
 
     /**
-     * Attachments stored as JSONB: [{"url":"/files/records/x.pdf","name":"x.pdf","type":"pdf","size":123}].
-     * Mapped as a raw JSON string via Hibernate 7 native JSON support (no extra dependency).
+     * Attachments payload: [{"url":"/files/records/x.pdf","name":"x.pdf","type":"pdf","size":123}].
+     * Mapped as a plain String (serialization handled in RecordDto via Jackson) — no extra dependency.
+     * The DB column is TEXT (see V4 migration): portable between PostgreSQL 17 and H2 (MODE=PostgreSQL),
+     * and keeps Hibernate schema-validation happy (SqlTypes.JSON would expect a native json type).
      */
-    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "attachments_jsonb", nullable = false, columnDefinition = "text")
     private String attachmentsJson = "[]";
 

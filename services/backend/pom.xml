@@ -61,6 +61,19 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<!--
+		  Sprint 4 fix: Spring Boot 4 ships Jackson 3 (groupId tools.jackson). Our code and
+		  JJWT 0.13 use the classic com.fasterxml.jackson API, so it is declared explicitly
+		  as a stable GA dependency version-managed by the Boot BOM (2.21.x). This guarantees
+		  jackson-databind on the TEST classpath even if jjwt-impl's transitive copy gets
+		  omitted by Maven conflict mediation (NoClassDefFoundError com/fasterxml/jackson/...
+		  previously failed ApplicationContext loading in AuthFlowTest).
+		-->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>
 			<artifactId>jjwt-api</artifactId>
