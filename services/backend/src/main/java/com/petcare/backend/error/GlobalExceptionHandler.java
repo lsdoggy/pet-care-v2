@@ -70,6 +70,20 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
     }
 
+    @ExceptionHandler(CareTaskNotFoundException.class)
+    ResponseEntity<ApiError> handleCareTaskNotFound(CareTaskNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(InvalidRecurrenceRuleException.class)
+    ResponseEntity<ApiError> handleInvalidRecurrenceRule(InvalidRecurrenceRuleException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(HttpStatus.BAD_REQUEST, ex.getMessage(),
+                        List.of(new FieldError("recurrenceRule",
+                                "Expected format UNIT:INTERVAL, e.g. MONTHLY:1, WEEKLY:2, DAILY:1, YEARLY:1"))));
+    }
+
     @ExceptionHandler(AccessDeniedForResourceException.class)
     ResponseEntity<ApiError> handleAccessDenied(AccessDeniedForResourceException ex) {
         // 404 (not 403) — do not leak existence of resources owned by other users.
