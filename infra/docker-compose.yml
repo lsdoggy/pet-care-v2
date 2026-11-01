@@ -1,0 +1,23 @@
+# PostgreSQL 17 для будущих спринтов.
+# ВНИМАНИЕ: в Sprint 0 backend НЕ подключается к этой базе.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: petcare-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: petcare
+      POSTGRES_USER: petcare
+      POSTGRES_PASSWORD: petcare_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petcare -d petcare"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
