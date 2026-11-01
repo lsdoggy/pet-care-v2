@@ -132,10 +132,14 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
 ### Проверка
 
 ```bash
-cd services/backend && ./mvnw test        # все тесты + VetFlowTest (CRUD, ownership 404, history merge, upload)
+cd services/backend && ./mvnw test        # 34 теста: auth, pets, tasks CRUD/upcoming/recurrence + VetFlowTest (CRUD, ownership 404, history merge, upload)
 cd apps/web && npx tsc --noEmit           # типы OK
 cd apps/mobile && npx tsc --noEmit        # типы OK
 ```
+
+> **Примечание по фиксу тестов (Sprint 4).** Изначально `./mvnw test` падал с `Failed to load ApplicationContext`:
+> Hibernate `ddl-auto=validate` не совмещал типы колонок V4-миграции с маппингом сущностей (`CHAR(3)` vs `VARCHAR(3)` для `currency`; `SqlTypes.JSON` vs TEXT для `attachments_jsonb`), а также Jackson 2 (`com.fasterxml.jackson`) приходил только транзитивно через `jjwt-impl (runtime)`.
+> Исправлено без изменения схемы: в `VetAppointmentEntity.currency` добавлен `columnDefinition = "char(3)"`, из `VetRecordEntity.attachmentsJson` убран `@JdbcTypeCode(SqlTypes.JSON)` (сериализация — в `RecordDto`), в `pom.xml` явно добавлен GA-артефакт `com.fasterxml.jackson.core:jackson-databind` (версию контролирует BOM Boot 4.0.x). Колонка в миграции остаётся TEXT — JSON-валидность обеспечивает сервисный слой.
 
 curl-примеры:
 
