@@ -34,7 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
                         // Uploaded files are served statically; pet photos are not sensitive by URL,
                         // but keep UUID-based filenames unguessable. Protect if requirements change.
-                        .requestMatchers("/files/uploads/**").permitAll()
+                        .requestMatchers("/files/uploads/**", "/files/records/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -76,6 +76,18 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
     }
 
+    @ExceptionHandler(AppointmentNotFoundException.class)
+    ResponseEntity<ApiError> handleAppointmentNotFound(AppointmentNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(RecordNotFoundException.class)
+    ResponseEntity<ApiError> handleRecordNotFound(RecordNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
     @ExceptionHandler(InvalidRecurrenceRuleException.class)
     ResponseEntity<ApiError> handleInvalidRecurrenceRule(InvalidRecurrenceRuleException ex) {
         return ResponseEntity.badRequest()

@@ -2,11 +2,16 @@ import type {
   ApiErrorBody,
   AuthResponse,
   CareTaskDto,
+  CreateAppointmentRequest,
   CreatePetRequest,
+  CreateRecordRequest,
   CreateTaskRequest,
+  HistoryEventDto,
   PetDto,
   UpdatePetRequest,
   UserDto,
+  VetAppointmentDto,
+  VetRecordDto,
 } from './types'
 
 const BASE_URL = '/api/v1'
@@ -99,6 +104,27 @@ export const api = {
     return (await response.json()) as PetDto
   },
 
+  /** Generic multipart upload helper (Sprint 4: record attachments). */
+  uploadFile: async <T,>(path: string, file: File, token: string): Promise<T> => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }, // no Content-Type: browser sets multipart boundary
+      body: form,
+    })
+    if (!response.ok) {
+      let body: Partial<ApiErrorBody> | undefined
+      try {
+        body = (await response.json()) as Partial<ApiErrorBody>
+      } catch {
+        /* fall through */
+      }
+      throw new ApiError(response.status, body?.message ?? `Upload failed (${response.status})`, body?.details ?? [])
+    }
+    return (await response.json()) as T
+  },
+
   /* ---------- Care tasks (Sprint 3) ---------- */
 
   listTasks: (token: string) => request<CareTaskDto[]>('/tasks', { method: 'GET' }, token),
@@ -117,4 +143,42 @@ export const api = {
   /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
   completeTask: (id: number, token: string) =>
     request<CareTaskDto>(`/tasks/${id}/complete`, { method: 'POST' }, token),
+
+  /* ---------- Veterinary appointments & records (Sprint 4) ---------- */
+
+  listAppointments: (token: string) =>
+    request<VetAppointmentDto[]>('/appointments', { method: 'GET' }, token),
+
+  getAppointment: (id: number, token: string) =>
+    request<VetAppointmentDto>(`/appointments/${id}`, { method: 'GET' }, token),
+
+  createAppointment: (body: CreateAppointmentRequest, token: string) =>
+    request<VetAppointmentDto>('/appointments', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateAppointment: (id: number, body: Partial<CreateAppointmentRequest>, token: string) =>
+    request<VetAppointmentDto>(`/appointments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteAppointment: (id: number, token: string) =>
+    request<void>(`/appointments/${id}`, { method: 'DELETE' }, token),
+
+  listRecords: (token: string) => request<VetRecordDto[]>('/records', { method: 'GET' }, token),
+
+  getRecord: (id: number, token: string) =>
+    request<VetRecordDto>(`/records/${id}`, { method: 'GET' }, token),
+
+  createRecord: (body: CreateRecordRequest, token: string) =>
+    request<VetRecordDto>('/records', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateRecord: (id: number, body: Partial<CreateRecordRequest>, token: string) =>
+    request<VetRecordDto>(`/records/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteRecord: (id: number, token: string) => request<void>(`/records/${id}`, { method: 'DELETE' }, token),
+
+  /** Attaches a PDF/image to an existing record; returns the updated record with new attachments[]. */
+  uploadRecordAttachment: (id: number, file: File, token: string) =>
+    api.uploadFile<VetRecordDto>(`/records/${id}/attachments`, file, token),
+
+  /** Merged chronology (appointments + records) for one pet, newest event first. */
+  getPetHistory: (petId: number, token: string) =>
+    request<HistoryEventDto[]>(`/pets/${petId}/history`, { method: 'GET' }, token),
 }
