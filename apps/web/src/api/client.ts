@@ -1,6 +1,11 @@
-import type { ApiErrorBody, AuthResponse, UserDto } from './types'
+import type { ApiErrorBody, AuthResponse, CreatePetRequest, PetDto, UpdatePetRequest, UserDto } from './types'
 
 const BASE_URL = '/api/v1'
+
+/** Resolves a backend-relative photo URL (e.g. /files/uploads/pets/x.jpg) for the browser. */
+export function resolveFileUrl(photoUrl: string | null): string | null {
+  return photoUrl
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -51,4 +56,37 @@ export const api = {
     }),
 
   me: (token: string) => request<UserDto>('/users/me', { method: 'GET' }, token),
+
+  listPets: (token: string) => request<PetDto[]>('/pets', { method: 'GET' }, token),
+
+  getPet: (id: number, token: string) => request<PetDto>(`/pets/${id}`, { method: 'GET' }, token),
+
+  createPet: (body: CreatePetRequest, token: string) =>
+    request<PetDto>('/pets', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updatePet: (id: number, body: UpdatePetRequest, token: string) =>
+    request<PetDto>(`/pets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deletePet: (id: number, token: string) =>
+    request<void>(`/pets/${id}`, { method: 'DELETE' }, token),
+
+  uploadPetPhoto: async (id: number, file: File, token: string): Promise<PetDto> => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch(`${BASE_URL}/pets/${id}/photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }, // no Content-Type: browser sets multipart boundary
+      body: form,
+    })
+    if (!response.ok) {
+      let body: Partial<ApiErrorBody> | undefined
+      try {
+        body = (await response.json()) as Partial<ApiErrorBody>
+      } catch {
+        /* fall through */
+      }
+      throw new ApiError(response.status, body?.message ?? `Upload failed (${response.status})`, body?.details ?? [])
+    }
+    return (await response.json()) as PetDto
+  },
 }

@@ -32,6 +32,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
+                        // Uploaded files are served statically; pet photos are not sensitive by URL,
+                        // but keep UUID-based filenames unguessable. Protect if requirements change.
+                        .requestMatchers("/files/uploads/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -46,11 +49,14 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of(HttpMethod.GET.name(), HttpMethod.POST.name()));
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8081"));
+        config.setAllowedMethods(List.of(
+                HttpMethod.GET.name(), HttpMethod.POST.name(),
+                HttpMethod.PATCH.name(), HttpMethod.DELETE.name(), HttpMethod.OPTIONS.name()));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/files/**", config);
         return source;
     }
 }

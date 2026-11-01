@@ -1,7 +1,21 @@
-import type { ApiErrorBody, AuthResponse, UserDto } from './types';
+import type {
+  ApiErrorBody,
+  AuthResponse,
+  CreatePetRequest,
+  PetDto,
+  UpdatePetRequest,
+  UserDto,
+} from './types';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
+export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 const BASE_URL = `${API_URL}/api/v1`;
+
+/** Resolves a relative photoUrl returned by the backend into an absolute URL. */
+export function resolveFileUrl(photoUrl: string | null): string | null {
+  if (!photoUrl) return null;
+  if (photoUrl.startsWith('http')) return photoUrl;
+  return `${API_URL}${photoUrl.startsWith('/') ? '' : '/'}${photoUrl}`;
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -51,4 +65,46 @@ export const api = {
     }),
 
   me: (token: string) => request<UserDto>('/users/me', { method: 'GET' }, token),
+
+  listPets: (token: string) => request<PetDto[]>('/pets', { method: 'GET' }, token),
+
+  getPet: (id: number, token: string) => request<PetDto>(`/pets/${id}`, { method: 'GET' }, token),
+
+  createPet: (body: CreatePetRequest, token: string) =>
+    request<PetDto>('/pets', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updatePet: (id: number, body: UpdatePetRequest, token: string) =>
+    request<PetDto>(`/pets/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deletePet: (id: number, token: string) =>
+    request<void>(`/pets/${id}`, { method: 'DELETE' }, token),
+
+  /** Uploads a photo picked via expo-image-picker (local file URI) for the given pet. */
+  uploadPetPhoto: async (id: number, fileUri: string, fileName: string, token: string): Promise<PetDto> => {
+    const form = new FormData();
+    // RN fetch supports uploading from device URIs via this object shape.
+    form.append('file', {
+      uri: fileUri,
+      name: fileName,
+      type: 'image/jpeg',
+    } as unknown as Blob);
+
+    const response = await fetch(`${BASE_URL}/pets/${id}/photo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new ApiError(response.status, `Unexpected empty response (${response.status})`);
+    }
+    if (!response.ok) {
+      const err = body as Partial<ApiErrorBody>;
+      throw new ApiError(response.status, err.message ?? 'Upload failed', err.details ?? []);
+    }
+    return body as PetDto;
+  },
 };
