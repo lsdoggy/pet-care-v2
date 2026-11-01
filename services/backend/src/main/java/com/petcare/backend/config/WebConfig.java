@@ -22,7 +22,11 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // Pet photos: ./uploads/pets/x.jpg -> /files/uploads/pets/x.jpg (kept for backward compat)
         registry.addResourceHandler("/files/uploads/**")
                 .addResourceLocations(uploadRoot.toUri().toString());
+        // Sprint 4: record attachments live in ./uploads/records/ but are served at /files/records/**
+        registry.addResourceHandler("/files/records/**")
+                .addResourceLocations(uploadRoot.resolve("records").toUri().toString());
     }
 }
