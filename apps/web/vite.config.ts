@@ -5,10 +5,11 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // Все запросы на /api/* проксируются на backend (Spring Boot, порт 8080).
+    // Все запросы на /api/* и /files/* проксируются на backend (Spring Boot, порт 8080).
     // Благодаря этому браузер не сталкивается с CORS.
     proxy: {
       '/api': 'http://localhost:8080',
+      '/files': 'http://localhost:8080',
     },
   },
 })

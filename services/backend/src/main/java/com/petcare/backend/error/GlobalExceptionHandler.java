@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import io.jsonwebtoken.JwtException;
@@ -61,6 +62,38 @@ public class GlobalExceptionHandler {
     ResponseEntity<ApiError> handleEmailExists(EmailAlreadyRegisteredException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiError.of(HttpStatus.CONFLICT, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(PetNotFoundException.class)
+    ResponseEntity<ApiError> handlePetNotFound(PetNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(AccessDeniedForResourceException.class)
+    ResponseEntity<ApiError> handleAccessDenied(AccessDeniedForResourceException ex) {
+        // 404 (not 403) — do not leak existence of resources owned by other users.
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(FutureBirthDateException.class)
+    ResponseEntity<ApiError> handleFutureBirthDate(FutureBirthDateException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(HttpStatus.BAD_REQUEST, ex.getMessage(),
+                        List.of(new FieldError("birthDate", "Birth date cannot be in the future"))));
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    ResponseEntity<ApiError> handleInvalidFile(InvalidFileException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(HttpStatus.BAD_REQUEST, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiError.of(HttpStatus.PAYLOAD_TOO_LARGE, "Uploaded file is too large (max 5 MB)", List.of()));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
