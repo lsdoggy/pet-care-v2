@@ -5,7 +5,10 @@ import { api, ApiError } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
-import { HomeScreen } from '../screens/HomeScreen';
+import { AppStack, type Route } from '../navigation/AppStack';
+import { PetsHomeScreen } from '../screens/PetsHomeScreen';
+import { PetFormScreen } from '../screens/PetFormScreen';
+import { PetDetailScreen } from '../screens/PetDetailScreen';
 
 type Phase = 'boot' | 'anon' | 'authed';
 
@@ -64,7 +67,21 @@ export function AuthGate() {
   if (phase === 'authed' && user) {
     return (
       <>
-        <HomeScreen user={user} onLogout={handleLogout} />
+        {/* Keyed by route identity so each screen re-mounts on navigation —
+            Home reloads its pet list when we pop back from form/detail. */}
+        <AppStack>
+          {(top: Route) => {
+            switch (top.name) {
+              case 'PetForm':
+                return <PetFormScreen key={`form-${top.petId ?? 'new'}`} petId={top.petId} />;
+              case 'PetDetail':
+                return <PetDetailScreen key={`detail-${top.petId}`} petId={top.petId} />;
+              case 'Home':
+              default:
+                return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;
+            }
+          }}
+        </AppStack>
         <StatusBar style="auto" />
       </>
     );

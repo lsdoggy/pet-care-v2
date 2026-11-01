@@ -6,6 +6,14 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pet Care needs access to your photos to set a pet picture."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },
