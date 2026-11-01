@@ -1,59 +1,78 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../api/client'
 import type { UserDto } from '../api/types'
+import { AuthContext } from './authContext'
 import { tokenStore } from './tokenStore'
 
-export interface AuthContextValue {
-  user: UserDto | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string) => Promise<void>
-  logout: () => void
+type Session = { status: 'loading' } | { status: 'anon' } | { status: 'authed'; user: UserDto }
+
+let session: Session = { status: 'loading' }
+const listeners = new Set<() => void>()
+
+function emit() {
+  for (const l of listeners) l()
 }
 
-export const AuthContext = createContext<AuthContextValue | null>(null)
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+function bootstrap() {
+  const token = tokenStore.get()
+  if (!token) {
+    session = { status: 'anon' }
+    emit()
+    return
+  }
+  api
+    .me(token)
+    .then((user) => {
+      session = { status: 'authed', user }
+    })
+    .catch(() => tokenStore.clear())
+    .finally(() => {
+      if (session.status === 'loading') session = { status: 'anon' }
+      emit()
+    })
+}
+
+bootstrap()
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserDto | null>(null)
-  const [bootstrapped, setBootstrapped] = useState(false)
-
-  useEffect(() => {
-    const token = tokenStore.get()
-    if (!token) {
-      setBootstrapped(true)
-      return
-    }
-    api
-      .me(token)
-      .then(setUser)
-      .catch(() => tokenStore.clear())
-      .finally(() => setBootstrapped(true))
-  }, [])
+  const current = useSyncExternalStore(subscribe, () => session)
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login(email, password)
     tokenStore.set(res.accessToken)
-    setUser(res.user)
+    session = { status: 'authed', user: res.user }
+    emit()
   }, [])
 
   const register = useCallback(async (email: string, password: string) => {
     const res = await api.register(email, password)
     tokenStore.set(res.accessToken)
-    setUser(res.user)
+    session = { status: 'authed', user: res.user }
+    emit()
   }, [])
 
   const logout = useCallback(() => {
     tokenStore.clear()
-    setUser(null)
+    session = { status: 'anon' }
+    emit()
   }, [])
 
   const value = useMemo(
-    () => ({ user, loading: !bootstrapped, login, register, logout }),
-    [user, bootstrapped, login, register, logout],
+    () => ({
+      user: current.status === 'authed' ? current.user : null,
+      loading: current.status === 'loading',
+      login,
+      register,
+      logout,
+    }),
+    [current, login, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
-export { useAuth } from './useAuth'

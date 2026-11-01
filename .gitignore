@@ -1,1 +1,41 @@
+# IDE / editor
 .vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+.expo/
+
+# Java / Maven
+target/
+*.class
+
+# Build artifacts must never live outside target/build/dist
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# Runtime artifacts
+uploads/
+logs/
+*.log
+
+# Env files (except committed examples)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Archives are forbidden in the repo
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
