@@ -156,10 +156,6 @@ public class CareTaskService {
         return dueAt.plus(interval, unit);
     }
 
-    private static String normalizeRule(String rule) {
-        return rule == null || rule.isBlank() ? null : rule.trim().toUpperCase();
-    }
-
     private List<CareTaskDto> toDtoList(List<CareTaskEntity> tasks) {
         if (tasks.isEmpty()) {
             return List.of();
@@ -179,6 +175,17 @@ public class CareTaskService {
                 .map(PetEntity::getName)
                 .orElse("Unknown pet");
         return CareTaskDto.from(task, petName);
+    }
+
+    /**
+     * Clears the recurrence rule. Bean Validation treats "" as valid for optional
+     * fields (and our pattern allows it), so an explicit empty string means "remove rule".
+     */
+    static String normalizeRule(String rule) {
+        if (rule == null || rule.isBlank()) {
+            return null;
+        }
+        return rule.trim().toUpperCase();
     }
 
     private CareTaskEntity loadOwnedTask(Long id, String email) {
