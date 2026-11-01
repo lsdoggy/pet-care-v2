@@ -5,10 +5,11 @@ import { api, ApiError } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
-import { AppStack, type Route } from '../navigation/AppStack';
+import { AppStack, type Route, type TabName } from '../navigation/AppStack';
 import { PetsHomeScreen } from '../screens/PetsHomeScreen';
 import { PetFormScreen } from '../screens/PetFormScreen';
 import { PetDetailScreen } from '../screens/PetDetailScreen';
+import { TasksScreen } from '../screens/TasksScreen';
 
 type Phase = 'boot' | 'anon' | 'authed';
 
@@ -16,6 +17,7 @@ export function AuthGate() {
   const [phase, setPhase] = useState<Phase>('boot');
   const [mode, setMode] = useState<AuthMode>('login');
   const [user, setUser] = useState<UserDto | null>(null);
+  const [activeTab, setActiveTab] = useState<TabName>('Home');
 
   useEffect(() => {
     (async () => {
@@ -51,6 +53,7 @@ export function AuthGate() {
     await tokenStore.clear();
     setUser(null);
     setMode('login');
+    setActiveTab('Home');
     setPhase('anon');
   }, []);
 
@@ -69,13 +72,15 @@ export function AuthGate() {
       <>
         {/* Keyed by route identity so each screen re-mounts on navigation —
             Home reloads its pet list when we pop back from form/detail. */}
-        <AppStack>
+        <AppStack activeTab={activeTab} onTabChange={setActiveTab}>
           {(top: Route) => {
             switch (top.name) {
               case 'PetForm':
                 return <PetFormScreen key={`form-${top.petId ?? 'new'}`} petId={top.petId} />;
               case 'PetDetail':
                 return <PetDetailScreen key={`detail-${top.petId}`} petId={top.petId} />;
+              case 'Tasks':
+                return <TasksScreen key="tasks" />;
               case 'Home':
               default:
                 return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;

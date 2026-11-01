@@ -74,3 +74,47 @@ export interface ApiErrorBody {
   details: FieldError[];
   timestamp: string;
 }
+
+/* ---------- Care tasks (Sprint 3) ---------- */
+
+/** Mirrors backend com.petcare.backend.task.CareTaskType enum. */
+export type CareTaskType =
+  | 'VACCINATION'
+  | 'VET'
+  | 'FOOD'
+  | 'GROOMING'
+  | 'MEDICATION'
+  | 'WALK'
+  | 'OTHER';
+
+export const TASK_TYPE_LABELS: Record<CareTaskType, string> = {
+  VACCINATION: 'Vaccination',
+  VET: 'Vet visit',
+  FOOD: 'Food',
+  GROOMING: 'Grooming',
+  MEDICATION: 'Medication',
+  WALK: 'Walk',
+  OTHER: 'Other',
+};
+
+/** Mirrors backend com.petcare.backend.task.CareTaskStatus enum. */
+export type CareTaskStatus = 'PENDING' | 'DONE';
+
+export interface CareTaskDto {
+  id: number;
+  petId: number;
+  petName: string;
+  title: string;
+  type: CareTaskType;
+  /** UTC ISO instant — convert to local time for display. */
+  dueAt: string;
+  status: CareTaskStatus;
+  recurrenceRule: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Formats a UTC ISO instant in the device's local timezone. */
+export function formatDueAt(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
