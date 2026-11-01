@@ -142,3 +142,96 @@ export type RecurrenceUnit = (typeof RECURRENCE_UNITS)[number]
 export function formatDueAt(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 }
+
+/* ---------- Veterinary appointments & records (Sprint 4) ---------- */
+
+export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'
+
+export const APPOINTMENT_STATUSES: AppointmentStatus[] = ['SCHEDULED', 'COMPLETED', 'CANCELLED']
+
+export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'Scheduled',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+}
+
+export interface VetAppointmentDto {
+  id: number
+  petId: number
+  petName: string
+  clinicName: string
+  doctorName: string | null
+  /** UTC ISO instant — convert to local time for display. */
+  scheduledAt: string
+  durationMinutes: number
+  status: AppointmentStatus
+  address: string | null
+  cost: number | null
+  currency: string | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateAppointmentRequest {
+  petId: number
+  clinicName: string
+  doctorName?: string | null
+  /** UTC ISO instant. */
+  scheduledAt: string
+  durationMinutes?: number
+  status?: AppointmentStatus
+  address?: string | null
+  cost?: number | null
+  currency?: string | null
+  notes?: string | null
+}
+
+export type UpdateAppointmentRequest = Partial<Omit<CreateAppointmentRequest, 'petId'>>
+
+export interface AttachmentDto {
+  /** Backend-relative URL, e.g. /files/records/<uuid>.pdf */
+  url: string
+  name: string
+  /** Extension without dot: pdf | jpg | jpeg | png | webp */
+  type: string
+  size: number
+}
+
+export interface VetRecordDto {
+  id: number
+  appointmentId: number | null
+  petId: number
+  petName: string
+  /** Local calendar date, YYYY-MM-DD. */
+  visitDate: string
+  diagnosisText: string | null
+  recommendationsText: string | null
+  prescriptionsText: string | null
+  attachments: AttachmentDto[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateRecordRequest {
+  petId: number
+  appointmentId?: number | null
+  /** YYYY-MM-DD, must be today or earlier. */
+  visitDate: string
+  diagnosisText?: string | null
+  recommendationsText?: string | null
+  prescriptionsText?: string | null
+}
+
+export type UpdateRecordRequest = Omit<Partial<CreateRecordRequest>, 'petId' | 'appointmentId'>
+
+export type HistoryEventKind = 'APPOINTMENT' | 'RECORD'
+
+/** One merged timeline event from GET /api/v1/pets/{id}/history; exactly one payload is set. */
+export interface HistoryEventDto {
+  kind: HistoryEventKind
+  /** Appointment: scheduledAt; Record: visitDate at start of day (UTC). */
+  eventAt: string
+  appointment: VetAppointmentDto | null
+  record: VetRecordDto | null
+}

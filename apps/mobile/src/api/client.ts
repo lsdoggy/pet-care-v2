@@ -2,10 +2,15 @@ import type {
   ApiErrorBody,
   AuthResponse,
   CareTaskDto,
+  CreateAppointmentRequest,
   CreatePetRequest,
+  CreateRecordRequest,
+  HistoryEventDto,
   PetDto,
   UpdatePetRequest,
   UserDto,
+  VetAppointmentDto,
+  VetRecordDto,
 } from './types';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
@@ -116,4 +121,62 @@ export const api = {
   /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
   completeTask: (id: number, token: string) =>
     request<CareTaskDto>(`/tasks/${id}/complete`, { method: 'POST' }, token),
+
+  /* ---------- Veterinary appointments & records (Sprint 4) ---------- */
+
+  listAppointments: (token: string) =>
+    request<VetAppointmentDto[]>('/appointments', { method: 'GET' }, token),
+
+  createAppointment: (body: CreateAppointmentRequest, token: string) =>
+    request<VetAppointmentDto>('/appointments', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateAppointment: (id: number, body: Partial<CreateAppointmentRequest>, token: string) =>
+    request<VetAppointmentDto>(`/appointments/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteAppointment: (id: number, token: string) =>
+    request<void>(`/appointments/${id}`, { method: 'DELETE' }, token),
+
+  createRecord: (body: CreateRecordRequest, token: string) =>
+    request<VetRecordDto>('/records', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  deleteRecord: (id: number, token: string) => request<void>(`/records/${id}`, { method: 'DELETE' }, token),
+
+  /** Merged chronology (appointments + records) for one pet, newest event first. */
+  getPetHistory: (petId: number, token: string) =>
+    request<HistoryEventDto[]>(`/pets/${petId}/history`, { method: 'GET' }, token),
+
+  /** Uploads a picked document/photo (device file URI) and appends it to the record's attachments. */
+  uploadRecordAttachment: async (
+    id: number,
+    fileUri: string,
+    fileName: string,
+    mimeType: string,
+    token: string,
+  ): Promise<VetRecordDto> => {
+    const form = new FormData();
+    // RN fetch supports uploading from device URIs via this object shape.
+    form.append('file', {
+      uri: fileUri,
+      name: fileName,
+      type: mimeType,
+    } as unknown as Blob);
+
+    const response = await fetch(`${BASE_URL}/records/${id}/attachments`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      throw new ApiError(response.status, `Unexpected empty response (${response.status})`);
+    }
+    if (!response.ok) {
+      const err = body as Partial<ApiErrorBody>;
+      throw new ApiError(response.status, err.message ?? 'Upload failed', err.details ?? []);
+    }
+    return body as VetRecordDto;
+  },
 };

@@ -6,7 +6,8 @@ export type Route =
   | { name: 'Home' }
   | { name: 'Tasks' }
   | { name: 'PetForm'; petId?: number }
-  | { name: 'PetDetail'; petId: number };
+  | { name: 'PetDetail'; petId: number }
+  | { name: 'AppointmentForm'; petId: number };
 
 /** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). */
 export type TabName = 'Home' | 'Tasks';

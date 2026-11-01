@@ -5,7 +5,10 @@ import type { PetDto } from '../api/types'
 import { SPECIES_LABELS } from '../api/types'
 import { tokenStore } from '../auth/tokenStore'
 import { useAuth } from '../auth/useAuth'
+import HealthHistoryTab from '../components/HealthHistoryTab'
 import PetFormModal from '../components/PetFormModal'
+
+type DetailTab = 'profile' | 'history'
 
 const pageStyle: React.CSSProperties = {
   fontFamily: 'sans-serif',
@@ -21,6 +24,7 @@ export default function PetDetailPage() {
   const [pet, setPet] = useState<PetDto | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<DetailTab>('profile')
 
   const load = useCallback(() => {
     const token = tokenStore.get()
@@ -58,6 +62,18 @@ export default function PetDetailPage() {
   }
 
   if (!pet) return <main style={pageStyle}>Loading…</main>
+
+  const tabButtonStyle = (active: boolean): React.CSSProperties => ({
+    padding: '8px 16px',
+    borderRadius: '6px 6px 0 0',
+    border: 'none',
+    borderBottom: active ? '2px solid #4f46e5' : '2px solid transparent',
+    backgroundColor: 'transparent',
+    color: active ? '#4f46e5' : '#64748b',
+    fontWeight: active ? 700 : 400,
+    cursor: 'pointer',
+    fontSize: 15,
+  })
 
   return (
     <main style={pageStyle}>
@@ -108,6 +124,18 @@ export default function PetDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Sprint 4: tabs — Profile / Health History */}
+      <div style={{ display: 'flex', gap: 4, marginTop: 32, borderBottom: '1px solid #e2e8f0' }}>
+        <button style={tabButtonStyle(tab === 'profile')} onClick={() => setTab('profile')}>
+          Profile
+        </button>
+        <button style={tabButtonStyle(tab === 'history')} onClick={() => setTab('history')}>
+          Health History
+        </button>
+      </div>
+
+      {tab === 'history' && <HealthHistoryTab petId={pet.id} token={tokenStore.get() ?? ''} />}
 
       {editing && (
         <PetFormModal

@@ -51,7 +51,7 @@ public class VetRecordEntity {
      * Mapped as a raw JSON string via Hibernate 7 native JSON support (no extra dependency).
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "attachments_jsonb", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "attachments_jsonb", nullable = false, columnDefinition = "text")
     private String attachmentsJson = "[]";
 
     @Column(name = "created_at", nullable = false, updatable = false)

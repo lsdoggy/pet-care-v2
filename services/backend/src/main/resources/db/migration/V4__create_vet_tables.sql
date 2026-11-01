@@ -35,7 +35,10 @@ CREATE TABLE veterinary_records (
     recommendations_text TEXT,
     prescriptions_text   TEXT,
     -- List of attachments: [{"url": "...", "name": "...", "type": "pdf|jpg|...", "size": 123}]
-    attachments_jsonb    JSONB        NOT NULL DEFAULT '[]'::jsonb,
+    -- TEXT payload holding JSON; Hibernate maps it with @JdbcTypeCode(SqlTypes.JSON).
+    -- Plain TEXT (instead of native JSONB) keeps the migration portable: it runs on
+    -- PostgreSQL 17 in production AND on H2 (MODE=PostgreSQL) used by the test suite.
+    attachments_jsonb    TEXT         NOT NULL DEFAULT '[]',
     created_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at           TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
