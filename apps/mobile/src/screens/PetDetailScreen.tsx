@@ -114,6 +114,13 @@ export function PetDetailScreen({ petId }: Props) {
       </View>
 
       <Pressable
+        style={({ pressed }) => [styles.historyBtn, pressed && styles.pressed]}
+        onPress={() => navigation.push({ name: 'PetHistory', petId: pet.id, petName: pet.name })}
+      >
+        <Text style={styles.historyText}>🩺 Health history</Text>
+      </Pressable>
+
+      <Pressable
         style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
         onPress={() => navigation.push({ name: 'PetForm', petId: pet.id })}
       >
@@ -156,6 +163,8 @@ const styles = StyleSheet.create({
   fieldValue: { fontWeight: '600', fontSize: 15 },
   editBtn: { backgroundColor: '#4f46e5', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   editText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  historyBtn: { backgroundColor: '#e0e7ff', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
+  historyText: { color: '#4f46e5', fontSize: 16, fontWeight: '600' },
   deleteBtn: { backgroundColor: '#fee2e2', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
   deleteText: { color: '#dc2626', fontSize: 16, fontWeight: '600' },
   back: { alignItems: 'center', paddingVertical: 14 },

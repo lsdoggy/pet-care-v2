@@ -9,6 +9,9 @@ import { AppStack, type Route, type TabName } from '../navigation/AppStack';
 import { PetsHomeScreen } from '../screens/PetsHomeScreen';
 import { PetFormScreen } from '../screens/PetFormScreen';
 import { PetDetailScreen } from '../screens/PetDetailScreen';
+import { PetHistoryScreen } from '../screens/PetHistoryScreen';
+import { AppointmentFormScreen } from '../screens/AppointmentFormScreen';
+import { RecordFormScreen } from '../screens/RecordFormScreen';
 import { TasksScreen } from '../screens/TasksScreen';
 
 type Phase = 'boot' | 'anon' | 'authed';
@@ -79,6 +82,12 @@ export function AuthGate() {
                 return <PetFormScreen key={`form-${top.petId ?? 'new'}`} petId={top.petId} />;
               case 'PetDetail':
                 return <PetDetailScreen key={`detail-${top.petId}`} petId={top.petId} />;
+              case 'PetHistory':
+                return <PetHistoryScreen key={`history-${top.petId}`} petId={top.petId} petName={top.petName} />;
+              case 'AppointmentForm':
+                return <AppointmentFormScreen key={`appt-${top.petId}`} petId={top.petId} petName={top.petName} />;
+              case 'RecordForm':
+                return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
               case 'Home':
