@@ -27,7 +27,7 @@ class CareTaskRecurrenceTest {
 
     @Test
     void weeklyAddsWeeks() {
-        assertEquals(BASE.plus(14, ChronoUnit.WEEKS),
+        assertEquals(BASE.plus(14, ChronoUnit.DAYS),
                 CareTaskService.applyRecurrence(BASE, "WEEKLY:2"));
     }
 
@@ -35,7 +35,7 @@ class CareTaskRecurrenceTest {
     void dailyAddsDaysAndYearlyAddsYears() {
         assertEquals(BASE.plus(3, ChronoUnit.DAYS),
                 CareTaskService.applyRecurrence(BASE, "DAILY:3"));
-        assertEquals(BASE.plus(1, ChronoUnit.YEARS),
+        assertEquals(BASE.plus(365, ChronoUnit.DAYS),
                 CareTaskService.applyRecurrence(BASE, "YEARLY:1"));
     }
 

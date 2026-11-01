@@ -1,6 +1,8 @@
 package com.petcare.backend.task;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -25,12 +27,12 @@ import com.petcare.backend.user.UserRepository;
 @Service
 public class CareTaskService {
 
-    /** Supported recurrence units -> ChronoUnit for the simplified "+interval" logic. */
-    private static final Map<String, ChronoUnit> RECURRENCE_UNITS = Map.of(
-            "DAILY", ChronoUnit.DAYS,
-            "WEEKLY", ChronoUnit.WEEKS,
-            "MONTHLY", ChronoUnit.MONTHS,
-            "YEARLY", ChronoUnit.YEARS);
+    /**
+     * Supported recurrence units for the simplified "+interval" logic.
+     * MONTHS/YEARS are calendar-based (Instant.plus throws on them), so we shift
+     * via ZonedDateTime in UTC; DAYS/WEEKS are fixed-length and work on Instant.
+     */
+    private static final List<String> RECURRENCE_UNITS = List.of("DAILY", "WEEKLY", "MONTHLY", "YEARLY");
 
     private final CareTaskRepository careTaskRepository;
     private final PetRepository petRepository;
@@ -134,14 +136,10 @@ public class CareTaskService {
         return toDto(task);
     }
 
-    /** Parses "UNIT:N" (e.g. "MONTHLY:1") and shifts the given instant. */
+    /** Parses "UNIT:N" (e.g. "MONTHLY:1") and shifts the given instant in UTC. */
     static Instant applyRecurrence(Instant dueAt, String rule) {
         String[] parts = rule.trim().toUpperCase().split(":");
-        if (parts.length != 2) {
-            throw new InvalidRecurrenceRuleException(rule);
-        }
-        ChronoUnit unit = RECURRENCE_UNITS.get(parts[0]);
-        if (unit == null) {
+        if (parts.length != 2 || !RECURRENCE_UNITS.contains(parts[0])) {
             throw new InvalidRecurrenceRuleException(rule);
         }
         long interval;
@@ -153,7 +151,14 @@ public class CareTaskService {
         if (interval <= 0) {
             throw new InvalidRecurrenceRuleException(rule);
         }
-        return dueAt.plus(interval, unit);
+        ZonedDateTime utc = dueAt.atZone(ZoneOffset.UTC);
+        return switch (parts[0]) {
+            case "DAILY" -> utc.plus(interval, ChronoUnit.DAYS).toInstant();
+            case "WEEKLY" -> utc.plus(interval, ChronoUnit.WEEKS).toInstant();
+            case "MONTHLY" -> utc.plusMonths(interval).toInstant();
+            case "YEARLY" -> utc.plusYears(interval).toInstant();
+            default -> throw new InvalidRecurrenceRuleException(rule);
+        };
     }
 
     private List<CareTaskDto> toDtoList(List<CareTaskEntity> tasks) {

@@ -25,7 +25,7 @@ public record UpdateTaskRequest(
 
         /** Empty string clears the recurrence rule; case-insensitive unit is accepted. */
         @Size(max = 50, message = "Recurrence rule must be at most 50 characters")
-        @Pattern(regexp = "^$|^(?i)(daily|weekly|monthly|yearly):[1-9][0-9]{0,3}$",
+        @Pattern(regexp = "^$|^(?i:DAILY|WEEKLY|MONTHLY|YEARLY):[1-9][0-9]{0,3}$",
                 message = "Recurrence rule must look like MONTHLY:1, WEEKLY:2, DAILY:1 or YEARLY:1")
         String recurrenceRule) {
 }

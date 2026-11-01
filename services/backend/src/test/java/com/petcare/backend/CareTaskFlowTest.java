@@ -132,7 +132,8 @@ class CareTaskFlowTest {
         String token = registerAndLogin(uniqueEmail());
         long petId = createPet(token, "Luna");
 
-        Instant dueAt = Instant.parse("2026-03-15T10:30:00Z");
+        Instant dueAt = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                .plusDays(10).truncatedTo(ChronoUnit.SECONDS).toInstant();
         long id = createTask(token, petId, "Rabies vaccine", "VACCINATION", dueAt, "MONTHLY:1");
 
         String body = mockMvc.perform(post("/api/v1/tasks/" + id + "/complete")
@@ -144,7 +145,10 @@ class CareTaskFlowTest {
         // The response is the NEW recurring task: pending, same fields, due_at +1 month (UTC preserved).
         org.junit.jupiter.api.Assertions.assertNotEquals(id, next.get("id").asLong());
         org.junit.jupiter.api.Assertions.assertEquals("PENDING", next.get("status").asText());
-        org.junit.jupiter.api.Assertions.assertEquals("2026-04-15T10:30:00Z", next.get("dueAt").asText());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                dueAt.atZone(java.time.ZoneOffset.UTC).plusMonths(1).toInstant()
+                        .truncatedTo(ChronoUnit.SECONDS).toString(),
+                next.get("dueAt").asText());
         org.junit.jupiter.api.Assertions.assertEquals("MONTHLY:1", next.get("recurrenceRule").asText());
         org.junit.jupiter.api.Assertions.assertEquals("Rabies vaccine", next.get("title").asText());
 
@@ -168,8 +172,9 @@ class CareTaskFlowTest {
         String token = registerAndLogin(uniqueEmail());
         long petId = createPet(token, "Bobik");
 
-        long id = createTask(token, petId, "Grooming", "GROOMING",
-                Instant.parse("2026-05-01T08:00:00Z"), "WEEKLY:2");
+        Instant dueAt = java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC)
+                .plusDays(30).truncatedTo(ChronoUnit.SECONDS).toInstant();
+        long id = createTask(token, petId, "Grooming", "GROOMING", dueAt, "WEEKLY:2");
 
         String body = mockMvc.perform(post("/api/v1/tasks/" + id + "/complete")
                         .header("Authorization", "Bearer " + token))
@@ -177,7 +182,9 @@ class CareTaskFlowTest {
                 .andReturn().getResponse().getContentAsString();
 
         org.junit.jupiter.api.Assertions.assertEquals(
-                "2026-05-15T08:00:00Z", JSON.readTree(body).get("dueAt").asText());
+                dueAt.atZone(java.time.ZoneOffset.UTC).plusWeeks(2).toInstant()
+                        .truncatedTo(ChronoUnit.SECONDS).toString(),
+                JSON.readTree(body).get("dueAt").asText());
     }
 
     @Test
