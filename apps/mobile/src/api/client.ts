@@ -1,6 +1,7 @@
 import type {
   ApiErrorBody,
   AuthResponse,
+  CareTaskDto,
   CreatePetRequest,
   PetDto,
   UpdatePetRequest,
@@ -107,4 +108,12 @@ export const api = {
     }
     return body as PetDto;
   },
+
+  /* ---------- Care tasks (Sprint 3) ---------- */
+
+  listUpcomingTasks: (token: string) => request<CareTaskDto[]>('/tasks/upcoming', { method: 'GET' }, token),
+
+  /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
+  completeTask: (id: number, token: string) =>
+    request<CareTaskDto>(`/tasks/${id}/complete`, { method: 'POST' }, token),
 };

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import type { PetDto } from '../api/types'
+import type { CareTaskDto, PetDto } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
 import PetCard from '../components/PetCard'
 import PetFormModal from '../components/PetFormModal'
+import TaskFormModal from '../components/TaskFormModal'
+import UpcomingTasksCard from '../components/UpcomingTasksCard'
 
 const pageStyle: React.CSSProperties = {
   fontFamily: 'sans-serif',
@@ -28,8 +30,21 @@ export default function HomePage() {
   const { user, loading, logout } = useAuth()
   const navigate = useNavigate()
   const [pets, setPets] = useState<PetDto[]>([])
+  const [tasks, setTasks] = useState<CareTaskDto[]>([])
   const [showForm, setShowForm] = useState(false)
+  const [showTaskForm, setShowTaskForm] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const loadTasks = useCallback(() => {
+    const token = tokenStore.get()
+    if (!token) return
+    api
+      .listUpcomingTasks(token)
+      .then(setTasks)
+      .catch(() => {
+        /* task errors are surfaced inside UpcomingTasksCard */
+      })
+  }, [])
 
   const loadPets = useCallback(() => {
     const token = tokenStore.get()
@@ -44,8 +59,11 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (user) loadPets()
-  }, [user, loadPets])
+    if (user) {
+      loadPets()
+      loadTasks()
+    }
+  }, [user, loadPets, loadTasks])
 
   if (loading) return <main style={pageStyle}>Loading…</main>
   if (!user) return <Navigate to="/login" replace />
@@ -92,6 +110,17 @@ export default function HomePage() {
         <p style={{ color: '#6b7280', marginTop: 16 }}>No pets yet. Click “+” to add your first pet.</p>
       )}
 
+      <UpcomingTasksCard
+        tasks={tasks}
+        onNewTask={() => setShowTaskForm(true)}
+        onComplete={async (task) => {
+          const token = tokenStore.get() ?? ''
+          await api.completeTask(task.id, token)
+          // Refetch so a newly spawned recurring task appears in the list.
+          setTasks(await api.listUpcomingTasks(token))
+        }}
+      />
+
       {showForm && (
         <PetFormModal
           token={tokenStore.get() ?? ''}
@@ -99,6 +128,18 @@ export default function HomePage() {
           onSaved={(saved) => {
             setPets((prev) => [...prev, saved])
             setShowForm(false)
+          }}
+        />
+      )}
+
+      {showTaskForm && (
+        <TaskFormModal
+          pets={pets}
+          token={tokenStore.get() ?? ''}
+          onClose={() => setShowTaskForm(false)}
+          onSaved={() => {
+            setShowTaskForm(false)
+            loadTasks()
           }}
         />
       )}

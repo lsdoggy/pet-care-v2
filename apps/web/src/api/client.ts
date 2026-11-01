@@ -1,4 +1,13 @@
-import type { ApiErrorBody, AuthResponse, CreatePetRequest, PetDto, UpdatePetRequest, UserDto } from './types'
+import type {
+  ApiErrorBody,
+  AuthResponse,
+  CareTaskDto,
+  CreatePetRequest,
+  CreateTaskRequest,
+  PetDto,
+  UpdatePetRequest,
+  UserDto,
+} from './types'
 
 const BASE_URL = '/api/v1'
 
@@ -89,4 +98,23 @@ export const api = {
     }
     return (await response.json()) as PetDto
   },
+
+  /* ---------- Care tasks (Sprint 3) ---------- */
+
+  listTasks: (token: string) => request<CareTaskDto[]>('/tasks', { method: 'GET' }, token),
+
+  listUpcomingTasks: (token: string) => request<CareTaskDto[]>('/tasks/upcoming', { method: 'GET' }, token),
+
+  createTask: (body: CreateTaskRequest, token: string) =>
+    request<CareTaskDto>('/tasks', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateTask: (id: number, body: Partial<CreateTaskRequest> & { status?: string }, token: string) =>
+    request<CareTaskDto>(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteTask: (id: number, token: string) =>
+    request<void>(`/tasks/${id}`, { method: 'DELETE' }, token),
+
+  /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
+  completeTask: (id: number, token: string) =>
+    request<CareTaskDto>(`/tasks/${id}/complete`, { method: 'POST' }, token),
 }

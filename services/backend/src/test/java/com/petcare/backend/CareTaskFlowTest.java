@@ -269,7 +269,7 @@ class CareTaskFlowTest {
                         .header("Authorization", "Bearer " + strangerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(JSON.writeValueAsString(Map.of(
-                                "petId", petId, "title":= null == null ? "Intruder food" : "", "type", "FOOD",
+                                "petId", petId, "title", "Intruder food", "type", "FOOD",
                                 "dueAt", Instant.now().plusSeconds(3600).toString()))))
                 .andExpect(status().isNotFound());
     }
