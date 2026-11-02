@@ -61,15 +61,10 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 		<!--
-		  Sprint 6: push notifications. Primary transport is the Expo Push Service (no FCM
-		  service-account needed for Expo builds); firebase-admin (GA) provides the FCM HTTP v1
-		  client used as a fallback for raw FCM device tokens.
+		  Sprint 6: push notifications. Per the approved plan the primary (and only) transport is
+		  the Expo Push Service (plain HTTPS via RestClient, which forwards to FCM/APNs), so the
+		  heavy firebase-admin dependency and FCM service accounts are intentionally NOT required.
 		-->
-		<dependency>
-			<groupId>com.google.firebase</groupId>
-			<artifactId>firebase-admin</artifactId>
-			<version>9.11.0</version>
-		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>

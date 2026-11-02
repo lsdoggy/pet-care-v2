@@ -10,6 +10,7 @@ import com.petcare.backend.user.dto.AuthResponse;
 import com.petcare.backend.user.dto.LoginRequest;
 import com.petcare.backend.user.dto.RegisterRequest;
 import com.petcare.backend.user.dto.UserDto;
+import com.petcare.backend.notification.dto.NotificationSettingsRequest;
 
 import org.springframework.security.authentication.BadCredentialsException;
 
@@ -51,6 +52,16 @@ public class UserService {
         return repository.findByEmailIgnoreCase(normalize(email))
                 .map(UserDto::from)
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+    }
+
+    /** Sprint 6: profile switches — Push On/Off and Email On/Off. */
+    @Transactional
+    public UserDto updateNotificationSettings(NotificationSettingsRequest request, String email) {
+        UserEntity user = repository.findByEmailIgnoreCase(normalize(email))
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+        user.setPushNotificationsEnabled(request.pushEnabled());
+        user.setEmailNotificationsEnabled(request.emailEnabled());
+        return UserDto.from(user);
     }
 
     private static String normalize(String email) {

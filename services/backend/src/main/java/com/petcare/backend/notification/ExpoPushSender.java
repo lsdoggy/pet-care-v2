@@ -36,15 +36,16 @@ public class ExpoPushSender implements PushSender {
             @org.springframework.beans.factory.annotation.Value("${app.notifications.expo.url:" + SEND_URL + "}") String url,
             @org.springframework.beans.factory.annotation.Value("${app.notifications.expo.access-token:}") String accessToken) {
         this.accessToken = accessToken;
+        // Default RestClient factory (JDK HttpClient in Spring Framework 7) with sane timeouts.
+        var requestFactory = new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder()
+                        .connectTimeout(java.time.Duration.ofSeconds(10))
+                        .build());
+        requestFactory.setReadTimeout(java.time.Duration.ofSeconds(15));
         this.http = RestClient.builder()
                 .baseUrl(url)
-                .requestFactory(clientHttpRequestFactory())
+                .requestFactory(requestFactory)
                 .build();
-    }
-
-    private static org.springframework.http.client.ClientHttpRequestFactory clientHttpRequestFactory() {
-        var options = org.springframework.http.client.ClientHttpRequestFactoryBuilder.detect().build(Map.of());
-        return options;
     }
 
     @Override

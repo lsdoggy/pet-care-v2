@@ -11,4 +11,7 @@ public interface NotificationRepository extends JpaRepository<NotificationEntity
 
     /** Unread rows for the badge counter shown by web/mobile clients. */
     long countByUserIdAndChannelStatus(Long userId, ChannelStatus status);
+
+    /** Retry pass of the scheduler: rows that were not delivered yet (pending or failed). */
+    List<NotificationEntity> findByChannelStatusInOrderByCreatedAtAsc(List<ChannelStatus> statuses);
 }
