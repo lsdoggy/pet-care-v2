@@ -16,8 +16,11 @@ import com.petcare.backend.error.AccessDeniedForResourceException;
 import com.petcare.backend.error.CareTaskNotFoundException;
 import com.petcare.backend.error.InvalidRecurrenceRuleException;
 import com.petcare.backend.error.PetNotFoundException;
+import com.petcare.backend.food.FoodProductEntity;
+import com.petcare.backend.food.FoodProductService;
 import com.petcare.backend.pet.PetEntity;
 import com.petcare.backend.pet.PetRepository;
+import com.petcare.backend.shopping.ShoppingListService;
 import com.petcare.backend.task.dto.CareTaskDto;
 import com.petcare.backend.task.dto.CreateTaskRequest;
 import com.petcare.backend.task.dto.UpdateTaskRequest;
@@ -37,13 +40,19 @@ public class CareTaskService {
     private final CareTaskRepository careTaskRepository;
     private final PetRepository petRepository;
     private final UserRepository userRepository;
+    private final FoodProductService foodProductService;
+    private final ShoppingListService shoppingListService;
 
     public CareTaskService(CareTaskRepository careTaskRepository,
                            PetRepository petRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           FoodProductService foodProductService,
+                           ShoppingListService shoppingListService) {
         this.careTaskRepository = careTaskRepository;
         this.petRepository = petRepository;
         this.userRepository = userRepository;
+        this.foodProductService = foodProductService;
+        this.shoppingListService = shoppingListService;
     }
 
     @Transactional(readOnly = true)
@@ -112,6 +121,10 @@ public class CareTaskService {
      * Marks the task as done. If it carries a recurrence rule ("UNIT:N"),
      * a NEW pending task is created with due_at shifted by N units
      * (simplified logic from the sprint spec: "MONTHLY:1" -> +1 month).
+     *
+     * Sprint 5 (simplified feeding linkage, approved in plan item 3): completing a FOOD-type
+     * task consumes stock — if the task title exactly matches (case-insensitively) one of the
+     * owner's food products, that product's stock decreases by its daily_portion_grams (clamped at 0).
      */
     @Transactional
     public CareTaskDto completeTask(Long id, String email) {
@@ -121,6 +134,7 @@ public class CareTaskService {
             return toDto(task);
         }
         task.setStatus(CareTaskStatus.DONE);
+        consumeFoodStockIfNeeded(task);
 
         if (task.getRecurrenceRule() != null && !task.getRecurrenceRule().isBlank()) {
             Instant nextDueAt = applyRecurrence(task.getDueAt(), task.getRecurrenceRule());
@@ -134,6 +148,34 @@ public class CareTaskService {
             return toDto(careTaskRepository.save(next));
         }
         return toDto(task);
+    }
+
+    /**
+     * Best-effort stock consumption for feeding tasks; never blocks task completion.
+     * Sprint 5 linkage (approved plan item 3): after the daily portion is consumed,
+     * if the product's stock dropped to/below its reorder threshold, an OPEN shopping
+     * item is created automatically — unless one already exists for that product or
+     * under the same name (dedup guard from the sprint spec).
+     */
+    private void consumeFoodStockIfNeeded(CareTaskEntity task) {
+        if (task.getType() != CareTaskType.FOOD) {
+            return;
+        }
+        List<FoodProductEntity> matches =
+                foodProductService.findByOwnerAndExactName(task.getOwnerId(), task.getTitle());
+        if (matches.isEmpty()) {
+            return;
+        }
+        FoodProductEntity product = matches.get(0); // first match wins (MVP simplification)
+        int portion = product.getDailyPortionGrams() != null ? product.getDailyPortionGrams() : 0;
+        if (portion > 0) {
+            foodProductService.addStockQuantity(product, -portion);
+        }
+        if (product.isLowStock()
+                && shoppingListService.findOpenItemForProduct(task.getOwnerId(), product.getId()).isEmpty()
+                && shoppingListService.findOpenItemsByName(task.getOwnerId(), product.getName()).isEmpty()) {
+            shoppingListService.addOpenItemForProduct(product, 1);
+        }
     }
 
     /** Parses "UNIT:N" (e.g. "MONTHLY:1") and shifts the given instant in UTC. */

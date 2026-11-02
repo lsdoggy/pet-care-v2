@@ -88,6 +88,25 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
     }
 
+    @ExceptionHandler(FoodProductNotFoundException.class)
+    ResponseEntity<ApiError> handleFoodProductNotFound(FoodProductNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(ShoppingItemNotFoundException.class)
+    ResponseEntity<ApiError> handleShoppingItemNotFound(ShoppingItemNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
+    @ExceptionHandler(InvalidPurchaseOperationException.class)
+    ResponseEntity<ApiError> handleInvalidPurchase(InvalidPurchaseOperationException ex) {
+        // 400 per approved plan (decision #2): restocking a custom item is rejected explicitly.
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(HttpStatus.BAD_REQUEST, ex.getMessage(), List.of()));
+    }
+
     @ExceptionHandler(InvalidRecurrenceRuleException.class)
     ResponseEntity<ApiError> handleInvalidRecurrenceRule(InvalidRecurrenceRuleException ex) {
         return ResponseEntity.badRequest()
