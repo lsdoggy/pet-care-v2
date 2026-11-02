@@ -13,6 +13,8 @@ import { PetHistoryScreen } from '../screens/PetHistoryScreen';
 import { AppointmentFormScreen } from '../screens/AppointmentFormScreen';
 import { RecordFormScreen } from '../screens/RecordFormScreen';
 import { TasksScreen } from '../screens/TasksScreen';
+import { ShoppingScreen } from '../screens/ShoppingScreen';
+import { StockScreen } from '../screens/StockScreen';
 
 type Phase = 'boot' | 'anon' | 'authed';
 
@@ -90,6 +92,10 @@ export function AuthGate() {
                 return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
+              case 'Shopping':
+                return <ShoppingScreen key="shopping" />;
+              case 'Stock':
+                return <StockScreen key="stock" />;
               case 'Home':
               default:
                 return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;
