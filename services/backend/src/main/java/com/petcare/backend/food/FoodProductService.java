@@ -118,7 +118,7 @@ public class FoodProductService {
     /** Case-insensitive exact-name lookup (simplified feeding-task linkage, approved in plan item 3). */
     @Transactional(readOnly = true)
     public List<FoodProductEntity> findByOwnerAndExactName(Long ownerId, String name) {
-        return foodProductRepository.findByOwnerIdAndLowerName(ownerId, name.trim().toLowerCase());
+        return foodProductRepository.findByOwnerAndNameIgnoreCase(ownerId, name.trim());
     }
 
     /** Adds delta to the stock counter, clamped at 0 (never negative — DB CHECK mirrors this). */

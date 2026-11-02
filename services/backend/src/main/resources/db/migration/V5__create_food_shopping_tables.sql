@@ -19,9 +19,6 @@ CREATE TABLE food_products (
     -- Unit of the stock counter: pcs | kg | g
     unit                  VARCHAR(10)  NOT NULL DEFAULT 'PCS'
                           CHECK (unit IN ('PCS', 'KG', 'G')),
-    -- Lowercased copy of name for case-insensitive exact-match lookups
-    -- (feeding-task linkage; portable across PostgreSQL 17 and H2 MODE=PostgreSQL).
-    lower_name            VARCHAR(150) GENERATED ALWAYS AS (LOWER(name)) STORED,
     notes                 TEXT,
     created_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at            TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
@@ -44,8 +41,6 @@ CREATE TABLE shopping_list_items (
                 CHECK (unit IN ('PCS', 'KG', 'G')),
     is_purchased  BOOLEAN      NOT NULL DEFAULT FALSE,
     purchased_at  TIMESTAMP WITH TIME ZONE,
-    -- Lowercased copy of custom_name for case-insensitive duplicate checks.
-    lower_custom_name VARCHAR(150) GENERATED ALWAYS AS (LOWER(custom_name)) STORED,
     created_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     -- Consistency: purchased rows carry a timestamp, open rows do not.

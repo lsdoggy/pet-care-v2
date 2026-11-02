@@ -159,8 +159,7 @@ public class ShoppingListService {
     /** Case-insensitive lookup of open items by display name (feeding-task linkage). */
     @Transactional(readOnly = true)
     public List<ShoppingListItemEntity> findOpenItemsByName(Long ownerId, String name) {
-        return shoppingListRepository.findByOwnerIdAndLowerCustomNameAndPurchasedFalse(
-                ownerId, name.trim().toLowerCase());
+        return shoppingListRepository.findOpenByNameIgnoreCase(ownerId, name.trim());
     }
 
     /** Adds an open item linked to the given product (used by auto-linkage; no dedup here — caller guards). */

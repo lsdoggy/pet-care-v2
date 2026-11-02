@@ -150,7 +150,13 @@ public class CareTaskService {
         return toDto(task);
     }
 
-    /** Best-effort stock consumption for feeding tasks; never blocks task completion. */
+    /**
+     * Best-effort stock consumption for feeding tasks; never blocks task completion.
+     * Sprint 5 linkage (approved plan item 3): after the daily portion is consumed,
+     * if the product's stock dropped to/below its reorder threshold, an OPEN shopping
+     * item is created automatically — unless one already exists for that product or
+     * under the same name (dedup guard from the sprint spec).
+     */
     private void consumeFoodStockIfNeeded(CareTaskEntity task) {
         if (task.getType() != CareTaskType.FOOD) {
             return;
@@ -164,6 +170,11 @@ public class CareTaskService {
         int portion = product.getDailyPortionGrams() != null ? product.getDailyPortionGrams() : 0;
         if (portion > 0) {
             foodProductService.addStockQuantity(product, -portion);
+        }
+        if (product.isLowStock()
+                && shoppingListService.findOpenItemForProduct(task.getOwnerId(), product.getId()).isEmpty()
+                && shoppingListService.findOpenItemsByName(task.getOwnerId(), product.getName()).isEmpty()) {
+            shoppingListService.addOpenItemForProduct(product, 1);
         }
     }
 

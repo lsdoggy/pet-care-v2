@@ -51,10 +51,6 @@ public class FoodProductEntity {
     @Column(nullable = false, length = 10)
     private StockUnit unit = StockUnit.PCS;
 
-    /** DB-generated lowercased copy of name (case-insensitive lookups); never written by JPA. */
-    @Column(name = "lower_name", insertable = false, updatable = false)
-    private String lowerName;
-
     @Column(columnDefinition = "text")
     private String notes;
 

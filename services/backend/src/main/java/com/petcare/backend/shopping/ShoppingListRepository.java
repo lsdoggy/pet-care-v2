@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ShoppingListRepository extends JpaRepository<ShoppingListItemEntity, Long> {
 
@@ -19,6 +21,8 @@ public interface ShoppingListRepository extends JpaRepository<ShoppingListItemEn
     List<ShoppingListItemEntity> findByProductId(Long productId);
 
     /** Case-insensitive exact-name lookup of open items (feeding-task linkage). */
-    List<ShoppingListItemEntity> findByOwnerIdAndLowerCustomNameAndPurchasedFalse(
-            Long ownerId, String lowerCustomName);
+    @Query("select i from ShoppingListItemEntity i where i.ownerId = :ownerId "
+            + "and lower(i.customName) = lower(:name) and i.purchased = false")
+    List<ShoppingListItemEntity> findOpenByNameIgnoreCase(@Param("ownerId") Long ownerId,
+                                                          @Param("name") String name);
 }

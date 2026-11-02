@@ -48,10 +48,6 @@ public class ShoppingListItemEntity {
     @Column(name = "purchased_at")
     private Instant purchasedAt;
 
-    /** DB-generated lowercased copy of custom_name (case-insensitive duplicate checks); never written by JPA. */
-    @Column(name = "lower_custom_name", insertable = false, updatable = false)
-    private String lowerCustomName;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
