@@ -24,6 +24,14 @@ public class UserEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** Sprint 6: user-level channel switches (profile settings Push On/Off). */
+    @Column(name = "push_notifications_enabled", nullable = false)
+    private boolean pushNotificationsEnabled = true;
+
+    /** Sprint 6: opt-in email notifications (off by default — emails are only for important events). */
+    @Column(name = "email_notifications_enabled", nullable = false)
+    private boolean emailNotificationsEnabled = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -52,6 +60,22 @@ public class UserEntity {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public boolean isPushNotificationsEnabled() {
+        return pushNotificationsEnabled;
+    }
+
+    public void setPushNotificationsEnabled(boolean pushNotificationsEnabled) {
+        this.pushNotificationsEnabled = pushNotificationsEnabled;
+    }
+
+    public boolean isEmailNotificationsEnabled() {
+        return emailNotificationsEnabled;
+    }
+
+    public void setEmailNotificationsEnabled(boolean emailNotificationsEnabled) {
+        this.emailNotificationsEnabled = emailNotificationsEnabled;
     }
 
     public Instant getCreatedAt() {
