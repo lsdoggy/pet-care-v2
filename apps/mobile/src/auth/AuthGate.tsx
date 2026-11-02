@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { api, ApiError } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
+import { usePushRegistration } from '../notifications/usePushRegistration';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
 import { AppStack, type Route, type TabName } from '../navigation/AppStack';
 import { PetsHomeScreen } from '../screens/PetsHomeScreen';
@@ -13,6 +14,7 @@ import { PetHistoryScreen } from '../screens/PetHistoryScreen';
 import { AppointmentFormScreen } from '../screens/AppointmentFormScreen';
 import { RecordFormScreen } from '../screens/RecordFormScreen';
 import { TasksScreen } from '../screens/TasksScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
 type Phase = 'boot' | 'anon' | 'authed';
 
@@ -21,6 +23,10 @@ export function AuthGate() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [user, setUser] = useState<UserDto | null>(null);
   const [activeTab, setActiveTab] = useState<TabName>('Home');
+  const jwtRef = useRef<string | null>(null);
+
+  // Sprint 6: register this device's Expo push token on every cold start.
+  usePushRegistration(phase === 'authed' ? jwtRef.current : null);
 
   useEffect(() => {
     (async () => {
@@ -30,6 +36,7 @@ export function AuthGate() {
         return;
       }
       try {
+        jwtRef.current = token;
         setUser(await api.me(token));
         setPhase('authed');
       } catch (e) {
@@ -46,6 +53,7 @@ export function AuthGate() {
       const res: AuthResponse =
         mode === 'login' ? await api.login(email, password) : await api.register(email, password);
       await tokenStore.set(res.accessToken);
+      jwtRef.current = res.accessToken;
       setUser(res.user);
       setPhase('authed');
     },
@@ -54,6 +62,7 @@ export function AuthGate() {
 
   const handleLogout = useCallback(async () => {
     await tokenStore.clear();
+    jwtRef.current = null;
     setUser(null);
     setMode('login');
     setActiveTab('Home');
@@ -90,6 +99,8 @@ export function AuthGate() {
                 return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
+              case 'Settings':
+                return <SettingsScreen key="settings" user={user} onUserChange={setUser} />;
               case 'Home':
               default:
                 return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;

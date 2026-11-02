@@ -7,6 +7,7 @@ import type {
   CreateRecordRequest,
   CreateTaskRequest,
   HistoryEventDto,
+  NotificationDto,
   PetDto,
   UpdatePetRequest,
   UserDto,
@@ -181,4 +182,22 @@ export const api = {
   /** Merged chronology (appointments + records) for one pet, newest event first. */
   getPetHistory: (petId: number, token: string) =>
     request<HistoryEventDto[]>(`/pets/${petId}/history`, { method: 'GET' }, token),
+
+  /* ---------- Notifications (Sprint 6) ---------- */
+
+  listNotifications: (token: string) =>
+    request<NotificationDto[]>('/notifications', { method: 'GET' }, token),
+
+  unreadNotificationCount: (token: string) =>
+    request<{ count: number }>('/notifications/unread-count', { method: 'GET' }, token),
+
+  markNotificationRead: (id: number, token: string) =>
+    request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, token),
+
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, token: string) =>
+    request<UserDto>(
+      '/users/notification-settings',
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      token,
+    ),
 }
