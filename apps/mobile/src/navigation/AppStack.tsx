@@ -5,14 +5,16 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 export type Route =
   | { name: 'Home' }
   | { name: 'Tasks' }
+  | { name: 'Shopping' }
+  | { name: 'Stock' }
   | { name: 'PetForm'; petId?: number }
   | { name: 'PetDetail'; petId: number; petName?: string }
   | { name: 'PetHistory'; petId: number; petName: string }
   | { name: 'AppointmentForm'; petId: number; petName?: string }
   | { name: 'RecordForm'; petId: number; petName?: string };
 
-/** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). */
-export type TabName = 'Home' | 'Tasks';
+/** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
+export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock';
 
 interface NavigationValue {
   push: (route: Route) => void;
@@ -74,6 +76,8 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
 const TABS: { name: TabName; label: string; icon: string }[] = [
   { name: 'Home', label: 'Home', icon: '🐾' },
   { name: 'Tasks', label: 'Tasks', icon: '📅' },
+  { name: 'Shopping', label: 'Buy', icon: '🛒' },
+  { name: 'Stock', label: 'Stock', icon: '📦' },
 ];
 
 function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {

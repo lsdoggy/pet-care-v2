@@ -235,3 +235,86 @@ export interface HistoryEventDto {
   appointment: VetAppointmentDto | null
   record: VetRecordDto | null
 }
+
+/* ---------- Food products & shopping list (Sprint 5) ---------- */
+
+export type FoodCategory = 'DRY' | 'WET' | 'TREAT' | 'SUPPLEMENT' | 'LITTER'
+
+export const FOOD_CATEGORIES: FoodCategory[] = ['DRY', 'WET', 'TREAT', 'SUPPLEMENT', 'LITTER']
+
+export const FOOD_CATEGORY_LABELS: Record<FoodCategory, string> = {
+  DRY: 'Dry food',
+  WET: 'Wet food',
+  TREAT: 'Treats',
+  SUPPLEMENT: 'Supplement',
+  LITTER: 'Litter',
+}
+
+export type StockUnit = 'PCS' | 'KG' | 'G'
+
+export const STOCK_UNITS: StockUnit[] = ['PCS', 'KG', 'G']
+
+export interface FoodProductDto {
+  id: number
+  name: string
+  brand: string | null
+  category: FoodCategory
+  packageSizeGrams: number | null
+  dailyPortionGrams: number | null
+  stockQuantity: number
+  reorderThreshold: number
+  unit: StockUnit
+  notes: string | null
+  /** True when stockQuantity <= reorderThreshold (drives progress bar color / suggestions). */
+  lowStock: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateFoodProductRequest {
+  name: string
+  brand?: string | null
+  category: FoodCategory
+  packageSizeGrams?: number | null
+  dailyPortionGrams?: number | null
+  stockQuantity?: number | null
+  reorderThreshold?: number | null
+  unit: StockUnit
+  notes?: string | null
+}
+
+export type UpdateFoodProductRequest = Partial<CreateFoodProductRequest>
+
+export interface ShoppingItemDto {
+  id: number
+  /** Null for custom one-off items. */
+  productId: number | null
+  customName: string
+  quantity: number
+  unit: StockUnit
+  isPurchased: boolean
+  /** UTC ISO instant, set when marked purchased; null while open. */
+  purchasedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateShoppingItemRequest {
+  /** Linked mode ("Add to Shopping List"): product of the current user. */
+  productId?: number | null
+  /** Custom mode (quick-add): required if productId is omitted. */
+  customName?: string | null
+  quantity?: number | null
+  unit?: StockUnit | null
+}
+
+export interface UpdateShoppingItemRequest {
+  customName?: string | null
+  quantity?: number | null
+  unit?: StockUnit | null
+}
+
+export interface PurchaseItemRequest {
+  /** Optional restock amount applied to the linked product in the same transaction. */
+  addStockQuantity?: number | null
+}
