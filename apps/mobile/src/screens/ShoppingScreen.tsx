@@ -201,7 +201,7 @@ export function ShoppingScreen() {
           ListHeaderComponent={<Text style={styles.sectionTitle}>To buy ({open.length})</Text>}
           ListFooterComponent={
             purchased.length > 0 ? (
-              <>
+              <View>
                 <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Purchased</Text>
                 {purchased.map((item) => (
                   <View key={`done-${item.id}`} style={[styles.row, styles.rowDone]}>
@@ -216,8 +216,8 @@ export function ShoppingScreen() {
                     </Pressable>
                   </View>
                 ))}
-              </>
-            ) : null
+              </View>
+            ) : undefined
           }
         />
       </View>

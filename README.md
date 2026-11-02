@@ -168,3 +168,102 @@ curl -s -X POST http://localhost:8080/api/v1/records/1/attachments \
 # История питомца
 curl -s http://localhost:8080/api/v1/pets/1/history -H "Authorization: Bearer $TOKEN"
 ```
+
+## Sprint 5 — Food Products & Shopping List
+
+### Модель данных (Flyway `V5__create_food_shopping_tables.sql`)
+
+**`food_products`** (запасы корма/наполнителя): `id`, `owner_id` (FK → users, денормализация как в прошлых спринтах),
+`name`, `brand`, `category` (`DRY | WET | TREAT | SUPPLEMENT | LITTER`, хранится UPPERCASE с CHECK-констрейнтом),
+`package_size_grams`, `daily_portion_grams`, `stock_quantity (>= 0)`, `reorder_threshold (>= 0)`,
+`unit` (`PCS | KG | G`), `notes`, `created_at`, `updated_at`.
+
+**`shopping_list_items`**: `id`, `owner_id`, `product_id` (nullable FK → food_products, `ON DELETE SET NULL` —
+удаление товара из каталога не уничтожает строки списка), `custom_name`, `quantity (1..999)`, `unit`,
+`is_purchased`, `purchased_at` + CHECK-констрейнт согласованности (`is_purchased ⇔ purchased_at IS NOT NULL`).
+
+Индексы: `idx_food_products_owner (owner_id, name)`,
+`idx_shopping_items_owner (owner_id, is_purchased, created_at)` (покрывает чек-лист), `idx_shopping_items_product`.
+
+### REST API (все эндпоинты требуют `Authorization: Bearer <JWT>`, базовый путь `/api/v1`)
+
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | `/food-products` | Мои запасы (по name) |
+| GET | `/food-products/{id}` | Один продукт (404 для чужих/несуществующих) |
+| POST | `/food-products` | Создание (`@Valid`: name 1–150, category, unit, лимиты граммов/стока) |
+| PATCH | `/food-products/{id}` | Частичное обновление (в т.ч. `stockQuantity`); null = без изменений |
+| DELETE | `/food-products/{id}` | Удаление; связанные позиции списка получают `product_id = NULL` |
+| GET | `/shopping-list/items` | Чек-лист: открытые сверху, купленные ниже (по created_at) |
+| GET | `/shopping-list/items/{id}` | Одна позиция |
+| POST | `/shopping-list/items` | Два режима: **linked** (`productId` — кнопка «Add to Shopping List», дедупликация по открытым позициям) и **custom** (`customName` — быстрый ввод на mobile) |
+| PATCH | `/shopping-list/items/{id}` | Частичное обновление (quantity/unit/name) |
+| DELETE | `/shopping-list/items/{id}` | Удаление позиции |
+| POST | `/shopping-list/items/{id}/purchase` | Отметка «Куплено» (идемпотентна) |
+| GET | `/shopping-list/suggestions` | Продукты с низким стоком (`stock <= threshold`), для которых нет открытых позиций |
+
+### Логика покупки (`ShoppingListService.purchaseItem`, `@Transactional`)
+
+1. Валидация владельца (чужая позиция → 404).
+2. Идемпотентность: повторная покупка не меняет `purchased_at`.
+3. `is_purchased = true`, `purchased_at = now()`.
+4. Опционально `addStockQuantity > 0` → пополнение `stock_quantity` связанного продукта **в той же транзакции**
+   (две таблицы обновляются атомарно). Для custom-позиции (без `product_id`) это поле → `400 Bad Request`
+   (решение №2 из плана).
+
+### Упрощённая привязка кормления (решение №3 из плана)
+
+При `POST /tasks/{id}/complete` для задачи типа `FOOD`: если название задачи совпадает (case-insensitive, trim)
+с продуктом пользователя, сток уменьшается на `daily_portion_grams`; если остаток опустился до `reorder_threshold`
+и для продукта ещё нет открытой позиции — она создаётся автоматически. Сложная эвристика намеренно не вводилась (MVP).
+
+### Клиенты
+
+- **Web** (`apps/web`): навигация Home / Stock («Запасы») / Shopping («Купить»).
+  `StockPage` — карточки продуктов с прогресс-баром остатка (`stock / reorder target`), кнопки ±, модалка
+  `ProductFormModal`, удаление и «Add to Shopping List». `ShoppingListPage` — чек-лист с чекбоксами покупки
+  (+ опциональное пополнение стока linked-позиций), ручное добавление custom-товаров, баннер подсказок из `/suggestions`.
+- **Mobile** (`apps/mobile`): Tab Bar Home / Tasks / Buy / Stock. `ShoppingScreen` — быстрый ввод одной строкой
+  (custom mode) и чек-лист с галочкой «Куплено»; `StockScreen` — список запасов, управление количеством,
+  создание/удаление продуктов.
+
+### Проверка
+
+```bash
+cd services/backend && ./mvnw test        # 44 теста: предыдущие спринты + FoodShoppingFlowTest (CRUD, purchase+restock atomicity, 400 для custom restock, dedup, suggestions, FOOD-task linkage, ownership isolation)
+cd apps/web && npx tsc --noEmit && npm run build   # типы OK, сборка OK
+cd apps/mobile && npx tsc --noEmit        # типы OK
+```
+
+curl-примеры:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"demo@example.com","password":"Passw0rd!"}' | jq -r .accessToken)
+
+# Создать продукт (запас)
+curl -s -X POST http://localhost:8080/api/v1/food-products \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"name":"Royal Canin Adult","brand":"Royal Canin","category":"DRY",
+       "packageSizeGrams":4000,"dailyPortionGrams":200,
+       "stockQuantity":2,"reorderThreshold":1,"unit":"PCS"}'
+
+# Добавить в список покупок (linked mode, идемпотентно)
+curl -s -X POST http://localhost:8080/api/v1/shopping-list/items \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"productId":1}'
+
+# Купить + пополнить сток (одна транзакция)
+curl -s -X POST http://localhost:8080/api/v1/shopping-list/items/1/purchase \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"addStockQuantity":1}'
+
+# Быстрый custom-товар
+curl -s -X POST http://localhost:8080/api/v1/shopping-list/items \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"customName":"Домашний корм","quantity":1,"unit":"KG"}'
+
+# Подсказки низкого стока
+curl -s http://localhost:8080/api/v1/shopping-list/suggestions -H "Authorization: Bearer $TOKEN"
+```
