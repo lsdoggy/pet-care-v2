@@ -1,5 +1,6 @@
 package com.petcare.backend.task;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,11 @@ public interface CareTaskRepository extends JpaRepository<CareTaskEntity, Long> 
     List<CareTaskEntity> findByOwnerIdOrderByDueAtAsc(Long ownerId);
 
     boolean existsByPetIdAndStatus(Long petId, CareTaskStatus status);
+
+    /**
+     * Sprint 6 scheduler scan: pending, not-yet-reminded tasks due within [from, to].
+     * Uses the partial index idx_care_tasks_due_reminder (V8 migration).
+     */
+    List<CareTaskEntity> findByStatusAndReminderSentFalseAndDueAtBetweenOrderByDueAtAsc(
+            CareTaskStatus status, Instant from, Instant to);
 }

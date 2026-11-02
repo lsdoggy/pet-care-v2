@@ -109,4 +109,9 @@ public class NotificationEntity {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    /** Marks the push as opened by the user (channel_status -> read, see V6 CHECK constraint). */
+    public void markRead() {
+        this.channelStatus = ChannelStatus.READ;
+    }
 }
