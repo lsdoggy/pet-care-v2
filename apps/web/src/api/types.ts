@@ -1,6 +1,10 @@
 export interface UserDto {
   id: number
   email: string
+  /** Design Sprint 1: optional display name collected at sign-up. */
+  firstName: string | null
+  /** Design Sprint 1: optional contact phone collected at sign-up. */
+  phone: string | null
   /** Sprint 6: profile push switch (Push On/Off). */
   pushNotificationsEnabled: boolean
   /** Sprint 6: profile email switch (Email On/Off, opt-in). */
