@@ -15,9 +15,9 @@ export type Route =
   | { name: 'RecordForm'; petId: number; petName?: string };
 
 /** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). Sprint 6 adds Settings. */
-export type TabName = 'Home' | 'Tasks' | 'Settings';
+/** export type TabName = 'Home' | 'Tasks' | 'Settings';
 /** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
-export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock';
+export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock' | 'Settings';
 
 interface NavigationValue {
   push: (route: Route) => void;
