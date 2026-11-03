@@ -135,6 +135,16 @@ export const TASK_TYPE_LABELS: Record<CareTaskType, string> = {
 /** Mirrors backend com.petcare.backend.task.CareTaskStatus enum. */
 export type CareTaskStatus = 'PENDING' | 'DONE';
 
+/** POST /api/v1/tasks request (mirror of web client contract). */
+export interface CreateTaskRequest {
+  petId: number;
+  title: string;
+  type: CareTaskType;
+  /** UTC ISO instant. */
+  dueAt: string;
+  recurrenceRule?: string | null;
+}
+
 export interface CareTaskDto {
   id: number;
   petId: number;
