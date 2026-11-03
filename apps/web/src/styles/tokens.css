@@ -164,6 +164,11 @@
   --stack-lg: var(--space-6);
 
   --page-padding-x: var(--space-4);   /* mobile gutter */
+
+  /* Layout shell */
+  --shell-sidebar-width: 232px;
+  --shell-content-max: 960px;
+  --bottomnav-height: 56px;
   --content-max-width: 1200px;
 
   /* ----------------------------------------------------------
