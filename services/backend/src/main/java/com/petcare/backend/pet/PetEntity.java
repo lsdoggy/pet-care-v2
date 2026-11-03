@@ -1,5 +1,6 @@
 package com.petcare.backend.pet;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -37,6 +38,14 @@ public class PetEntity {
 
     @Column(name = "photo_url")
     private String photoUrl;
+
+    /** Design Sprint 3: optional breed, max 80 chars (V10 migration). */
+    @Column(length = 80)
+    private String breed;
+
+    /** Design Sprint 3: optional weight in kilograms, must be > 0 when set (V10 migration). */
+    @Column(name = "weight_kg", precision = 6, scale = 2)
+    private BigDecimal weightKg;
 
     @Column(nullable = false)
     private boolean deleted = false;
@@ -109,6 +118,22 @@ public class PetEntity {
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public String getBreed() {
+        return breed;
+    }
+
+    public void setBreed(String breed) {
+        this.breed = breed;
+    }
+
+    public BigDecimal getWeightKg() {
+        return weightKg;
+    }
+
+    public void setWeightKg(BigDecimal weightKg) {
+        this.weightKg = weightKg;
     }
 
     public boolean isDeleted() {

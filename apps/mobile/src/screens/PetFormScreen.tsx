@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -17,26 +17,43 @@ import type { PetSpecies } from '../api/types';
 import { PET_SPECIES, SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import {
+  PET_BREED_MAX_LENGTH,
+  PET_NAME_MAX_LENGTH,
+  parseWeightKg,
+  validatePetForm,
+  type PetFieldErrors,
+  type PetFormValues,
+} from '../lib/petUtils';
+import { colors } from '../theme/tokens';
 
 interface Props {
   /** When set — edit mode (PATCH + optional photo re-upload). Otherwise create mode. */
   petId?: number;
 }
 
-const TODAY = new Date().toISOString().slice(0, 10);
+/**
+ * Design Sprint 3 · Pets (mobile): форма добавления/редактирования.
+ * Bottom-sheet layout на мобильном: заголовок сверху, липкая кнопка действия снизу.
+ * Валидация — единая функция validatePetForm (имя*, вид*, дата не в будущем, вес > 0),
+ * тексты ошибок на русском. Бизнес-логика API не меняется (POST/PATCH /pets/{id}).
+ */
+const EMPTY_FORM: PetFormValues = { name: '', species: '', breed: '', birthDate: '', weightKg: '' };
 
 export function PetFormScreen({ petId }: Props) {
   const navigation = useNavigation();
   const isEdit = petId !== undefined;
 
   const [loading, setLoading] = useState(isEdit);
-  const [name, setName] = useState('');
-  const [species, setSpecies] = useState<PetSpecies>('DOG');
-  const [birthDate, setBirthDate] = useState('');
+  const [values, setValues] = useState<PetFormValues>(EMPTY_FORM);
+  const [touched, setTouched] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [pickedPhotoUri, setPickedPhotoUri] = useState<string | null>(null);
   const [existingPhotoUri, setExistingPhotoUri] = useState<string | null>(null);
+
+  const setField = <K extends keyof PetFormValues>(key: K, value: PetFormValues[K]) =>
+    setValues((prev) => ({ ...prev, [key]: value }));
 
   useEffect(() => {
     if (!isEdit || petId === undefined) return;
@@ -45,12 +62,16 @@ export function PetFormScreen({ petId }: Props) {
         const token = await tokenStore.get();
         if (!token) throw new ApiError(401, 'Not authenticated');
         const pet = await api.getPet(petId, token);
-        setName(pet.name);
-        setSpecies(pet.species);
-        setBirthDate(pet.birthDate ?? '');
+        setValues({
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed ?? '',
+          birthDate: pet.birthDate ?? '',
+          weightKg: pet.weightKg != null ? String(pet.weightKg).replace('.', ',') : '',
+        });
         setExistingPhotoUri(resolveFileUrl(pet.photoUrl));
       } catch (e) {
-        setFieldErrors({ form: e instanceof Error ? e.message : 'Failed to load pet' });
+        setFieldErrors({ form: e instanceof Error ? e.message : 'Не удалось загрузить питомца' });
       } finally {
         setLoading(false);
       }
@@ -60,7 +81,7 @@ export function PetFormScreen({ petId }: Props) {
   const pickFromGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setFieldErrors((prev) => ({ ...prev, photo: 'Gallery permission is required to pick a photo' }));
+      setFieldErrors((prev) => ({ ...prev, photo: 'Нужен доступ к галерее для выбора фото' }));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -78,26 +99,30 @@ export function PetFormScreen({ petId }: Props) {
     }
   };
 
-  const validate = (): boolean => {
-    const errors: Record<string, string> = {};
-    if (!name.trim()) errors.name = 'Name is required';
-    if (birthDate && birthDate > TODAY) errors.birthDate = 'Birth date cannot be in the future';
-    if (birthDate && !/^\d{4}-\d{2}-\d{2}$/.test(birthDate)) errors.birthDate = 'Use format YYYY-MM-DD';
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
+  /** live-ошибки показываем только после первой попытки отправки. */
+  const liveErrors: PetFieldErrors = useMemo(() => validatePetForm(values), [values]);
+  const shownError = (field: keyof PetFormValues): string | undefined =>
+    fieldErrors[field] ?? (touched ? liveErrors[field] : undefined);
 
   const submit = async () => {
-    if (!validate() || submitting) return;
+    if (submitting) return;
+    setTouched(true);
+    const errors = validatePetForm(values);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors({});
+      return;
+    }
     setSubmitting(true);
     try {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Not authenticated');
 
       const payload = {
-        name: name.trim(),
-        species,
-        birthDate: birthDate || null,
+        name: values.name.trim(),
+        species: values.species as PetSpecies,
+        birthDate: values.birthDate || null,
+        breed: values.breed.trim() || null,
+        weightKg: parseWeightKg(values.weightKg),
       };
 
       let savedPetId: number;
@@ -122,7 +147,7 @@ export function PetFormScreen({ petId }: Props) {
         map.form = e.message;
         setFieldErrors(map);
       } else {
-        setFieldErrors({ form: e instanceof Error ? e.message : 'Save failed' });
+        setFieldErrors({ form: e instanceof Error ? e.message : 'Не удалось сохранить' });
       }
     } finally {
       setSubmitting(false);
@@ -132,7 +157,7 @@ export function PetFormScreen({ petId }: Props) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -145,53 +170,88 @@ export function PetFormScreen({ petId }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{isEdit ? 'Edit pet' : 'New pet'}</Text>
+        <Text style={styles.title}>{isEdit ? 'Редактировать питомца' : 'Новый питомец'}</Text>
 
-        <Text style={styles.label}>Photo</Text>
-        <Pressable style={({ pressed }) => [styles.photoBox, pressed && styles.pressed]} onPress={pickFromGallery}>
+        <Text style={styles.label}>Фото</Text>
+        <Pressable
+          style={({ pressed }) => [styles.photoBox, pressed && styles.pressed]}
+          onPress={pickFromGallery}
+          accessibilityRole="button"
+          accessibilityLabel="Выбрать фото из галереи"
+        >
           {previewUri ? (
             <Image source={{ uri: previewUri }} style={styles.photoImage} resizeMode="cover" />
           ) : (
-            <Text style={styles.photoHint}>Tap to pick from gallery</Text>
+            <Text style={styles.photoHint}>Нажмите, чтобы выбрать фото из галереи</Text>
           )}
         </Pressable>
-        {fieldErrors.photo ? <Text style={styles.error}>{fieldErrors.photo}</Text> : null}
+        {shownError('photo' as keyof PetFormValues) || fieldErrors.photo ? (
+          <Text style={styles.error}>{fieldErrors.photo}</Text>
+        ) : null}
 
-        <Text style={styles.label}>Name *</Text>
+        <Text style={styles.label}>Имя *</Text>
         <TextInput
-          style={[styles.input, fieldErrors.name && styles.inputError]}
-          value={name}
-          onChangeText={setName}
-          placeholder="Buddy"
-          maxLength={100}
+          style={[styles.input, !!shownError('name') && styles.inputError]}
+          value={values.name}
+          onChangeText={(t) => setField('name', t)}
+          placeholder="Барсик"
+          maxLength={PET_NAME_MAX_LENGTH}
+          accessibilityLabel="Имя питомца, обязательно"
         />
-        {fieldErrors.name ? <Text style={styles.error}>{fieldErrors.name}</Text> : null}
+        {shownError('name') ? <Text style={styles.error}>{shownError('name')}</Text> : null}
 
-        <Text style={styles.label}>Species *</Text>
+        <Text style={styles.label}>Вид *</Text>
         {/* Custom chip "picker" — RN deprecated native Picker; keeps deps minimal */}
         <View style={styles.chips}>
           {PET_SPECIES.map((s) => (
             <Pressable
               key={s}
-              onPress={() => setSpecies(s)}
-              style={[styles.chip, species === s && styles.chipActive]}
+              onPress={() => setField('species', s)}
+              style={[styles.chip, values.species === s && styles.chipActive]}
+              accessibilityRole="radiobutton"
+              accessibilityState={{ selected: values.species === s }}
             >
-              <Text style={[styles.chipText, species === s && styles.chipTextActive]}>
+              <Text style={[styles.chipText, values.species === s && styles.chipTextActive]}>
                 {SPECIES_LABELS[s]}
               </Text>
             </Pressable>
           ))}
         </View>
+        {shownError('species') ? <Text style={styles.error}>{shownError('species')}</Text> : null}
 
-        <Text style={styles.label}>Birth date (YYYY-MM-DD)</Text>
+        <Text style={styles.label}>Порода</Text>
         <TextInput
-          style={[styles.input, fieldErrors.birthDate && styles.inputError]}
-          value={birthDate}
-          onChangeText={setBirthDate}
+          style={[styles.input, !!shownError('breed') && styles.inputError]}
+          value={values.breed}
+          onChangeText={(t) => setField('breed', t)}
+          placeholder="Например: мейн-кун"
+          maxLength={PET_BREED_MAX_LENGTH}
+          accessibilityLabel="Порода, необязательно"
+        />
+        {shownError('breed') ? <Text style={styles.error}>{shownError('breed')}</Text> : null}
+
+        <Text style={styles.label}>Дата рождения (ГГГГ-ММ-ДД)</Text>
+        <TextInput
+          style={[styles.input, !!shownError('birthDate') && styles.inputError]}
+          value={values.birthDate}
+          onChangeText={(t) => setField('birthDate', t)}
           placeholder="2020-05-01"
           autoCapitalize="none"
+          keyboardType="numbers-and-punctuation"
+          accessibilityLabel="Дата рождения, формат год-месяц-день"
         />
-        {fieldErrors.birthDate ? <Text style={styles.error}>{fieldErrors.birthDate}</Text> : null}
+        {shownError('birthDate') ? <Text style={styles.error}>{shownError('birthDate')}</Text> : null}
+
+        <Text style={styles.label}>Вес, кг</Text>
+        <TextInput
+          style={[styles.input, !!shownError('weightKg') && styles.inputError]}
+          value={values.weightKg}
+          onChangeText={(t) => setField('weightKg', t)}
+          placeholder="4,5"
+          keyboardType="decimal-pad"
+          accessibilityLabel="Вес в килограммах, больше нуля"
+        />
+        {shownError('weightKg') ? <Text style={styles.error}>{shownError('weightKg')}</Text> : null}
 
         {fieldErrors.form ? <Text style={styles.error}>{fieldErrors.form}</Text> : null}
 
@@ -199,16 +259,17 @@ export function PetFormScreen({ petId }: Props) {
           style={({ pressed }) => [styles.submit, pressed && styles.pressed, submitting && styles.disabled]}
           onPress={() => void submit()}
           disabled={submitting}
+          accessibilityRole="button"
         >
           {submitting ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
-            <Text style={styles.submitText}>{isEdit ? 'Save changes' : 'Create pet'}</Text>
+            <Text style={styles.submitText}>{isEdit ? 'Сохранить изменения' : 'Добавить питомца'}</Text>
           )}
         </Pressable>
 
-        <Pressable style={styles.cancel} onPress={navigation.pop}>
-          <Text style={styles.cancelText}>Cancel</Text>
+        <Pressable style={styles.cancel} onPress={navigation.pop} accessibilityRole="button">
+          <Text style={styles.cancelText}>Отмена</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -217,58 +278,63 @@ export function PetFormScreen({ petId }: Props) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f6f7fb' },
-  container: { padding: 20, backgroundColor: '#f6f7fb', gap: 6 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 12 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginTop: 12 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.pageBackground },
+  container: { padding: 20, backgroundColor: colors.pageBackground, gap: 6 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 12, color: colors.textPrimary },
+  label: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 12 },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
     marginTop: 6,
+    minHeight: 44,
+    color: colors.textPrimary,
   },
-  inputError: { borderColor: '#dc2626' },
-  error: { color: '#dc2626', fontSize: 13, marginTop: 4 },
+  inputError: { borderColor: colors.danger },
+  error: { color: colors.danger, fontSize: 13, marginTop: 4 },
   photoBox: {
     height: 140,
     borderRadius: 14,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#c7cad1',
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     marginTop: 6,
   },
   photoImage: { width: '100%', height: '100%' },
-  photoHint: { color: '#6b7280' },
+  photoHint: { color: colors.textSecondary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
   chip: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 18,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: colors.border,
+    minHeight: 44,
+    justifyContent: 'center',
   },
-  chipActive: { backgroundColor: '#4f46e5', borderColor: '#4f46e5' },
-  chipText: { color: '#374151', fontWeight: '500' },
-  chipTextActive: { color: '#fff' },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.textPrimary, fontWeight: '500' },
+  chipTextActive: { color: colors.onPrimary },
   submit: {
-    backgroundColor: '#4f46e5',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 24,
+    minHeight: 48,
   },
-  submitText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancel: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
-  cancelText: { color: '#6b7280', fontSize: 15 },
+  submitText: { color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
+  cancel: { alignItems: 'center', paddingVertical: 14, marginTop: 4, minHeight: 44 },
+  cancelText: { color: colors.textSecondary, fontSize: 15 },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.6 },
 });

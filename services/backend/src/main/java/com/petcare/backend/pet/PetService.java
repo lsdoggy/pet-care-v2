@@ -1,6 +1,7 @@
 package com.petcare.backend.pet;
 
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -9,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.petcare.backend.error.AccessDeniedForResourceException;
 import com.petcare.backend.error.FutureBirthDateException;
+import com.petcare.backend.error.InvalidPetWeightException;
 import com.petcare.backend.error.PetNotFoundException;
 import com.petcare.backend.file.FileStorageService;
 import com.petcare.backend.pet.dto.CreatePetRequest;
@@ -51,6 +53,8 @@ public class PetService {
         UserEntity user = resolveUser(email);
         validateBirthDate(request.birthDate());
         PetEntity pet = new PetEntity(user.getId(), request.name().trim(), request.species(), request.birthDate());
+        pet.setBreed(normalizeBreed(request.breed()));
+        pet.setWeightKg(request.weightKg());
         return PetDto.from(petRepository.save(pet));
     }
 
@@ -66,6 +70,14 @@ public class PetService {
         if (request.birthDate() != null) {
             validateBirthDate(request.birthDate());
             pet.setBirthDate(request.birthDate());
+        }
+        // PATCH semantics: null = keep current value; empty string = clear breed.
+        if (request.breed() != null) {
+            pet.setBreed(normalizeBreed(request.breed()));
+        }
+        if (request.weightKg() != null) {
+            validateWeight(request.weightKg());
+            pet.setWeightKg(request.weightKg());
         }
         return PetDto.from(pet);
     }
@@ -103,6 +115,25 @@ public class PetService {
     private static void validateBirthDate(LocalDate birthDate) {
         if (birthDate != null && birthDate.isAfter(LocalDate.now())) {
             throw new FutureBirthDateException(birthDate);
+        }
+    }
+
+    /** Design Sprint 3: trim breed; blank string becomes null (no empty strings in DB). */
+    private static String normalizeBreed(String breed) {
+        if (breed == null || breed.isBlank()) {
+            return null;
+        }
+        String trimmed = breed.trim();
+        if (trimmed.length() > 80) {
+            throw new InvalidPetWeightException("Breed must be at most 80 characters");
+        }
+        return trimmed;
+    }
+
+    /** Design Sprint 3: server-side guard mirroring bean validation (weight must be > 0, <= 200). */
+    private static void validateWeight(BigDecimal weightKg) {
+        if (weightKg.signum() <= 0 || weightKg.compareTo(new BigDecimal("200")) > 0) {
+            throw new InvalidPetWeightException("Weight must be greater than 0 and at most 200 kg");
         }
     }
 }

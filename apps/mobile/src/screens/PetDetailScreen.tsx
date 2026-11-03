@@ -14,11 +14,25 @@ import type { PetDto } from '../api/types';
 import { SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import {
+  formatBirthDateRu,
+  formatPetAge,
+  formatPetBreed,
+  formatPetWeight,
+  petInitials,
+} from '../lib/petUtils';
+import { colors } from '../theme/tokens';
 
 interface Props {
   petId: number;
 }
 
+/**
+ * Design Sprint 3 · Pets (mobile): карточка питомца.
+ * Фото/placeholder, имя, вид, порода, возраст, вес, дата рождения +
+ * доступное подтверждение удаления (нативный Alert с destructive-кнопкой).
+ * Вызовы API не меняются: GET /pets/{id}, DELETE /pets/{id}.
+ */
 export function PetDetailScreen({ petId }: Props) {
   const navigation = useNavigation();
   const [pet, setPet] = useState<PetDto | null>(null);
@@ -32,7 +46,7 @@ export function PetDetailScreen({ petId }: Props) {
       setPet(await api.getPet(petId, token));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load pet');
+      setError(e instanceof Error ? e.message : 'Не удалось загрузить питомца');
     }
   }, [petId]);
 
@@ -41,10 +55,10 @@ export function PetDetailScreen({ petId }: Props) {
   }, [load]);
 
   const confirmDelete = () => {
-    Alert.alert('Delete pet', `Remove “${pet?.name ?? ''}” permanently?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Удалить питомца?', `Удалить «${pet?.name ?? ''}» безвозвратно?`, [
+      { text: 'Отмена', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Удалить',
         style: 'destructive',
         onPress: async () => {
           if (deleting) return;
@@ -56,7 +70,7 @@ export function PetDetailScreen({ petId }: Props) {
             // Home re-mounts and reloads when we pop back (keyed stack children).
             navigation.pop();
           } catch (e) {
-            Alert.alert('Delete failed', e instanceof Error ? e.message : 'Unknown error');
+            Alert.alert('Не удалось удалить', e instanceof Error ? e.message : 'Неизвестная ошибка');
           } finally {
             setDeleting(false);
           }
@@ -70,7 +84,7 @@ export function PetDetailScreen({ petId }: Props) {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable style={styles.backBtn} onPress={navigation.pop}>
-          <Text style={styles.backText}>Go back</Text>
+          <Text style={styles.backText}>Назад</Text>
         </Pressable>
       </View>
     );
@@ -79,7 +93,7 @@ export function PetDetailScreen({ petId }: Props) {
   if (!pet) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -95,82 +109,146 @@ export function PetDetailScreen({ petId }: Props) {
           <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
         ) : (
           <View style={styles.photoPlaceholder}>
-            <Text style={styles.placeholderEmoji}>🐾</Text>
+            <Text style={styles.placeholderText}>{petInitials(pet.name) || '🐾'}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Species</Text>
+        <Text style={styles.fieldLabel}>Вид</Text>
         <Text style={styles.fieldValue}>{SPECIES_LABELS[pet.species]}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Birth date</Text>
-        <Text style={styles.fieldValue}>{pet.birthDate ?? '—'}</Text>
+        <Text style={styles.fieldLabel}>Порода</Text>
+        <Text style={styles.fieldValue}>{formatPetBreed(pet.breed)}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Added</Text>
-        <Text style={styles.fieldValue}>{new Date(pet.createdAt).toLocaleDateString()}</Text>
+        <Text style={styles.fieldLabel}>Дата рождения</Text>
+        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.birthDate)}</Text>
+      </View>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>Возраст</Text>
+        <Text style={styles.fieldValue}>{formatPetAge(pet.birthDate)}</Text>
+      </View>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>Вес</Text>
+        <Text style={styles.fieldValue}>{formatPetWeight(pet.weightKg)}</Text>
+      </View>
+      <View style={styles.fieldRow}>
+        <Text style={styles.fieldLabel}>Добавлен</Text>
+        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.createdAt.slice(0, 10))}</Text>
       </View>
 
       <Pressable
         style={({ pressed }) => [styles.historyBtn, pressed && styles.pressed]}
         onPress={() => navigation.push({ name: 'PetHistory', petId: pet.id, petName: pet.name })}
+        accessibilityRole="button"
       >
-        <Text style={styles.historyText}>🩺 Health history</Text>
+        <Text style={styles.historyText}>🩺 История здоровья</Text>
       </Pressable>
 
       <Pressable
         style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
         onPress={() => navigation.push({ name: 'PetForm', petId: pet.id })}
+        accessibilityRole="button"
       >
-        <Text style={styles.editText}>Edit</Text>
+        <Text style={styles.editText}>Редактировать</Text>
       </Pressable>
 
       <Pressable
         style={({ pressed }) => [styles.deleteBtn, pressed && styles.pressed, deleting && styles.disabled]}
         onPress={confirmDelete}
         disabled={deleting}
+        accessibilityRole="button"
+        accessibilityLabel={`Удалить питомца ${pet.name}`}
       >
-        <Text style={styles.deleteText}>{deleting ? 'Deleting…' : 'Delete'}</Text>
+        <Text style={styles.deleteText}>{deleting ? 'Удаляем…' : 'Удалить'}</Text>
       </Pressable>
 
       <Pressable style={styles.back} onPress={navigation.pop}>
-        <Text style={styles.backLink}>← Back to list</Text>
+        <Text style={styles.backLink}>← К списку</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#f6f7fb' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f6f7fb', gap: 12, padding: 24 },
-  errorText: { color: '#dc2626', textAlign: 'center' },
+  flex: { flex: 1, backgroundColor: colors.pageBackground },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.pageBackground,
+    gap: 12,
+    padding: 24,
+  },
+  errorText: { color: colors.danger, textAlign: 'center' },
   container: { padding: 20, gap: 12 },
-  title: { fontSize: 26, fontWeight: '700' },
+  title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary },
   photoWrap: {
     width: '100%',
     height: 220,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
   },
   photo: { width: '100%', height: '100%' },
-  photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#eef0f6' },
-  placeholderEmoji: { fontSize: 48 },
-  fieldRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  fieldLabel: { color: '#6b7280', fontSize: 15 },
-  fieldValue: { fontWeight: '600', fontSize: 15 },
-  editBtn: { backgroundColor: '#4f46e5', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
-  editText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  historyBtn: { backgroundColor: '#e0e7ff', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
-  historyText: { color: '#4f46e5', fontSize: 16, fontWeight: '600' },
-  deleteBtn: { backgroundColor: '#fee2e2', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
-  deleteText: { color: '#dc2626', fontSize: 16, fontWeight: '600' },
-  back: { alignItems: 'center', paddingVertical: 14 },
-  backLink: { color: '#4f46e5', fontSize: 15, fontWeight: '500' },
-  backBtn: { backgroundColor: '#4f46e5', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 },
-  backText: { color: '#fff', fontWeight: '600' },
+  photoPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  placeholderText: { fontSize: 44, fontWeight: '700', color: colors.primaryStrong },
+  fieldRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  fieldLabel: { color: colors.textSecondary, fontSize: 15 },
+  fieldValue: { fontWeight: '600', fontSize: 15, color: colors.textPrimary },
+  editBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  editText: { color: colors.onPrimary, fontSize: 16, fontWeight: '600' },
+  historyBtn: {
+    backgroundColor: colors.primarySubtle,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 12,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  historyText: { color: colors.primaryStrong, fontSize: 16, fontWeight: '600' },
+  deleteBtn: {
+    backgroundColor: colors.dangerSubtle,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  deleteText: { color: colors.danger, fontSize: 16, fontWeight: '600' },
+  back: { alignItems: 'center', paddingVertical: 14, minHeight: 44 },
+  backLink: { color: colors.primaryStrong, fontSize: 15, fontWeight: '500' },
+  backBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  backText: { color: colors.onPrimary, fontWeight: '600' },
   pressed: { opacity: 0.85 },
   disabled: { opacity: 0.6 },
 });
