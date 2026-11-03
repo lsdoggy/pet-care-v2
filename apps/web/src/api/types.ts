@@ -67,15 +67,17 @@ export const PET_SPECIES: PetSpecies[] = [
   'OTHER',
 ]
 
+// Design Sprint 2: UI copy language is Russian (approved in the sprint plan).
+// Backend enum values stay unchanged — only display labels are localized.
 export const SPECIES_LABELS: Record<PetSpecies, string> = {
-  DOG: 'Dog',
-  CAT: 'Cat',
-  BIRD: 'Bird',
-  HAMSTER: 'Hamster',
-  RABBIT: 'Rabbit',
-  TURTLE: 'Turtle',
-  FISH: 'Fish',
-  OTHER: 'Other',
+  DOG: 'Собака',
+  CAT: 'Кошка',
+  BIRD: 'Птица',
+  HAMSTER: 'Хомяк',
+  RABBIT: 'Кролик',
+  TURTLE: 'Черепаха',
+  FISH: 'Рыбка',
+  OTHER: 'Другое',
 }
 
 export interface PetDto {
@@ -116,13 +118,13 @@ export const TASK_TYPES: CareTaskType[] = [
 ]
 
 export const TASK_TYPE_LABELS: Record<CareTaskType, string> = {
-  VACCINATION: 'Vaccination',
-  VET: 'Vet visit',
-  FOOD: 'Food',
-  GROOMING: 'Grooming',
-  MEDICATION: 'Medication',
-  WALK: 'Walk',
-  OTHER: 'Other',
+  VACCINATION: 'Прививка',
+  VET: 'Визит к врачу',
+  FOOD: 'Кормление',
+  GROOMING: 'Груминг',
+  MEDICATION: 'Лекарство',
+  WALK: 'Прогулка',
+  OTHER: 'Другое',
 }
 
 export type CareTaskStatus = 'PENDING' | 'DONE'
@@ -173,9 +175,9 @@ export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED'
 export const APPOINTMENT_STATUSES: AppointmentStatus[] = ['SCHEDULED', 'COMPLETED', 'CANCELLED']
 
 export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
-  SCHEDULED: 'Scheduled',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  SCHEDULED: 'Запланирован',
+  COMPLETED: 'Завершён',
+  CANCELLED: 'Отменён',
 }
 
 export interface VetAppointmentDto {
@@ -266,11 +268,11 @@ export type FoodCategory = 'DRY' | 'WET' | 'TREAT' | 'SUPPLEMENT' | 'LITTER'
 export const FOOD_CATEGORIES: FoodCategory[] = ['DRY', 'WET', 'TREAT', 'SUPPLEMENT', 'LITTER']
 
 export const FOOD_CATEGORY_LABELS: Record<FoodCategory, string> = {
-  DRY: 'Dry food',
-  WET: 'Wet food',
-  TREAT: 'Treats',
-  SUPPLEMENT: 'Supplement',
-  LITTER: 'Litter',
+  DRY: 'Сухой корм',
+  WET: 'Влажный корм',
+  TREAT: 'Лакомства',
+  SUPPLEMENT: 'Добавка',
+  LITTER: 'Наполнитель',
 }
 
 export type StockUnit = 'PCS' | 'KG' | 'G'

@@ -126,6 +126,9 @@ export const api = {
 
   listUpcomingTasks: (token: string) => request<CareTaskDto[]>('/tasks/upcoming', { method: 'GET' }, token),
 
+  /** All tasks incl. DONE and overdue PENDING (mirror of web client; GET /api/v1/tasks). */
+  listTasks: (token: string) => request<CareTaskDto[]>('/tasks', { method: 'GET' }, token),
+
   /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
   completeTask: (id: number, token: string) =>
     request<CareTaskDto>(`/tasks/${id}/complete`, { method: 'POST' }, token),
