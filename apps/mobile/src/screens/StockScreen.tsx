@@ -4,6 +4,7 @@ import { api, ApiError } from '../api/client';
 import type { FoodProductDto } from '../api/types';
 import { FOOD_CATEGORY_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 /** Progress bar denominator: package size if set, otherwise threshold*2. */
 function stockPercent(p: FoodProductDto): number {
@@ -87,7 +88,8 @@ export function StockScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Stock 📦</Text>
+      {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
+      <ScreenHeader title="Food stock" />
       {error && <Text style={styles.error}>{error}</Text>}
       {notice && <Text style={styles.notice}>{notice}</Text>}
       <FlatList

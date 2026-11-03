@@ -1,0 +1,192 @@
+/* ==========================================================================
+   AppShell layout — Design Sprint 0 (foundation only)
+   Mobile-first: single column + bottom tab bar; >=768px adds a left sidebar
+   and a top header. Pages render inside .pc-shell__content via <Outlet/>.
+   All values come from tokens.css — no hardcoded colors here.
+   ========================================================================== */
+
+.pc-skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: var(--space-2);
+  z-index: var(--z-toast);
+  transform: translateY(-200%);
+  transition: transform var(--duration-fast) var(--easing-standard);
+}
+.pc-skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+.pc-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--color-bg-page);
+}
+
+/* ---------- Header (mobile: compact top bar) ---------- */
+.pc-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-md);
+  padding: var(--space-2) var(--page-padding-x);
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pc-header__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.pc-header__brand-icon {
+  display: inline-flex;
+  color: var(--color-primary);
+}
+
+.pc-header__spacer {
+  flex: 1;
+}
+
+.pc-header__user {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sidebar-only elements are hidden on mobile */
+.pc-sidebar,
+.pc-header__desktop-only {
+  display: none;
+}
+
+/* ---------- Content ---------- */
+.pc-shell__content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-content-max);
+  margin-inline: auto;
+  /* extra bottom room for the fixed mobile tab bar */
+  padding: var(--space-4) var(--page-padding-x)
+    calc(var(--bottomnav-height) + var(--space-6));
+}
+
+/* ---------- Bottom navigation (mobile) ---------- */
+.pc-bottom-nav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--z-fixed);
+  display: flex;
+  justify-content: space-around;
+  height: var(--bottomnav-height);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background-color: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border);
+}
+
+.pc-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  max-width: 120px;
+  min-height: var(--touch-target-min);
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.pc-bottom-nav__item--active {
+  color: var(--color-primary);
+}
+
+/* ---------- Desktop (>=768px): sidebar + header, no bottom nav ---------- */
+@media (min-width: 768px) {
+  .pc-shell {
+    flex-direction: row;
+  }
+
+  .pc-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    width: var(--shell-sidebar-width);
+    flex-shrink: 0;
+    padding: var(--space-4) var(--space-3);
+    background-color: var(--color-bg-surface);
+    border-right: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .pc-sidebar__title {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .pc-sidebar__link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    min-height: var(--control-sm);
+  }
+
+  .pc-sidebar__link:hover {
+    background-color: var(--color-primary-subtle);
+    color: var(--color-primary-strong);
+  }
+
+  .pc-sidebar__link--active {
+    background-color: var(--color-primary-subtle);
+    color: var(--color-primary-strong);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .pc-header__desktop-only {
+    display: inline-flex;
+  }
+
+  .pc-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pc-shell__content {
+    padding: var(--space-6) var(--page-padding-x) var(--space-8);
+  }
+
+  .pc-bottom-nav {
+    display: none;
+  }
+}

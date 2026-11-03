@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, spacing, typography, layout, radius } from '../theme/tokens';
+import { useSafeAreaInsets } from '../theme/useSafeAreaInsets';
 
 export type Route =
   | { name: 'Home' }
@@ -14,10 +16,28 @@ export type Route =
   | { name: 'AppointmentForm'; petId: number; petName?: string }
   | { name: 'RecordForm'; petId: number; petName?: string };
 
-/** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). Sprint 6 adds Settings. */
-/** export type TabName = 'Home' | 'Tasks' | 'Settings';
-/** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
+/**
+ * Tab Bar destinations: Home (pets), Tasks, Buy/Stock, Settings.
+ * Order here defines the visual order of the bottom navigation bar.
+ */
 export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock' | 'Settings';
+
+/**
+ * Screen title per route — single source of truth for headers.
+ * Used by DetailHeader on pushed (non-tab) screens.
+ */
+export const ROUTE_TITLES: Record<Route['name'], string> = {
+  Home: 'My pets',
+  Tasks: 'Upcoming tasks',
+  Shopping: 'Shopping list',
+  Stock: 'Food stock',
+  Settings: 'Settings',
+  PetForm: 'Pet details',
+  PetDetail: 'Pet profile',
+  PetHistory: 'Health history',
+  AppointmentForm: 'New vet visit',
+  RecordForm: 'New health record',
+};
 
 interface NavigationValue {
   push: (route: Route) => void;
@@ -67,31 +87,51 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
 
   const value = useMemo(() => ({ push, pop }), [push, pop]);
   const top = stack[stack.length - 1];
+  const insets = useSafeAreaInsets();
 
   return (
     <NavigationContext.Provider value={value}>
-      {children(top)}
-      <TabBar activeTab={activeTab} onChange={switchTab} />
+      <View style={shellStyles.root}>
+        {/* Top safe area: status bar / notch never overlaps screen content. */}
+        <View style={[shellStyles.insetTop, { height: insets.top }]} />
+        <View style={shellStyles.content}>{children(top)}</View>
+        <TabBar activeTab={activeTab} onChange={switchTab} />
+        {/* Bottom safe area (surface color, continues the tab bar): home indicator
+            never overlaps interactive elements on iOS devices without inset groups. */}
+        <View style={[shellStyles.insetBottom, { height: insets.bottom }]} />
+      </View>
     </NavigationContext.Provider>
   );
 }
 
 const TABS: { name: TabName; label: string; icon: string }[] = [
-  { name: 'Home', label: 'Home', icon: '🐾' },
+  { name: 'Home', label: 'Pets', icon: '🐾' },
   { name: 'Tasks', label: 'Tasks', icon: '📅' },
-  { name: 'Settings', label: 'Settings', icon: '⚙️' },
   { name: 'Shopping', label: 'Buy', icon: '🛒' },
   { name: 'Stock', label: 'Stock', icon: '📦' },
+  { name: 'Settings', label: 'Profile', icon: '⚙️' },
 ];
 
 function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {
   return (
-    <View style={tabBarStyles.bar}>
+    <View style={tabBarStyles.bar} accessibilityRole="tablist">
       {TABS.map((tab) => {
         const active = tab.name === activeTab;
         return (
-          <Pressable key={tab.name} style={tabBarStyles.item} onPress={() => onChange(tab.name)}>
-            <Text style={[tabBarStyles.icon, active && tabBarStyles.iconActive]}>{tab.icon}</Text>
+          <Pressable
+            key={tab.name}
+            style={({ pressed }) => [tabBarStyles.item, pressed && tabBarStyles.pressed]}
+            onPress={() => onChange(tab.name)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tab.label}
+          >
+            {/* Active indicator: small teal pill above the icon — state is not
+                conveyed by color alone (WCAG 1.4.1). */}
+            <View style={[tabBarStyles.indicator, active ? tabBarStyles.indicatorActive : null]} />
+            <Text style={[tabBarStyles.icon, active && tabBarStyles.iconActive]} importantForAccessibility="no">
+              {tab.icon}
+            </Text>
             <Text style={[tabBarStyles.label, active && tabBarStyles.labelActive]}>{tab.label}</Text>
           </Pressable>
         );
@@ -100,18 +140,40 @@ function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: T
   );
 }
 
+const shellStyles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.pageBackground },
+  insetTop: { backgroundColor: colors.surface },
+  insetBottom: { backgroundColor: colors.surface },
+  content: { flex: 1 },
+});
+
 const tabBarStyles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingBottom: 8,
-    paddingTop: 6,
+    borderTopColor: colors.border,
+    paddingTop: spacing.x1,
+    minHeight: layout.tabBarHeight,
   },
-  item: { flex: 1, alignItems: 'center', gap: 2 },
-  icon: { fontSize: 20, opacity: 0.5 },
+  item: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.x1,
+    paddingVertical: spacing.x1,
+    minHeight: layout.minTouchTarget,
+  },
+  pressed: { backgroundColor: colors.primarySubtle },
+  indicator: {
+    width: 20,
+    height: 3,
+    borderRadius: radius.full,
+    backgroundColor: 'transparent',
+  },
+  indicatorActive: { backgroundColor: colors.primary },
+  icon: { fontSize: typography.h3.fontSize, opacity: 0.55 },
   iconActive: { opacity: 1 },
-  label: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
-  labelActive: { color: '#4f46e5' },
+  label: { ...typography.caption, color: colors.textSecondary },
+  labelActive: { color: colors.primaryStrong, fontWeight: typography.button.fontWeight },
 });

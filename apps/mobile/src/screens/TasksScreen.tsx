@@ -4,6 +4,8 @@ import { api, ApiError } from '../api/client';
 import type { CareTaskDto } from '../api/types';
 import { formatDueAt, TASK_TYPE_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { colors } from '../theme/tokens';
 
 /**
  * Sprint 3 — "Tasks" tab: upcoming pending care tasks ordered by due_at ASC.
@@ -83,12 +85,14 @@ export function TasksScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Upcoming tasks</Text>
-        <Pressable onPress={() => void load()} hitSlop={8}>
-          <Text style={styles.refresh}>⟳</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title="Upcoming tasks"
+        actions={
+          <Pressable onPress={() => void load()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh tasks">
+            <Text style={styles.refresh}>⟳</Text>
+          </Pressable>
+        }
+      />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -115,17 +119,9 @@ export function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f7fb' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#111827' },
-  refresh: { fontSize: 20, color: '#4f46e5', paddingHorizontal: 8 },
+  container: { flex: 1, backgroundColor: colors.pageBackground },
+  // header/headerTitle moved to <ScreenHeader/> (design shell) — Step 5.
+  refresh: { fontSize: 20, color: colors.primary, paddingHorizontal: 8 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { padding: 16, gap: 10 },
   error: { color: '#dc2626', paddingHorizontal: 16, paddingBottom: 8, fontSize: 13 },

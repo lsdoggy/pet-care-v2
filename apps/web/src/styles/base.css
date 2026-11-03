@@ -1,0 +1,151 @@
+/* ============================================================
+   Pet Care Platform — Base styles (Web)
+   Design Sprint 0 · Step 2
+
+   Requires tokens.css to be loaded FIRST.
+   Scope: reset + defaults only. No component classes yet
+   (components arrive in Sprint 1; existing inline styles keep
+   working — nothing here overrides them destructively).
+   ============================================================ */
+
+/* ---------- Reset ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%; /* prevent iOS font scaling surprises */
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);      /* 15px base */
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit; /* inherit family/size from body */
+  color: inherit;
+}
+
+ul[class],
+ol[class] {
+  list-style: none;
+  padding: 0;
+}
+
+a {
+  color: var(--color-text-link);
+  text-decoration-thickness: from-font;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1, h2, h3, h4 {
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--color-text-primary);
+}
+
+h1 { font-size: var(--font-size-2xl); } /* 24px page title */
+h2 { font-size: var(--font-size-xl); }  /* 20px section */
+h3 { font-size: var(--font-size-lg); }  /* 18px card */
+h4 { font-size: var(--font-size-md); }  /* 16px sub-block */
+
+/* ---------- Accessibility helpers ---------- */
+
+/* Visible keyboard focus on all interactive elements (WCAG 2.4.7) */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip-to-content link (WCAG 2.4.1) */
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -100px;
+  z-index: var(--z-toast);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  transition: top var(--duration-fast) var(--easing-standard);
+}
+
+.skip-link:focus-visible {
+  top: var(--space-2);
+}
+
+/* Respect reduced motion preference (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Selection & scrollbar polish (subtle) ---------- */
+::selection {
+  background: var(--color-primary-border);
+  color: var(--color-text-primary);
+}
+
+/* ---------- Utility primitives (layout shell support) ---------- */
+.pc-container {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin-inline: auto;
+  padding-inline: var(--page-padding-x);
+}
+
+@media (min-width: 768px) {
+  .pc-container {
+    padding-inline: var(--space-6);
+  }
+}
