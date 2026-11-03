@@ -6,9 +6,11 @@ import type {
   CreateFoodProductRequest,
   CreatePetRequest,
   CreateRecordRequest,
+  DeviceDto,
   CreateShoppingItemRequest,
   FoodProductDto,
   HistoryEventDto,
+  NotificationDto,
   PetDto,
   PurchaseItemRequest,
   ShoppingItemDto,
@@ -186,6 +188,33 @@ export const api = {
     return body as VetRecordDto;
   },
 
+  /* ---------- Notifications & devices (Sprint 6) ---------- */
+
+  /** Idempotent registration of the Expo push token for the current user. */
+  registerDevice: (token: string, platform: 'ios' | 'android' | 'web', jwt: string) =>
+    request<DeviceDto>(
+      '/devices/register',
+      { method: 'POST', body: JSON.stringify({ token, platform }) },
+      jwt,
+    ),
+
+  listDevices: (jwt: string) => request<DeviceDto[]>('/devices', { method: 'GET' }, jwt),
+
+  listNotifications: (jwt: string) =>
+    request<NotificationDto[]>('/notifications', { method: 'GET' }, jwt),
+
+  unreadNotificationCount: (jwt: string) =>
+    request<{ count: number }>('/notifications/unread-count', { method: 'GET' }, jwt),
+
+  markNotificationRead: (id: number, jwt: string) =>
+    request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, jwt),
+
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, jwt: string) =>
+    request<UserDto>(
+      '/users/notification-settings',
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      jwt,
+    ),
   /* ---------- Food products & shopping list (Sprint 5) ---------- */
 
   listFoodProducts: (token: string) => request<FoodProductDto[]>('/food-products', { method: 'GET' }, token),

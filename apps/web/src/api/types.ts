@@ -1,6 +1,29 @@
 export interface UserDto {
   id: number
   email: string
+  /** Sprint 6: profile push switch (Push On/Off). */
+  pushNotificationsEnabled: boolean
+  /** Sprint 6: profile email switch (Email On/Off, opt-in). */
+  emailNotificationsEnabled: boolean
+  createdAt: string
+}
+
+/** Mirrors backend ChannelStatus enum (stored lowercase in the DB). 'read' = user has seen it. */
+export type NotificationChannelStatus = 'pending' | 'sent' | 'failed' | 'read'
+
+/** Mirrors backend NotificationType enum: delivery channel of the notification. */
+export type NotificationType = 'push' | 'email'
+
+/** One row of GET /api/v1/notifications (newest first). */
+export interface NotificationDto {
+  id: number
+  type: NotificationType
+  title: string
+  body: string
+  /** Raw JSON string with extra context, e.g. {"careTaskId":42,"dueAt":"..."}. */
+  payloadJson: string | null
+  channelStatus: NotificationChannelStatus
+  sentAt: string | null
   createdAt: string
 }
 

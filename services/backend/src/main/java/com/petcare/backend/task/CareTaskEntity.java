@@ -47,6 +47,10 @@ public class CareTaskEntity {
     @Column(name = "recurrence_rule", length = 50)
     private String recurrenceRule;
 
+    /** Sprint 6: set by the reminder scheduler so a task is notified only once. */
+    @Column(name = "reminder_sent", nullable = false)
+    private boolean reminderSent = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -130,6 +134,14 @@ public class CareTaskEntity {
 
     public void setRecurrenceRule(String recurrenceRule) {
         this.recurrenceRule = recurrenceRule;
+    }
+
+    public boolean isReminderSent() {
+        return reminderSent;
+    }
+
+    public void setReminderSent(boolean reminderSent) {
+        this.reminderSent = reminderSent;
     }
 
     public Instant getCreatedAt() {

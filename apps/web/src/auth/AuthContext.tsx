@@ -63,6 +63,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emit()
   }, [])
 
+  /** Sprint 6: keep the cached user in sync after PATCH /users/notification-settings. */
+  const setUser = useCallback((updated: UserDto) => {
+    if (session.status === 'authed') {
+      session = { status: 'authed', user: updated }
+      emit()
+    }
+  }, [])
+
   const value = useMemo(
     () => ({
       user: current.status === 'authed' ? current.user : null,
@@ -70,8 +78,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      setUser,
     }),
-    [current, login, register, logout],
+    [current, login, register, logout, setUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 export type Route =
   | { name: 'Home' }
   | { name: 'Tasks' }
+  | { name: 'Settings' }
   | { name: 'Shopping' }
   | { name: 'Stock' }
   | { name: 'PetForm'; petId?: number }
@@ -13,6 +14,8 @@ export type Route =
   | { name: 'AppointmentForm'; petId: number; petName?: string }
   | { name: 'RecordForm'; petId: number; petName?: string };
 
+/** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). Sprint 6 adds Settings. */
+export type TabName = 'Home' | 'Tasks' | 'Settings';
 /** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
 export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock';
 
@@ -76,6 +79,7 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
 const TABS: { name: TabName; label: string; icon: string }[] = [
   { name: 'Home', label: 'Home', icon: '🐾' },
   { name: 'Tasks', label: 'Tasks', icon: '📅' },
+  { name: 'Settings', label: 'Settings', icon: '⚙️' },
   { name: 'Shopping', label: 'Buy', icon: '🛒' },
   { name: 'Stock', label: 'Stock', icon: '📦' },
 ];

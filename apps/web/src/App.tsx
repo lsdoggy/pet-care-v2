@@ -3,6 +3,7 @@ import { AuthProvider } from './auth/AuthContext'
 import AuthPage from './pages/AuthPage'
 import HomePage from './pages/HomePage'
 import PetDetailPage from './pages/PetDetailPage'
+import SettingsPage from './pages/SettingsPage'
 import ShoppingListPage from './pages/ShoppingListPage'
 import StockPage from './pages/StockPage'
 
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/pets/:id" element={<PetDetailPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           {/* Sprint 5: "Запасы" and "Купить" pages */}
           <Route path="/stock" element={<StockPage />} />
           <Route path="/shopping" element={<ShoppingListPage />} />

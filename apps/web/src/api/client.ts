@@ -10,6 +10,7 @@ import type {
   CreateTaskRequest,
   FoodProductDto,
   HistoryEventDto,
+  NotificationDto,
   PetDto,
   PurchaseItemRequest,
   ShoppingItemDto,
@@ -189,6 +190,23 @@ export const api = {
   getPetHistory: (petId: number, token: string) =>
     request<HistoryEventDto[]>(`/pets/${petId}/history`, { method: 'GET' }, token),
 
+  /* ---------- Notifications (Sprint 6) ---------- */
+
+  listNotifications: (token: string) =>
+    request<NotificationDto[]>('/notifications', { method: 'GET' }, token),
+
+  unreadNotificationCount: (token: string) =>
+    request<{ count: number }>('/notifications/unread-count', { method: 'GET' }, token),
+
+  markNotificationRead: (id: number, token: string) =>
+    request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, token),
+
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, token: string) =>
+    request<UserDto>(
+      '/users/notification-settings',
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      token,
+    ),
   /* ---------- Food products & shopping list (Sprint 5) ---------- */
 
   listFoodProducts: (token: string) => request<FoodProductDto[]>('/food-products', { method: 'GET' }, token),

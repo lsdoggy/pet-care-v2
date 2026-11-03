@@ -55,6 +55,16 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!-- Sprint 6: SMTP email delivery (JavaMailSender). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<!--
+		  Sprint 6: push notifications. Per the approved plan the primary (and only) transport is
+		  the Expo Push Service (plain HTTPS via RestClient, which forwards to FCM/APNs), so the
+		  heavy firebase-admin dependency and FCM service accounts are intentionally NOT required.
+		-->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
