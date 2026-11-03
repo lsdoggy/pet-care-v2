@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { api } from '../api/client'
+import type { RegisterProfile } from '../api/client'
 import type { UserDto } from '../api/types'
 import { AuthContext } from './authContext'
 import { tokenStore } from './tokenStore'
@@ -50,8 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emit()
   }, [])
 
-  const register = useCallback(async (email: string, password: string) => {
-    const res = await api.register(email, password)
+  const register = useCallback(async (email: string, password: string, profile?: RegisterProfile) => {
+    const res = await api.register(email, password, profile)
     tokenStore.set(res.accessToken)
     session = { status: 'authed', user: res.user }
     emit()

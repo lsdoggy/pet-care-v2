@@ -27,7 +27,7 @@ export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock' | 'Settings';
  * Used by DetailHeader on pushed (non-tab) screens.
  */
 export const ROUTE_TITLES: Record<Route['name'], string> = {
-  Home: 'My pets',
+  Home: 'Главная',
   Tasks: 'Upcoming tasks',
   Shopping: 'Shopping list',
   Stock: 'Food stock',

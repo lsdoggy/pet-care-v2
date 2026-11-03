@@ -3,12 +3,13 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
+import type { RegisterProfile } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
 import { usePushRegistration } from '../notifications/usePushRegistration';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
 import { AppStack, type Route, type TabName } from '../navigation/AppStack';
-import { PetsHomeScreen } from '../screens/PetsHomeScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
 import { PetFormScreen } from '../screens/PetFormScreen';
 import { PetDetailScreen } from '../screens/PetDetailScreen';
 import { PetHistoryScreen } from '../screens/PetHistoryScreen';
@@ -52,9 +53,11 @@ export function AuthGate() {
   }, []);
 
   const handleAuth = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, profile?: RegisterProfile) => {
       const res: AuthResponse =
-        mode === 'login' ? await api.login(email, password) : await api.register(email, password);
+        mode === 'login'
+          ? await api.login(email, password)
+          : await api.register(email, password, profile);
       await tokenStore.set(res.accessToken);
       jwtRef.current = res.accessToken;
       setUser(res.user);
@@ -110,7 +113,9 @@ export function AuthGate() {
                 return <StockScreen key="stock" />;
               case 'Home':
               default:
-                return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;
+                return (
+                  <DashboardScreen key="home" user={user} onLogout={handleLogout} onTabChange={setActiveTab} />
+                );
             }
           }}
         </AppStack>

@@ -22,6 +22,12 @@ import type {
   VetRecordDto,
 } from './types'
 
+/** Design Sprint 1: optional profile fields sent alongside {email,password}. */
+export interface RegisterProfile {
+  firstName?: string
+  phone?: string
+}
+
 const BASE_URL = '/api/v1'
 
 /** Resolves a backend-relative photo URL (e.g. /files/uploads/pets/x.jpg) for the browser. */
@@ -65,10 +71,12 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 
 export const api = {
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      // Design Sprint 1: firstName/phone are optional in the backend DTO —
+      // old contract {email,password} stays valid (backward compatible).
+      body: JSON.stringify({ email, password, ...profile }),
     }),
 
   login: (email: string, password: string) =>

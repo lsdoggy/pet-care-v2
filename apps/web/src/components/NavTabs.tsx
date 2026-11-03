@@ -6,7 +6,7 @@ export interface NavTabDef {
 }
 
 const tabs: NavTabDef[] = [
-  { to: '/', label: 'Pets' },
+  { to: '/', label: 'Главная' },
   { to: '/stock', label: 'Stock' },
   { to: '/shopping', label: 'Shopping' },
 ]

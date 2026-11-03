@@ -6,6 +6,7 @@ import type {
   CreateFoodProductRequest,
   CreatePetRequest,
   CreateRecordRequest,
+  CreateTaskRequest,
   DeviceDto,
   CreateShoppingItemRequest,
   FoodProductDto,
@@ -65,11 +66,19 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return body as T;
 }
 
+/** Design Sprint 1: optional profile fields accepted by the backend RegisterRequest. */
+export interface RegisterProfile {
+  firstName?: string;
+  phone?: string;
+}
+
 export const api = {
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      // Design Sprint 1: firstName/phone are optional in the backend DTO —
+      // old contract {email,password} stays valid (backward compatible).
+      body: JSON.stringify({ email, password, ...profile }),
     }),
 
   login: (email: string, password: string) =>
@@ -125,6 +134,13 @@ export const api = {
   /* ---------- Care tasks (Sprint 3) ---------- */
 
   listUpcomingTasks: (token: string) => request<CareTaskDto[]>('/tasks/upcoming', { method: 'GET' }, token),
+
+  /** All tasks incl. DONE and overdue PENDING (mirror of web client; GET /api/v1/tasks). */
+  listTasks: (token: string) => request<CareTaskDto[]>('/tasks', { method: 'GET' }, token),
+
+  /** Creates a care task (mirror of web client; POST /api/v1/tasks). */
+  createTask: (body: CreateTaskRequest, token: string) =>
+    request<CareTaskDto>('/tasks', { method: 'POST', body: JSON.stringify(body) }, token),
 
   /** Marks a task as done; if it has a recurrence rule the API returns the NEW pending task. */
   completeTask: (id: number, token: string) =>
