@@ -96,3 +96,91 @@ export function pluralRu(n: number, forms: [string, string, string]): string {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ${forms[1]}`
   return `${n} ${forms[2]}`
 }
+
+/* ---------- age & greeting (Design Sprint 2 dashboard) ---------- */
+
+/** "3 года" / "5 мес." / "12 дн." — pet age from a local YYYY-MM-DD birth date. */
+export function formatAgeRu(birthDate: string, now: Date = new Date()): string {
+  const b = new Date(`${birthDate}T00:00:00`)
+  if (Number.isNaN(b.getTime())) return ''
+  let years = now.getFullYear() - b.getFullYear()
+  let months = now.getMonth() - b.getMonth()
+  if (now.getDate() < b.getDate()) months -= 1
+  if (months < 0) {
+    years -= 1
+    months += 12
+  }
+  if (years >= 0 && !(years === 0 && months === 0)) {
+    if (years === 0) return pluralRu(months, ['месяц', 'месяца', 'месяцев'])
+    const y = pluralRu(years, ['год', 'года', 'лет'])
+    return months > 0 ? `${y}, ${pluralRu(months, ['месяц', 'месяца', 'месяцев'])}` : y
+  }
+  const days = Math.floor((startOfDay(now) - startOfDay(b)) / MS_IN_DAY)
+  return pluralRu(Math.max(0, days), ['день', 'дня', 'дней'])
+}
+
+/** Time-of-day greeting part: "Доброе утро" / "Добрый день" / "Добрый вечер" / "Доброй ночи". */
+export function greetingWord(now: Date = new Date()): string {
+  const h = now.getHours()
+  if (h >= 5 && h < 12) return 'Доброе утро'
+  if (h >= 12 && h < 18) return 'Добрый день'
+  if (h >= 18 && h < 23) return 'Добрый вечер'
+  return 'Доброй ночи'
+}
+
+/** Display name for a user: email local-part before "@", fallback to the whole email. */
+export function displayNameFromEmail(email: string): string {
+  const at = email.indexOf('@')
+  const base = at > 0 ? email.slice(0, at) : email
+  return base.length > 0 ? base : email
+}
+
+const MONTH_GENITIVE_RU = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+]
+
+/** Today's line for the greeting block: "Четверг, 4 ноября". */
+export function todayLabel(now: Date = new Date()): string {
+  const wd = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' }).format(now)
+  return `${wd[0].toUpperCase()}${wd.slice(1)}, ${now.getDate()} ${MONTH_GENITIVE_RU[now.getMonth()]}`
+}
+
+/** Parses "DAILY:1" / "WEEKLY:2" backend recurrence rules into Russian copy; null when unknown. */
+export function recurrenceLabel(rule: string | null): string | null {
+  if (!rule) return null
+  const [unitRaw, intervalRaw] = rule.split(':')
+  const interval = Number.parseInt(intervalRaw ?? '1', 10)
+  if (!Number.isFinite(interval) || interval < 1) return null
+  switch (unitRaw?.toUpperCase()) {
+    case 'DAILY':
+      return interval === 1 ? 'Каждый день' : `Каждые ${interval} дн.`
+    case 'WEEKLY':
+      return interval === 1 ? 'Каждую неделю' : `Каждые ${interval} нед.`
+    case 'MONTHLY':
+      return interval === 1 ? 'Каждый месяц' : `Каждые ${interval} мес.`
+    case 'YEARLY':
+      return interval === 1 ? 'Каждый год' : `Каждые ${interval} г.`
+    default:
+      return null
+  }
+}
+
+/* ---------- unified upcoming-events feed (tasks + visits) ---------- */
+
+export type DashboardEvent =
+  | { kind: 'task'; at: number; task: CareTaskDto }
+  | { kind: 'visit'; at: number; appointment: VetAppointmentDto }
+
+/** Merges pending tasks and scheduled future visits into one chronological feed. */
+export function buildUpcomingEvents(
+  tasks: CareTaskDto[],
+  appointments: VetAppointmentDto[],
+  now: number = Date.now(),
+): DashboardEvent[] {
+  const taskEvents: DashboardEvent[] = tasks.map((t) => ({ kind: 'task', at: new Date(t.dueAt).getTime(), task: t }))
+  const visitEvents: DashboardEvent[] = appointments
+    .filter((a) => a.status === 'SCHEDULED' && new Date(a.scheduledAt).getTime() >= now)
+    .map((a) => ({ kind: 'visit', at: new Date(a.scheduledAt).getTime(), appointment: a }))
+  return [...taskEvents, ...visitEvents].sort((x, y) => x.at - y.at)
+}
