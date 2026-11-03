@@ -129,6 +129,15 @@ public class GlobalExceptionHandler {
                         List.of(new FieldError("birthDate", "Birth date cannot be in the future"))));
     }
 
+    @ExceptionHandler(InvalidPetWeightException.class)
+    ResponseEntity<ApiError> handleInvalidPetWeight(InvalidPetWeightException ex) {
+        // Design Sprint 3: service-level weight/breed validation -> 400.
+        String field = ex.getMessage().startsWith("Breed") ? "breed" : "weightKg";
+        return ResponseEntity.badRequest()
+                .body(ApiError.of(HttpStatus.BAD_REQUEST, ex.getMessage(),
+                        List.of(new FieldError(field, ex.getMessage()))));
+    }
+
     @ExceptionHandler(InvalidFileException.class)
     ResponseEntity<ApiError> handleInvalidFile(InvalidFileException ex) {
         return ResponseEntity.badRequest()

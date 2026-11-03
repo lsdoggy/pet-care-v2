@@ -1,8 +1,34 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
 import type { PetDto, PetSpecies } from '../api/types'
-import { PET_SPECIES, SPECIES_LABELS } from '../api/types'
+import { SPECIES_LABELS } from '../api/types'
+import Modal from './Modal'
+import { petInitials } from '../lib/petFormat'
+import {
+  PET_BREED_MAX_LENGTH,
+  PET_NAME_MAX_LENGTH,
+  parseWeightKg,
+  validatePetForm,
+  isPetFormValid,
+  mapPetApiError,
+} from '../lib/petValidation'
+import type { PetFieldErrors, PetFieldName, PetFormValues } from '../lib/petValidation'
+import '../styles/pets.css'
+
+/**
+ * Design Sprint 3 · Pets — форма добавления/редактирования питомца (Web).
+ *
+ * Изменения против прежней версии:
+ *  - новые поля «Порода» и «Вес» (backend V10, необязательные — обратная совместимость);
+ *  - клиентская валидация из lib/petValidation (имя*, вид*, дата не в будущем, вес > 0)
+ *    с русскими сообщениями и aria-invalid/aria-describedby (WCAG AA);
+ *  - инлайн-стили заменены на CSS-классы токенов; на мобильных модалка
+ *    отображается как bottom sheet (см. pets.css);
+ *  - focus-trap / Escape / возврат фокуса — через базовый компонент Modal.
+ *
+ * Бизнес-логика сохранена: те же эндпоинты POST/PATCH /pets и POST /pets/{id}/photo.
+ */
 
 interface Props {
   /** When provided the form edits an existing pet, otherwise it creates a new one. */
@@ -12,152 +38,253 @@ interface Props {
   onSaved: (pet: PetDto) => void
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  backgroundColor: 'rgba(15, 23, 42, 0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 100,
-}
-
-const modalStyle: React.CSSProperties = {
-  backgroundColor: '#fff',
-  borderRadius: 12,
-  padding: 24,
-  width: 360,
-  maxWidth: '90vw',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-}
-
-const inputStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: 6,
-  border: '1px solid #cbd5e1',
-  fontSize: 15,
-}
+const EMPTY_VALUES: PetFormValues = { name: '', species: '', breed: '', birthDate: '', weightKg: '' }
 
 export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
-  const [name, setName] = useState(pet?.name ?? '')
-  const [species, setSpecies] = useState<PetSpecies>(pet?.species ?? 'DOG')
-  const [birthDate, setBirthDate] = useState(pet?.birthDate ?? '')
+  const [values, setValues] = useState<PetFormValues>(() =>
+    pet
+      ? {
+          name: pet.name,
+          species: pet.species,
+          breed: pet.breed ?? '',
+          birthDate: pet.birthDate ?? '',
+          weightKg: pet.weightKg != null ? String(pet.weightKg).replace('.', ',') : '',
+        }
+      : EMPTY_VALUES,
+  )
+  const [touched, setTouched] = useState<Partial<Record<PetFieldName, boolean>>>({})
+  const [submitAttempted, setSubmitAttempted] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  const allErrors: PetFieldErrors = useMemo(() => validatePetForm(values), [values])
+
+  /** Показываем ошибку поля только после blur либо после попытки отправки. */
+  function fieldError(field: PetFieldName): string | undefined {
+    return touched[field] || submitAttempted ? allErrors[field] : undefined
+  }
+
+  function setValue<K extends keyof PetFormValues>(key: K, value: PetFormValues[K]) {
+    setValues((prev) => ({ ...prev, [key]: value }))
+    setFormError(null)
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-
-    if (!name.trim()) {
-      setError('Name is required')
-      return
-    }
-    if (birthDate && new Date(birthDate).getTime() > Date.now()) {
-      setError('Birth date cannot be in the future')
-      return
-    }
+    setSubmitAttempted(true)
+    // Финальная проверка перед отправкой: ошибки уже в allErrors.
+    if (!isPetFormValid(allErrors)) return
 
     setSaving(true)
+    setFormError(null)
     try {
+      const body = {
+        name: values.name.trim(),
+        species: values.species as PetSpecies,
+        birthDate: values.birthDate || null,
+        breed: values.breed.trim() || null,
+        weightKg: parseWeightKg(values.weightKg),
+      }
+
       let saved: PetDto
       if (pet) {
-        saved = await api.updatePet(pet.id, { name: name.trim(), species, birthDate: birthDate || undefined }, token)
-        if (photoFile) {
-          saved = await api.uploadPetPhoto(saved.id, photoFile, token)
-        }
+        saved = await api.updatePet(pet.id, body, token)
+        if (photoFile) saved = await api.uploadPetPhoto(saved.id, photoFile, token)
       } else {
-        saved = await api.createPet({ name: name.trim(), species, birthDate: birthDate || undefined }, token)
-        if (photoFile) {
-          saved = await api.uploadPetPhoto(saved.id, photoFile, token)
-        }
+        saved = await api.createPet(body, token)
+        if (photoFile) saved = await api.uploadPetPhoto(saved.id, photoFile, token)
       }
       onSaved(saved)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      const mapped = mapPetApiError(err instanceof Error ? err.message : undefined)
+      if (mapped.field) setTouched((prev) => ({ ...prev, [mapped.field as PetFieldName]: true }))
+      setFormError(mapped.message)
     } finally {
       setSaving(false)
     }
   }
 
+  const titleId = 'pet-form-title'
+  const todayIso = new Date().toISOString().slice(0, 10)
+
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>{pet ? 'Edit pet' : 'Add pet'}</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <label>
-            Name *
-            <input
-              style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
-              value={name}
-              maxLength={100}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Rex"
-              autoFocus
-            />
-          </label>
+    <Modal labelledBy={titleId} onClose={saving ? () => undefined : onClose} className="pc-modal--form">
+      <h2 id={titleId} className="pc-modal__title">
+        {pet ? 'Редактировать питомца' : 'Добавить питомца'}
+      </h2>
 
-          <label>
-            Species
-            <select
-              style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
-              value={species}
-              onChange={(e) => setSpecies(e.target.value as PetSpecies)}
-            >
-              {PET_SPECIES.map((s) => (
-                <option key={s} value={s}>
-                  {SPECIES_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Birth date
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {/* Фото / placeholder */}
+        <div className="pc-photo-preview">
+          <span className="pc-photo-preview__avatar" aria-hidden="true">
+            {photoFile ? (
+              <img src={URL.createObjectURL(photoFile)} alt="" />
+            ) : pet?.photoUrl ? (
+              <img src={pet.photoUrl} alt="" />
+            ) : (
+              petInitials(values.name)
+            )}
+          </span>
+          <label className="pc-field" style={{ flex: 1 }}>
+            <span className="pc-field__label">Фото</span>
             <input
-              style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
-              type="date"
-              value={birthDate}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setBirthDate(e.target.value)}
-            />
-          </label>
-
-          <label>
-            Photo
-            <input
-              style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
+              className="pc-field__input"
               type="file"
               accept=".jpg,.jpeg,.png,.webp,image/*"
               onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
             />
           </label>
+        </div>
 
-          {error && <p style={{ color: '#c0392b', margin: 0, fontSize: 14 }}>{error}</p>}
+        {/* Имя (обязательно) */}
+        <div className="pc-field">
+          <label className="pc-field__label" htmlFor="pet-name">
+            Имя <span className="pc-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="pet-name"
+            data-autofocus
+            className={`pc-field__input${fieldError('name') ? ' pc-field__input--invalid' : ''}`}
+            value={values.name}
+            maxLength={PET_NAME_MAX_LENGTH}
+            required
+            autoComplete="off"
+            placeholder="Например, Рекс"
+            aria-invalid={!!fieldError('name')}
+            aria-describedby={fieldError('name') ? 'pet-name-error' : undefined}
+            onChange={(e) => setValue('name', e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
+          />
+          {fieldError('name') && (
+            <p id="pet-name-error" className="pc-field__error" role="alert">
+              {fieldError('name')}
+            </p>
+          )}
+        </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ ...inputStyle, cursor: 'pointer' }}>
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{ ...inputStyle, cursor: 'pointer', backgroundColor: '#4f46e5', color: '#fff', border: 'none' }}
+        {/* Вид + порода */}
+        <div className="pc-field-row">
+          <div className="pc-field">
+            <label className="pc-field__label" htmlFor="pet-species">
+              Вид <span className="pc-field__required" aria-hidden="true">*</span>
+            </label>
+            <select
+              id="pet-species"
+              className={`pc-field__input${fieldError('species') ? ' pc-field__input--invalid' : ''}`}
+              value={values.species}
+              required
+              aria-invalid={!!fieldError('species')}
+              aria-describedby={fieldError('species') ? 'pet-species-error' : undefined}
+              onChange={(e) => setValue('species', e.target.value as PetSpecies | '')}
+              onBlur={() => setTouched((t) => ({ ...t, species: true }))}
             >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
+              <option value="">Выберите вид…</option>
+              {(Object.keys(SPECIES_LABELS) as PetSpecies[]).map((s) => (
+                <option key={s} value={s}>
+                  {SPECIES_LABELS[s]}
+                </option>
+              ))}
+            </select>
+            {fieldError('species') && (
+              <p id="pet-species-error" className="pc-field__error" role="alert">
+                {fieldError('species')}
+              </p>
+            )}
           </div>
-        </form>
-      </div>
-    </div>
+
+          <div className="pc-field">
+            <label className="pc-field__label" htmlFor="pet-breed">
+              Порода
+            </label>
+            <input
+              id="pet-breed"
+              className={`pc-field__input${fieldError('breed') ? ' pc-field__input--invalid' : ''}`}
+              value={values.breed}
+              maxLength={PET_BREED_MAX_LENGTH}
+              placeholder="Например, лайка"
+              autoComplete="off"
+              aria-invalid={!!fieldError('breed')}
+              aria-describedby={fieldError('breed') ? 'pet-breed-error' : undefined}
+              onChange={(e) => setValue('breed', e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, breed: true }))}
+            />
+            {fieldError('breed') && (
+              <p id="pet-breed-error" className="pc-field__error" role="alert">
+                {fieldError('breed')}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Дата рождения + вес */}
+        <div className="pc-field-row">
+          <div className="pc-field">
+            <label className="pc-field__label" htmlFor="pet-birthdate">
+              Дата рождения
+            </label>
+            <input
+              id="pet-birthdate"
+              type="date"
+              className={`pc-field__input${fieldError('birthDate') ? ' pc-field__input--invalid' : ''}`}
+              value={values.birthDate}
+              max={todayIso}
+              aria-invalid={!!fieldError('birthDate')}
+              aria-describedby={fieldError('birthDate') ? 'pet-birthdate-error' : 'pet-birthdate-hint'}
+              onChange={(e) => setValue('birthDate', e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, birthDate: true }))}
+            />
+            {fieldError('birthDate') ? (
+              <p id="pet-birthdate-error" className="pc-field__error" role="alert">
+                {fieldError('birthDate')}
+              </p>
+            ) : (
+              <p id="pet-birthdate-hint" className="pc-field__hint">
+                Возраст посчитаем автоматически.
+              </p>
+            )}
+          </div>
+
+          <div className="pc-field">
+            <label className="pc-field__label" htmlFor="pet-weight">
+              Вес, кг
+            </label>
+            <input
+              id="pet-weight"
+              type="text"
+              inputMode="decimal"
+              className={`pc-field__input${fieldError('weightKg') ? ' pc-field__input--invalid' : ''}`}
+              value={values.weightKg}
+              placeholder="4,5"
+              autoComplete="off"
+              aria-invalid={!!fieldError('weightKg')}
+              aria-describedby={fieldError('weightKg') ? 'pet-weight-error' : undefined}
+              onChange={(e) => setValue('weightKg', e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, weightKg: true }))}
+            />
+            {fieldError('weightKg') && (
+              <p id="pet-weight-error" className="pc-field__error" role="alert">
+                {fieldError('weightKg')}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {formError && (
+          <p className="pc-form-status pc-form-status--error" role="alert">
+            {formError}
+          </p>
+        )}
+
+        <div className="pc-modal__actions">
+          <button type="button" className="pc-btn pc-btn--ghost" onClick={onClose} disabled={saving}>
+            Отмена
+          </button>
+          <button type="submit" className="pc-btn pc-btn--primary" disabled={saving}>
+            {saving ? 'Сохранение…' : 'Сохранить'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

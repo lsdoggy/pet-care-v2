@@ -1,5 +1,6 @@
 package com.petcare.backend.pet.dto;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -14,7 +15,11 @@ public record PetDto(
         LocalDate birthDate,
         String photoUrl,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        /** Design Sprint 3: optional breed (nullable, backward compatible). */
+        String breed,
+        /** Design Sprint 3: optional weight in kg (> 0 when set, nullable). */
+        BigDecimal weightKg) {
 
     public static PetDto from(PetEntity entity) {
         return new PetDto(
@@ -25,6 +30,8 @@ public record PetDto(
                 entity.getBirthDate(),
                 entity.getPhotoUrl(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt());
+                entity.getUpdatedAt(),
+                entity.getBreed(),
+                entity.getWeightKg());
     }
 }

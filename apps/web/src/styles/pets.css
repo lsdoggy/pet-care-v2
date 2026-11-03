@@ -1,0 +1,432 @@
+/* ==========================================================================
+   Design Sprint 3 · Pets (web) — mobile-first.
+   Все значения из tokens.css; никаких UI-библиотек.
+   Секции: модалка (bottom-sheet на мобильных) · поля формы · карточка
+   питомца с расширенными данными · подтверждение удаления.
+   ========================================================================== */
+
+/* ---------- Modal shell (desktop: центрированное окно) ---------- */
+.pc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgba(15, 23, 42, 0.55); /* затемнение под WCAG-контраст содержимого */
+}
+
+.pc-modal {
+  width: 100%;
+  max-width: 460px;
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  background-color: var(--color-bg-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pc-modal__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.pc-modal__actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+@media (min-width: 768px) {
+  .pc-modal__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+  .pc-modal__actions > .pc-btn {
+    min-width: 120px;
+  }
+}
+
+/* ---------- Mobile (<768px): bottom sheet ---------- */
+@media (max-width: 767.98px) {
+  .pc-modal-overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .pc-modal {
+    max-width: none;
+    max-height: 88dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+
+  /* Визуальная «ручка» листа */
+  .pc-modal::before {
+    content: '';
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-border-strong);
+    margin-bottom: var(--space-1);
+    flex-shrink: 0;
+  }
+}
+
+/* ---------- Form fields ---------- */
+.pc-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pc-field__label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.pc-field__required {
+  color: var(--color-danger);
+}
+
+.pc-field__input {
+  width: 100%;
+  min-height: 44px; /* touch target ≥ 44px (WCAG AA) */
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-md); /* 16px — без iOS auto-zoom */
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+}
+
+.pc-field__input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.pc-field__input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+  border-color: var(--color-primary);
+}
+
+/* Ошибочное состояние: цвет + текст (не только цвет — WCAG 1.4.1) */
+.pc-field__input--invalid {
+  border-color: var(--color-danger);
+}
+
+.pc-field__error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.pc-field__hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Двухколоночная раскладка полей на широких экранах */
+.pc-field-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 480px) {
+  .pc-field-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Аватар-превью в форме */
+.pc-photo-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.pc-photo-preview__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-surface-mut);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.pc-photo-preview__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Глобальная ошибка формы / успешное сохранение */
+.pc-form-status {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  font-size: var(--font-size-sm);
+}
+
+.pc-form-status--error {
+  background-color: var(--color-danger-subtle);
+  color: var(--palette-red-700);
+}
+
+/* ---------- Confirm dialog ---------- */
+.pc-modal--confirm {
+  max-width: 400px;
+  text-align: center;
+  align-items: center;
+}
+
+.pc-confirm__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.pc-confirm__text {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+/* Danger button (подтверждение удаления) */
+.pc-btn--danger {
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+  border: 1px solid transparent;
+}
+
+.pc-btn--danger:hover {
+  background-color: var(--color-danger-hover);
+}
+
+/* ---------- Pet card (extended, requirement 2) ---------- */
+.pc-petcard__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.pc-petcard__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.pc-petcard__fact {
+  display: inline-flex;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+.pc-petcard__fact-label {
+  color: var(--color-text-tertiary);
+}
+
+.pc-petcard__next {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  min-width: 0;
+}
+
+.pc-petcard__next-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Инициалы вместо emoji-glyph, если фото нет */
+.pc-petcard__avatar--initials {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-hover);
+  background-color: var(--color-primary-subtle);
+}
+
+/* ---------- Pet detail page (Sprint 3) ---------- */
+.pc-petdetail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: var(--shell-content-max);
+}
+
+.pc-petdetail__back {
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.pc-petdetail__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .pc-petdetail__header {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-6);
+  }
+}
+
+.pc-petdetail__avatar {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-surface-mut);
+  font-size: 48px;
+}
+
+@media (min-width: 768px) {
+  .pc-petdetail__avatar {
+    width: 200px;
+    height: 200px;
+    font-size: 72px;
+  }
+}
+
+.pc-petdetail__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-petdetail__ident {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pc-petdetail__name {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-tight);
+}
+
+.pc-petdetail__facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+@media (min-width: 480px) {
+  .pc-petdetail__facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pc-petdetail__fact {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-size-base);
+}
+
+.pc-petdetail__fact dt {
+  color: var(--color-text-tertiary);
+}
+
+.pc-petdetail__fact dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.pc-petdetail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* Outlined danger button (secondary destructive action) */
+.pc-btn--danger-outline {
+  background-color: var(--color-bg-surface);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.pc-btn--danger-outline:hover {
+  background-color: var(--color-danger-subtle);
+}
+
+/* ---------- Tabs (role=tablist) ---------- */
+.pc-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.pc-tabs__tab {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+.pc-tabs__tab:hover {
+  color: var(--color-text-primary);
+}
+
+.pc-tabs__tab--active {
+  border-bottom-color: var(--color-primary);
+  color: var(--color-primary-hover);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pc-tabs__tab:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
