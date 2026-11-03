@@ -30,7 +30,10 @@ export const stack = {
 export const layout = {
   pagePaddingX: spacing.x4, // 16
   screenGap: spacing.x4,
+  headerHeight: 56,
   tabBarHeight: 56,
+  /** Content bottom clearance so lists scroll above the tab bar + home indicator. */
+  contentBottomInset: 96,
   minTouchTarget: 44, // WCAG AA touch target
 } as const;
 

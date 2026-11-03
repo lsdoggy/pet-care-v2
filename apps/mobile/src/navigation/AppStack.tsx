@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, typography, layout } from '../theme/tokens';
+import { useSafeAreaInsets } from '../theme/useSafeAreaInsets';
 
 export type Route =
   | { name: 'Home' }
@@ -66,11 +67,16 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
 
   const value = useMemo(() => ({ push, pop }), [push, pop]);
   const top = stack[stack.length - 1];
+  const insets = useSafeAreaInsets();
 
   return (
     <NavigationContext.Provider value={value}>
-      {children(top)}
-      <TabBar activeTab={activeTab} onChange={switchTab} />
+      <View style={shellStyles.root}>
+        {/* Top safe area: status bar / notch never overlaps screen content. */}
+        <View style={[shellStyles.insetTop, { height: insets.top }]} />
+        <View style={shellStyles.content}>{children(top)}</View>
+        <TabBar activeTab={activeTab} onChange={switchTab} bottomInset={insets.bottom} />
+      </View>
     </NavigationContext.Provider>
   );
 }
@@ -83,13 +89,28 @@ const TABS: { name: TabName; label: string; icon: string }[] = [
   { name: 'Stock', label: 'Stock', icon: '📦' },
 ];
 
-function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {
+function TabBar({
+  activeTab,
+  onChange,
+  bottomInset,
+}: {
+  activeTab: TabName;
+  onChange: (tab: TabName) => void;
+  bottomInset: number;
+}) {
   return (
-    <View style={tabBarStyles.bar}>
+    <View style={[tabBarStyles.bar, { paddingBottom: spacing.x1 + bottomInset }]} accessibilityRole="tablist">
       {TABS.map((tab) => {
         const active = tab.name === activeTab;
         return (
-          <Pressable key={tab.name} style={tabBarStyles.item} onPress={() => onChange(tab.name)}>
+          <Pressable
+            key={tab.name}
+            style={tabBarStyles.item}
+            onPress={() => onChange(tab.name)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tab.label}
+          >
             <Text style={[tabBarStyles.icon, active && tabBarStyles.iconActive]}>{tab.icon}</Text>
             <Text style={[tabBarStyles.label, active && tabBarStyles.labelActive]}>{tab.label}</Text>
           </Pressable>
@@ -99,19 +120,31 @@ function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: T
   );
 }
 
+const shellStyles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.pageBackground },
+  insetTop: { backgroundColor: colors.surface },
+  content: { flex: 1 },
+});
+
 const tabBarStyles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderTopWidth: 1,
     borderTopColor: colors.border,
-    paddingBottom: spacing.x2,
     paddingTop: spacing.x1 + 2,
     minHeight: layout.tabBarHeight,
   },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.x1, paddingVertical: spacing.x1 },
+  item: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.x1,
+    paddingVertical: spacing.x1,
+    minHeight: layout.minTouchTarget,
+  },
   icon: { fontSize: typography.h2.fontSize, opacity: 0.5 },
   iconActive: { opacity: 1 },
   label: { ...typography.caption, color: colors.textTertiary },
-  labelActive: { color: colors.primary },
+  labelActive: { color: colors.primary, fontWeight: typography.button.fontWeight },
 });

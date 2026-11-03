@@ -13,6 +13,8 @@ import type { PetDto, UserDto } from '../api/types';
 import { SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import { ScreenHeader, headerActionStyles } from '../components/ScreenHeader';
+import { colors, typography } from '../theme/tokens';
 
 interface Props {
   user: UserDto;
@@ -68,15 +70,20 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>My pets</Text>
-          <Text style={styles.email}>{user.email}</Text>
-        </View>
-        <Pressable style={({ pressed }) => [styles.logoutBtn, pressed && styles.pressed]} onPress={onLogout}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </Pressable>
-      </View>
+      <ScreenHeader
+        title="My pets"
+        subtitle={user.email}
+        actions={
+          <Pressable
+            style={({ pressed }) => [headerActionStyles.pill, styles.logoutBtn, pressed && styles.pressed]}
+            onPress={onLogout}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
+            <Text style={styles.logoutText}>Log out</Text>
+          </Pressable>
+        }
+      />
 
       {error ? (
         <View style={styles.centerBox}>
@@ -87,7 +94,7 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
         </View>
       ) : pets === null ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color="#4f46e5" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -121,19 +128,10 @@ function PetPhoto({ uri }: { uri: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f6f7fb' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 12,
-  },
-  title: { fontSize: 24, fontWeight: '700' },
-  email: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  logoutBtn: { backgroundColor: '#fee2e2', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
-  logoutText: { color: '#dc2626', fontWeight: '600' },
+  container: { flex: 1, backgroundColor: colors.pageBackground },
+  // header/title/email moved to <ScreenHeader/> (design shell) — Step 5.
+  logoutBtn: { backgroundColor: colors.dangerSubtle },
+  logoutText: { ...typography.button, color: colors.danger },
   list: { padding: 16, gap: 12, paddingBottom: 96 },
   card: {
     flexDirection: 'row',
