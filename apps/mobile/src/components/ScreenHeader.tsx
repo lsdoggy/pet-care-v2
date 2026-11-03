@@ -5,8 +5,9 @@
  */
 
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, typography, layout, radius } from '../theme/tokens';
+import { ROUTE_TITLES, useNavigation, type Route } from '../navigation/AppStack';
 
 interface Props {
   title: string;
@@ -34,6 +35,43 @@ export function ScreenHeader({ title, subtitle, actions }: Props) {
   );
 }
 
+/**
+ * DetailHeader — back-arrow header for pushed (non-tab) stack screens.
+ * Title comes from ROUTE_TITLES so every detail screen shares one pattern.
+ * Presentational only; uses the existing useNavigation() context (no new deps).
+ */
+export function DetailHeader({ route }: { route: Route }) {
+  const navigation = useNavigation();
+  return (
+    <View style={styles.bar} accessibilityRole="header">
+      <PressableBack onBack={navigation.pop} />
+      <View style={styles.textWrap}>
+        <Text style={styles.title} numberOfLines={1}>
+          {ROUTE_TITLES[route.name]}
+        </Text>
+      </View>
+      {/* Spacer keeps the title centered like the tab header layout. */}
+      <View style={styles.backHit} />
+    </View>
+  );
+}
+
+function PressableBack({ onBack }: { onBack: () => void }) {
+  return (
+    <Pressable
+      onPress={onBack}
+      hitSlop={8}
+      style={({ pressed }) => [styles.backHit, pressed && styles.backPressed]}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+    >
+      <Text style={styles.backChevron} importantForAccessibility="no">
+        ‹
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
@@ -50,6 +88,9 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: colors.textPrimary },
   subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.x2 },
+  backHit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md },
+  backPressed: { backgroundColor: colors.primarySubtle },
+  backChevron: { fontSize: typography.h1.fontSize, lineHeight: typography.h1.lineHeight, color: colors.primaryStrong, fontWeight: '700' },
 });
 
 /** Shared header action pill styles — used by tab screens for right-side buttons. */

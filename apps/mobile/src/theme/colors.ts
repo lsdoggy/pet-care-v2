@@ -41,6 +41,8 @@ export const colors = {
   // Brand
   primary: palette.teal600,
   primaryHover: palette.teal700,
+  /** Text-safe primary (AA on white and on subtle backgrounds). */
+  primaryStrong: palette.teal700,
   primarySubtle: palette.teal50,
   onPrimary: '#FFFFFF',
 

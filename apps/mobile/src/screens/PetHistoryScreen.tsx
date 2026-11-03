@@ -15,6 +15,7 @@ import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/ty
 import { APPOINTMENT_STATUS_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import { DetailHeader } from '../components/ScreenHeader';
 
 interface Props {
   petId: number;
@@ -89,10 +90,8 @@ export function PetHistoryScreen({ petId, petName }: Props) {
 
   return (
     <View style={styles.flex}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Health history</Text>
-        <Text style={styles.subtitle}>{petName}</Text>
-      </View>
+      {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
+      <DetailHeader route={{ name: 'PetHistory', petId, petName }} />
 
       {error && <Text style={[styles.errorText, styles.banner]}>{error}</Text>}
 

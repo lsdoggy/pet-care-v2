@@ -14,6 +14,7 @@ import { api, ApiError } from '../api/client';
 import type { FoodProductDto, ShoppingItemDto } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import { ScreenHeader } from '../components/ScreenHeader';
 
 /**
  * Sprint 5 mobile "Buy" tab: quick-add a shopping item and check off purchases.
@@ -130,12 +131,20 @@ export function ShoppingScreen() {
       keyboardVerticalOffset={90}
     >
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Buy 🛒</Text>
-          <Pressable onPress={() => navigation.push({ name: 'Stock' })} hitSlop={8}>
-            <Text style={styles.stockLink}>Stock 📦</Text>
-          </Pressable>
-        </View>
+        {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
+        <ScreenHeader
+          title="Shopping list"
+          actions={
+            <Pressable
+              onPress={() => navigation.push({ name: 'Stock' })}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open food stock"
+            >
+              <Text style={styles.stockLink}>Stock 📦</Text>
+            </Pressable>
+          }
+        />
 
         {/* Quick add row — the primary mobile flow of this sprint */}
         <View style={styles.quickAddRow}>
