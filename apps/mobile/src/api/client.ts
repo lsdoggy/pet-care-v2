@@ -66,11 +66,19 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return body as T;
 }
 
+/** Design Sprint 1: optional profile fields accepted by the backend RegisterRequest. */
+export interface RegisterProfile {
+  firstName?: string;
+  phone?: string;
+}
+
 export const api = {
-  register: (email: string, password: string) =>
+  register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      // Design Sprint 1: firstName/phone are optional in the backend DTO —
+      // old contract {email,password} stays valid (backward compatible).
+      body: JSON.stringify({ email, password, ...profile }),
     }),
 
   login: (email: string, password: string) =>
