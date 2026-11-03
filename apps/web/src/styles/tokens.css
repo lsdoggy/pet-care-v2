@@ -1,0 +1,248 @@
+/* ============================================================
+   Pet Care Platform — Design Tokens (Web)
+   Design Sprint 0 · Step 2
+
+   Single source of truth for the web design system.
+   Semantic naming only — raw palette values live in one place
+   and are referenced through semantic aliases.
+
+   DO NOT hardcode colors/sizes in components; use these vars:
+     color: var(--color-text-primary);
+   ============================================================ */
+
+:root {
+  /* ----------------------------------------------------------
+     1. RAW PALETTE (primitive scale, not used directly)
+     ---------------------------------------------------------- */
+  --palette-teal-50:  #f0fdfa;
+  --palette-teal-100: #ccfbf1;
+  --palette-teal-300: #5eead4;
+  --palette-teal-500: #14b8a6;
+  --palette-teal-600: #0d9488; /* brand primary */
+  --palette-teal-700: #0f766e;
+  --palette-teal-800: #115e59;
+  --palette-teal-900: #134e4a;
+
+  --palette-orange-50:  #fff7ed;
+  --palette-orange-100: #ffedd5;
+  --palette-orange-500: #f97316; /* brand accent */
+  --palette-orange-600: #ea580c;
+  --palette-orange-700: #c2410c;
+
+  --palette-slate-50:  #f8fafc;
+  --palette-slate-100: #f1f5f9;
+  --palette-slate-200: #e2e8f0;
+  --palette-slate-300: #cbd5e1;
+  --palette-slate-400: #94a3b8;
+  --palette-slate-500: #64748b;
+  --palette-slate-600: #475569;
+  --palette-slate-700: #334155;
+  --palette-slate-800: #1e293b;
+  --palette-slate-900: #0f172a;
+
+  --palette-green-600: #16a34a;
+  --palette-green-700: #15803d;
+  --palette-amber-600: #d97706;
+  --palette-amber-700: #b45309;
+  --palette-red-600:   #dc2626;
+  --palette-red-700:   #b91c1c;
+
+  --palette-white: #ffffff;
+  --palette-black: #000000;
+
+  /* ----------------------------------------------------------
+     2. SEMANTIC COLORS
+     ---------------------------------------------------------- */
+  /* Surfaces */
+  --color-bg-page:        var(--palette-slate-50);   /* app background */
+  --color-bg-surface:     var(--palette-white);      /* cards, panels */
+  --color-bg-surface-mut: var(--palette-slate-100);  /* subtle fill, hover rows */
+  --color-bg-inverse:     var(--palette-slate-900);
+
+  /* Brand */
+  --color-primary:         var(--palette-teal-600);
+  --color-primary-hover:   var(--palette-teal-700);
+  --color-primary-active:  var(--palette-teal-800);
+  --color-primary-subtle:  var(--palette-teal-50);   /* tinted backgrounds */
+  --color-primary-border:  var(--palette-teal-100);
+  --color-on-primary:      var(--palette-white);
+
+  --color-accent:          var(--palette-orange-500);
+  --color-accent-hover:    var(--palette-orange-600);
+  --color-accent-subtle:   var(--palette-orange-50);
+  --color-on-accent:       var(--palette-white);
+
+  /* Text */
+  --color-text-primary:    var(--palette-slate-900);
+  --color-text-secondary:  var(--palette-slate-600);
+  --color-text-tertiary:   var(--palette-slate-400); /* placeholders, hints */
+  --color-text-inverse:    var(--palette-white);
+  --color-text-link:       var(--palette-teal-700);
+  --color-text-danger:     var(--palette-red-600);
+
+  /* Borders & dividers */
+  --color-border:          var(--palette-slate-200);
+  --color-border-strong:   var(--palette-slate-300);
+  --color-divider:         var(--palette-slate-200);
+
+  /* Status: success / warning / danger / info */
+  --color-success:         var(--palette-green-600);
+  --color-success-hover:   var(--palette-green-700);
+  --color-success-subtle:  #f0fdf4;
+  --color-on-success:      var(--palette-white);
+
+  --color-warning:         var(--palette-amber-600);
+  --color-warning-subtle:  #fffbeb;
+  --color-on-warning:      var(--palette-white);
+
+  --color-danger:          var(--palette-red-600);
+  --color-danger-hover:    var(--palette-red-700);
+  --color-danger-subtle:   #fef2f2;
+  --color-on-danger:       var(--palette-white);
+
+  --color-info:            #2563eb;
+  --color-info-subtle:     #eff6ff;
+
+  /* Focus ring (WCAG AA: visible focus indicator) */
+  --color-focus-ring:      var(--palette-teal-600);
+
+  /* Disabled state */
+  --color-disabled-bg:     var(--palette-slate-100);
+  --color-disabled-text:   var(--palette-slate-400);
+  --color-disabled-border: var(--palette-slate-200);
+
+  /* ----------------------------------------------------------
+     3. TYPOGRAPHY
+     ---------------------------------------------------------- */
+  --font-family-base: system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type scale (mobile-first, ratio ~1.2) */
+  --font-size-xs:   0.75rem;   /* 12px — badges, captions */
+  --font-size-sm:   0.8125rem; /* 13px — secondary text */
+  --font-size-base: 0.9375rem; /* 15px — body default */
+  --font-size-md:   1rem;      /* 16px — inputs, emphasized body */
+  --font-size-lg:   1.125rem;  /* 18px — card titles */
+  --font-size-xl:   1.25rem;   /* 20px — section titles */
+  --font-size-2xl:  1.5rem;    /* 24px — page titles */
+  --font-size-3xl:  1.875rem;  /* 30px — hero (rare, calm) */
+
+  --font-weight-regular:  400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  --line-height-tight:  1.25;
+  --line-height-normal: 1.5;
+  --line-height-loose:  1.7;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-wide:   0.02em;
+
+  /* ----------------------------------------------------------
+     4. SPACING (4px base grid)
+     ---------------------------------------------------------- */
+  --space-0:   0;
+  --space-1:   0.25rem;  /*  4px */
+  --space-2:   0.5rem;   /*  8px */
+  --space-3:   0.75rem;  /* 12px */
+  --space-4:   1rem;     /* 16px */
+  --space-5:   1.25rem;  /* 20px */
+  --space-6:   1.5rem;   /* 24px */
+  --space-8:   2rem;     /* 32px */
+  --space-10:  2.5rem;   /* 40px */
+  --space-12:  3rem;     /* 48px */
+  --space-16:  4rem;     /* 64px */
+
+  /* Component-level spacing aliases */
+  --gap-inline-xs: var(--space-1);
+  --gap-inline-sm: var(--space-2);
+  --gap-inline-md: var(--space-3);
+  --stack-sm: var(--space-3);
+  --stack-md: var(--space-4);
+  --stack-lg: var(--space-6);
+
+  --page-padding-x: var(--space-4);   /* mobile gutter */
+  --content-max-width: 1200px;
+
+  /* ----------------------------------------------------------
+     5. RADIUS
+     ---------------------------------------------------------- */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 9999px;
+
+  --radius-control: var(--radius-md);   /* buttons, inputs */
+  --radius-card:    var(--radius-lg);   /* cards, sheets */
+  --radius-pill:    var(--radius-full); /* badges, chips */
+
+  /* ----------------------------------------------------------
+     6. SHADOWS (soft, calm elevation)
+     ---------------------------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 8px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 10px 24px rgba(15, 23, 42, 0.10), 0 4px 8px rgba(15, 23, 42, 0.05);
+  --shadow-focus: 0 0 0 3px var(--color-primary-border);
+
+  /* ----------------------------------------------------------
+     7. STATES
+     ---------------------------------------------------------- */
+  --opacity-hover:    0.92;
+  --opacity-pressed:  0.85;
+  --opacity-disabled: 0.55;
+  --opacity-skeleton: 0.6;
+
+  --control-height-sm: 32px;
+  --control-height-md: 40px;  /* default touch target companion */
+  --control-height-lg: 48px;  /* recommended min touch target */
+
+  /* ----------------------------------------------------------
+     8. Z-INDEX SCALE
+     ---------------------------------------------------------- */
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-overlay:  300;
+  --z-modal:    400;
+  --z-toast:    500;
+
+  /* ----------------------------------------------------------
+     9. BREAKPOINT VALUES (for reference; media queries
+        cannot read vars natively — keep in sync manually)
+     sm: 640px | md: 768px | lg: 1024px | xl: 1280px
+     ---------------------------------------------------------- */
+
+  /* ----------------------------------------------------------
+     10. MOTION
+     ---------------------------------------------------------- */
+  --duration-fast:   120ms;
+  --duration-base:   200ms;
+  --duration-slow:   300ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ----------------------------------------------------------
+   DARK THEME (optional, ready for Sprint 1; activate by
+   adding data-theme="dark" on <html>)
+   ---------------------------------------------------------- */
+[data-theme="dark"] {
+  --color-bg-page:        #0b1220;
+  --color-bg-surface:     var(--palette-slate-900);
+  --color-bg-surface-mut: var(--palette-slate-800);
+
+  --color-text-primary:   var(--palette-slate-50);
+  --color-text-secondary: var(--palette-slate-300);
+  --color-text-tertiary:  var(--palette-slate-500);
+
+  --color-border:         var(--palette-slate-700);
+  --color-border-strong:  var(--palette-slate-600);
+  --color-divider:        var(--palette-slate-800);
+
+  --color-primary:        var(--palette-teal-500);
+  --color-primary-hover:  var(--palette-teal-300);
+  --color-primary-subtle: var(--palette-teal-900);
+}
