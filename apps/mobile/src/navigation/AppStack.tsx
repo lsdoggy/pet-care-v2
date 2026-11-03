@@ -6,6 +6,8 @@ export type Route =
   | { name: 'Home' }
   | { name: 'Tasks' }
   | { name: 'Settings' }
+  | { name: 'Shopping' }
+  | { name: 'Stock' }
   | { name: 'PetForm'; petId?: number }
   | { name: 'PetDetail'; petId: number; petName?: string }
   | { name: 'PetHistory'; petId: number; petName: string }
@@ -14,6 +16,8 @@ export type Route =
 
 /** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). Sprint 6 adds Settings. */
 export type TabName = 'Home' | 'Tasks' | 'Settings';
+/** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
+export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock';
 
 interface NavigationValue {
   push: (route: Route) => void;
@@ -76,6 +80,8 @@ const TABS: { name: TabName; label: string; icon: string }[] = [
   { name: 'Home', label: 'Home', icon: '🐾' },
   { name: 'Tasks', label: 'Tasks', icon: '📅' },
   { name: 'Settings', label: 'Settings', icon: '⚙️' },
+  { name: 'Shopping', label: 'Buy', icon: '🛒' },
+  { name: 'Stock', label: 'Stock', icon: '📦' },
 ];
 
 function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {

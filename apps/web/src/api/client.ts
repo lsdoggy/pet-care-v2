@@ -3,13 +3,20 @@ import type {
   AuthResponse,
   CareTaskDto,
   CreateAppointmentRequest,
+  CreateFoodProductRequest,
   CreatePetRequest,
   CreateRecordRequest,
+  CreateShoppingItemRequest,
   CreateTaskRequest,
+  FoodProductDto,
   HistoryEventDto,
   NotificationDto,
   PetDto,
+  PurchaseItemRequest,
+  ShoppingItemDto,
+  UpdateFoodProductRequest,
   UpdatePetRequest,
+  UpdateShoppingItemRequest,
   UserDto,
   VetAppointmentDto,
   VetRecordDto,
@@ -200,4 +207,42 @@ export const api = {
       { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
       token,
     ),
+  /* ---------- Food products & shopping list (Sprint 5) ---------- */
+
+  listFoodProducts: (token: string) => request<FoodProductDto[]>('/food-products', { method: 'GET' }, token),
+
+  getFoodProduct: (id: number, token: string) =>
+    request<FoodProductDto>(`/food-products/${id}`, { method: 'GET' }, token),
+
+  createFoodProduct: (body: CreateFoodProductRequest, token: string) =>
+    request<FoodProductDto>('/food-products', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateFoodProduct: (id: number, body: UpdateFoodProductRequest, token: string) =>
+    request<FoodProductDto>(`/food-products/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteFoodProduct: (id: number, token: string) =>
+    request<void>(`/food-products/${id}`, { method: 'DELETE' }, token),
+
+  listShoppingItems: (token: string) => request<ShoppingItemDto[]>('/shopping-list/items', { method: 'GET' }, token),
+
+  createShoppingItem: (body: CreateShoppingItemRequest, token: string) =>
+    request<ShoppingItemDto>('/shopping-list/items', { method: 'POST', body: JSON.stringify(body) }, token),
+
+  updateShoppingItem: (id: number, body: UpdateShoppingItemRequest, token: string) =>
+    request<ShoppingItemDto>(`/shopping-list/items/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+
+  deleteShoppingItem: (id: number, token: string) =>
+    request<void>(`/shopping-list/items/${id}`, { method: 'DELETE' }, token),
+
+  /** Marks an item purchased; optional addStockQuantity restocks the linked product atomically. */
+  purchaseShoppingItem: (id: number, body: PurchaseItemRequest | null, token: string) =>
+    request<ShoppingItemDto>(
+      `/shopping-list/items/${id}/purchase`,
+      { method: 'POST', body: body ? JSON.stringify(body) : undefined },
+      token,
+    ),
+
+  /** Low-stock products without an open list entry — suggestion banner source. */
+  listShoppingSuggestions: (token: string) =>
+    request<FoodProductDto[]>('/shopping-list/suggestions', { method: 'GET' }, token),
 }

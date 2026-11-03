@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
 import PetCard from '../components/PetCard'
 import PetFormModal from '../components/PetFormModal'
+import NavTabs from '../components/NavTabs'
 import TaskFormModal from '../components/TaskFormModal'
 import UpcomingTasksCard from '../components/UpcomingTasksCard'
 
@@ -70,6 +71,7 @@ export default function HomePage() {
 
   return (
     <main style={pageStyle}>
+      <NavTabs />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: 26 }}>My pets</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
