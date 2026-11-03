@@ -14,7 +14,7 @@ CREATE TABLE veterinary_appointments (
                      CHECK (status IN ('SCHEDULED', 'COMPLETED', 'CANCELLED')),
     address          VARCHAR(255),
     cost             NUMERIC(10,2) CHECK (cost IS NULL OR cost >= 0),
-    currency         CHAR(3),
+    currency         VARCHAR(3),
     notes            TEXT,
     created_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
