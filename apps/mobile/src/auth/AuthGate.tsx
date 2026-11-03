@@ -9,7 +9,7 @@ import { tokenStore } from './tokenStore';
 import { usePushRegistration } from '../notifications/usePushRegistration';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
 import { AppStack, type Route, type TabName } from '../navigation/AppStack';
-import { PetsHomeScreen } from '../screens/PetsHomeScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
 import { PetFormScreen } from '../screens/PetFormScreen';
 import { PetDetailScreen } from '../screens/PetDetailScreen';
 import { PetHistoryScreen } from '../screens/PetHistoryScreen';
@@ -113,7 +113,9 @@ export function AuthGate() {
                 return <StockScreen key="stock" />;
               case 'Home':
               default:
-                return <PetsHomeScreen key="home" user={user} onLogout={handleLogout} />;
+                return (
+                  <DashboardScreen key="home" user={user} onLogout={handleLogout} onTabChange={setActiveTab} />
+                );
             }
           }}
         </AppStack>

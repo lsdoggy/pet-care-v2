@@ -76,24 +76,25 @@ export function GearIcon(props: IconProps) {
   )
 }
 
-/* ---------- Design Sprint 1: auth screen icons ---------- */
+/* ---------- Design Sprint 2: Dashboard icon set ---------- */
 
-export function EyeIcon(props: IconProps) {
+export function CalendarPlusIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Z" />
-      <circle cx="12" cy="12" r="3" />
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 9.5h17M8 3v4m8-4v4" />
+      <path d="M12 12.5v5m-2.5-2.5h5" />
     </Svg>
   )
 }
 
-export function EyeOffIcon(props: IconProps) {
+export function StethoscopeIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <path d="M4 4l16 16" />
-      <path d="M9.9 5.8A9.7 9.7 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3.3 4.1" />
-      <path d="M6.4 7.6A16.8 16.8 0 0 0 2.5 12S6 18.5 12 18.5c1.5 0 2.9-.4 4.1-1" />
-      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M6 3.5v5a4 4 0 0 0 8 0v-5" />
+      <path d="M10 16.5a5 5 0 0 0 10 0v-2" />
+      <circle cx="20" cy="12" r="2.2" />
+      <path d="M6 3.5h2m6 0h2" opacity="0" />
     </Svg>
   )
 }
@@ -101,27 +102,58 @@ export function EyeOffIcon(props: IconProps) {
 export function AlertIcon(props: IconProps) {
   return (
     <Svg {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7.5v5" />
-      <path d="M12 16.2v.1" />
+      <path d="M12 4 2.8 20h18.4L12 4Z" />
+      <path d="M12 10.5v4.5" />
+      <circle cx="12" cy="17.6" r="0.4" fill="currentColor" strokeWidth={1.2} />
     </Svg>
   )
 }
 
-export function SpinnerIcon(props: IconProps) {
+export function CheckIcon(props: IconProps) {
   return (
-    <svg
-      width={props.size ?? 18}
-      height={props.size ?? 18}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-      className="auth-spinner"
-      role="presentation"
-    >
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2.5" />
-      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
+    <Svg {...props}>
+      <path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
+    </Svg>
   )
+}
+
+export function RefreshIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M20 11.5a8 8 0 1 1-2.3-5.7" />
+      <path d="M20 3.5V7h-3.5" />
+    </Svg>
+  )
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M9 5.5 15.5 12 9 18.5" />
+    </Svg>
+  )
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Svg>
+  )
+}
+
+/** Species glyph for placeholder avatars — keyed by backend PetSpecies enum. */
+const SPECIES_GLYPHS: Record<string, string> = {
+  DOG: '🐶',
+  CAT: '🐱',
+  BIRD: '🐦',
+  HAMSTER: '🐹',
+  RABBIT: '🐰',
+  TURTLE: '🐢',
+  FISH: '🐟',
+  OTHER: '🐾',
+}
+
+export function speciesGlyph(species: string): string {
+  return SPECIES_GLYPHS[species] ?? '🐾'
 }
