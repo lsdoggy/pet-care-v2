@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { colors, spacing, typography, layout } from '../theme/tokens';
 
 export type Route =
   | { name: 'Home' }
@@ -14,10 +15,8 @@ export type Route =
   | { name: 'AppointmentForm'; petId: number; petName?: string }
   | { name: 'RecordForm'; petId: number; petName?: string };
 
-/** Tab Bar destinations (Sprint 3): Home (pets) and Tasks (upcoming care tasks). Sprint 6 adds Settings. */
-export type TabName = 'Home' | 'Tasks' | 'Settings';
-/** Tab Bar destinations: Home (pets), Tasks (Sprint 3), Buy/Stock (Sprint 5). */
-export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock';
+/** Tab Bar destinations: Home (pets), Tasks, Buy/Stock, Settings. */
+export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock' | 'Settings';
 
 interface NavigationValue {
   push: (route: Route) => void;
@@ -103,15 +102,16 @@ function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: T
 const tabBarStyles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingBottom: 8,
-    paddingTop: 6,
+    borderTopColor: colors.border,
+    paddingBottom: spacing.x2,
+    paddingTop: spacing.x1 + 2,
+    minHeight: layout.tabBarHeight,
   },
-  item: { flex: 1, alignItems: 'center', gap: 2 },
-  icon: { fontSize: 20, opacity: 0.5 },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.x1, paddingVertical: spacing.x1 },
+  icon: { fontSize: typography.h2.fontSize, opacity: 0.5 },
   iconActive: { opacity: 1 },
-  label: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
-  labelActive: { color: '#4f46e5' },
+  label: { ...typography.caption, color: colors.textTertiary },
+  labelActive: { color: colors.primary },
 });

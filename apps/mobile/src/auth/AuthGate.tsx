@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
@@ -74,7 +75,7 @@ export function AuthGate() {
   if (phase === 'boot') {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4f46e5" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.bootText}>Checking session…</Text>
         <StatusBar style="auto" />
       </View>
@@ -127,6 +128,12 @@ export function AuthGate() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, backgroundColor: '#f6f7fb', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  bootText: { color: '#6b7280', fontSize: 14 },
+  center: {
+    flex: 1,
+    backgroundColor: colors.pageBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.x3,
+  },
+  bootText: { ...typography.body, color: colors.textSecondary },
 });
