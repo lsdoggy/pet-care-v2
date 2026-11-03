@@ -92,3 +92,86 @@ export function readPetOptionalFields(pet: PetDto): { breed?: string | null; wei
   const withExtras = pet as PetDto & { breed?: string | null; weightKg?: number | null }
   return { breed: withExtras.breed ?? null, weightKg: withExtras.weightKg ?? null }
 }
+
+/**
+ * Design Sprint 3 · Ближайшая задача питомца для карточки (требование 2).
+ *
+ * Чистая презентационная функция: принимает уже загруженные tasks/appointments
+ * (эндпоинты не меняются) и возвращает ближайший по времени пункт «следующей
+ * задачи»: care-задача PENDING или запланированный визит к врачу.
+ * Возвращает null, если ничего не запланировано.
+ */
+
+import type { CareTaskDto, VetAppointmentDto } from '../api/types'
+import { TASK_TYPE_LABELS } from '../api/types'
+
+export interface NextPetAction {
+  kind: 'task' | 'appointment'
+  /** Короткая подпись для карточки, например «Прививка · через 3 дня». */
+  label: string
+  /** Полный текст для aria-label/title. */
+  fullLabel: string
+}
+
+function pluralDaysRu(n: number): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod10 === 1 && mod100 !== 11) return 'день'
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'дня'
+  return 'дней'
+}
+
+/** «Сегодня» / «Завтра» / «через N дней» — по локальному дедлайну. */
+export function dueInLabel(iso: string, now: Date = new Date()): string {
+  const due = new Date(iso)
+  if (Number.isNaN(due.getTime())) return ''
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const diffDays = Math.round((startOfDay(due) - startOfDay(now)) / 86_400_000)
+  if (diffDays < 0) return 'просрочено'
+  if (diffDays === 0) return 'сегодня'
+  if (diffDays === 1) return 'завтра'
+  return `через ${diffDays} ${pluralDaysRu(diffDays)}`
+}
+
+export function findNextPetAction(
+  petId: number,
+  tasks: CareTaskDto[],
+  appointments: VetAppointmentDto[],
+  now: Date = new Date(),
+): NextPetAction | null {
+  const candidates: Array<{ at: number; action: NextPetAction }> = []
+
+  for (const t of tasks) {
+    if (t.petId !== petId || t.status !== 'PENDING') continue
+    const at = new Date(t.dueAt).getTime()
+    if (Number.isNaN(at)) continue
+    const when = dueInLabel(t.dueAt, now)
+    candidates.push({
+      at,
+      action: {
+        kind: 'task',
+        label: `${TASK_TYPE_LABELS[t.type]}${when ? ` · ${when}` : ''}`,
+        fullLabel: `${t.title} · ${TASK_TYPE_LABELS[t.type]}${when ? ` · ${when}` : ''}`,
+      },
+    })
+  }
+
+  for (const a of appointments) {
+    if (a.petId !== petId || a.status !== 'SCHEDULED') continue
+    const at = new Date(a.scheduledAt).getTime()
+    if (Number.isNaN(at)) continue
+    const when = dueInLabel(a.scheduledAt, now)
+    candidates.push({
+      at,
+      action: {
+        kind: 'appointment',
+        label: `Визит к врачу${when ? ` · ${when}` : ''}`,
+        fullLabel: `${a.clinicName}${a.doctorName ? `, ${a.doctorName}` : ''}${when ? ` · ${when}` : ''}`,
+      },
+    })
+  }
+
+  if (candidates.length === 0) return null
+  candidates.sort((x, y) => x.at - y.at)
+  return candidates[0].action
+}

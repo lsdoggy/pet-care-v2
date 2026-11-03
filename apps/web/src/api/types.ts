@@ -91,6 +91,10 @@ export interface PetDto {
   species: PetSpecies
   birthDate: string | null
   photoUrl: string | null
+  /** Design Sprint 3 (backend V10 migration): optional breed, ≤ 80 chars. */
+  breed: string | null
+  /** Design Sprint 3 (backend V10 migration): optional weight in kg, > 0. */
+  weightKg: number | null
   createdAt: string
   updatedAt: string
 }
@@ -99,12 +103,17 @@ export interface CreatePetRequest {
   name: string
   species: PetSpecies
   birthDate?: string | null
+  /** Design Sprint 3: optional new fields — old clients keep omitting them (backward compatible). */
+  breed?: string | null
+  weightKg?: number | null
 }
 
 export interface UpdatePetRequest {
   name?: string
   species?: PetSpecies
   birthDate?: string | null
+  breed?: string | null
+  weightKg?: number | null
 }
 
 /* ---------- Care tasks (Sprint 3) ---------- */

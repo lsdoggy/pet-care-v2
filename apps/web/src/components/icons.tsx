@@ -157,3 +157,24 @@ const SPECIES_GLYPHS: Record<string, string> = {
 export function speciesGlyph(species: string): string {
   return SPECIES_GLYPHS[species] ?? '🐾'
 }
+
+/** Design Sprint 3 · Pets — иконки действий (inline SVG, currentColor). */
+export function PencilIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </Svg>
+  )
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M3 6h18" />
+      <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M10 11v6M14 11v6" />
+    </Svg>
+  )
+}

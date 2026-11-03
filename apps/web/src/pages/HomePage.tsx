@@ -3,10 +3,12 @@ import type { ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { CareTaskDto, FoodProductDto, PetDto, VetAppointmentDto } from '../api/types'
-import { SPECIES_LABELS, TASK_TYPE_LABELS } from '../api/types'
+import { TASK_TYPE_LABELS } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
 import DashboardSkeleton from '../components/DashboardSkeleton'
+import ConfirmDialog from '../components/ConfirmDialog'
+import PetCard from '../components/PetCard'
 import PetFormModal from '../components/PetFormModal'
 import PetPickerModal from '../components/PetPickerModal'
 import QuickAddPurchaseModal from '../components/QuickAddPurchaseModal'
@@ -22,14 +24,12 @@ import {
   PlusIcon,
   RefreshIcon,
   StethoscopeIcon,
-  speciesGlyph,
 } from '../components/icons'
 import {
   buildUpcomingEvents,
   classifyTask,
   daysLeft,
   displayNameFromEmail,
-  formatAgeRu,
   formatDueLabel,
   formatVisitLabel,
   greetingWord,
@@ -41,6 +41,7 @@ import {
   todayLabel,
 } from '../lib/dashboard'
 import '../styles/dashboard.css'
+import '../styles/pets.css'
 
 /**
  * Design Sprint 2 — Dashboard (web, mobile-first).
@@ -49,12 +50,17 @@ import '../styles/dashboard.css'
  */
 
 type Modal =
-  | { name: 'pet' }
+  | { name: 'pet'; pet?: PetDto }
   | { name: 'task'; pet: PetDto }
   | { name: 'appointment'; pet: PetDto }
   | { name: 'purchase' }
   | { name: 'pickPet'; for: 'task' | 'appointment' }
   | null
+
+/** Design Sprint 3: подтверждение удаления питомца (замена window.confirm). */
+interface DeleteTarget {
+  pet: PetDto
+}
 
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
@@ -69,6 +75,9 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
   const [modal, setModal] = useState<Modal>(null)
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null)
+  // Design Sprint 3: удаление питомца через доступный ConfirmDialog.
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const token = tokenStore.get() ?? ''
 
@@ -125,6 +134,23 @@ export default function HomePage() {
       setProducts(nextProducts)
     } finally {
       setBusyTaskId(null)
+    }
+  }
+
+  /* ---------- pet delete (existing API: DELETE /pets/{id}, confirm via ConfirmDialog) ---------- */
+  async function confirmDeletePet(target: DeleteTarget) {
+    setDeleting(true)
+    try {
+      await api.deletePet(target.pet.id, token)
+      setPets((prev) => prev.filter((p) => p.id !== target.pet.id))
+      setTasks((prev) => prev.filter((t) => t.petId !== target.pet.id))
+      setAppointments((prev) => prev.filter((a) => a.petId !== target.pet.id))
+      setDeleteTarget(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Не удалось удалить питомца')
+      setDeleteTarget(null)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -340,24 +366,13 @@ export default function HomePage() {
                 ) : (
                   <div className="pc-pets">
                     {pets.map((pet) => (
-                      <button
+                      <PetCard
                         key={pet.id}
-                        type="button"
-                        className="pc-petcard"
-                        onClick={() => navigate(`/pets/${pet.id}`)}
-                        aria-label={`Открыть профиль: ${pet.name}`}
-                      >
-                        <span className="pc-petcard__avatar" aria-hidden="true">
-                          {pet.photoUrl ? <img src={pet.photoUrl} alt="" /> : speciesGlyph(pet.species)}
-                        </span>
-                        <span style={{ minWidth: 0 }}>
-                          <span className="pc-petcard__name">{pet.name}</span>
-                          <span className="pc-petcard__meta" style={{ display: 'block' }}>
-                            {SPECIES_LABELS[pet.species]}
-                            {pet.birthDate ? ` · ${formatAgeRu(pet.birthDate)}` : ''}
-                          </span>
-                        </span>
-                      </button>
+                        pet={pet}
+                        tasks={tasks}
+                        appointments={appointments}
+                        onOpen={(p) => navigate(`/pets/${p.id}`)}
+                      />
                     ))}
                     <button
                       type="button"
@@ -445,12 +460,29 @@ export default function HomePage() {
           {/* ---------- Modals (reuse existing forms/endpoints) ---------- */}
           {modal?.name === 'pet' && (
             <PetFormModal
+              pet={modal.pet}
               token={token}
               onClose={() => setModal(null)}
               onSaved={(saved) => {
-                setPets((prev) => [...prev, saved])
+                // Edit → replace in place; create → append (existing PATCH/POST semantics).
+                setPets((prev) =>
+                  prev.some((p) => p.id === saved.id) ? prev.map((p) => (p.id === saved.id ? saved : p)) : [...prev, saved],
+                )
                 setModal(null)
               }}
+            />
+          )}
+
+          {deleteTarget && (
+            <ConfirmDialog
+              titleId="pet-delete-title"
+              title={`Удалить питомца ${deleteTarget.pet.name}?`}
+              description="История здоровья, задачи и покупки этого питомца будут удалены безвозвратно. Действие нельзя отменить."
+              confirmLabel="Удалить"
+              cancelLabel="Отмена"
+              busy={deleting}
+              onCancel={() => setDeleteTarget(null)}
+              onConfirm={() => confirmDeletePet(deleteTarget)}
             />
           )}
 
