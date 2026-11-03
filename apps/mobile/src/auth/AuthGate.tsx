@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
+import type { RegisterProfile } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
 import { tokenStore } from './tokenStore';
 import { usePushRegistration } from '../notifications/usePushRegistration';
@@ -52,9 +53,11 @@ export function AuthGate() {
   }, []);
 
   const handleAuth = useCallback(
-    async (email: string, password: string) => {
+    async (email: string, password: string, profile?: RegisterProfile) => {
       const res: AuthResponse =
-        mode === 'login' ? await api.login(email, password) : await api.register(email, password);
+        mode === 'login'
+          ? await api.login(email, password)
+          : await api.register(email, password, profile);
       await tokenStore.set(res.accessToken);
       jwtRef.current = res.accessToken;
       setUser(res.user);
