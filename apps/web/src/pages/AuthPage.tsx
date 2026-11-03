@@ -2,126 +2,352 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ApiError } from '../api/client'
-import type { FieldError } from '../api/types'
 import { useAuth } from '../auth/useAuth'
-
-const pageStyle: React.CSSProperties = {
-  fontFamily: 'sans-serif',
-  maxWidth: 360,
-  margin: '10vh auto',
-  padding: 24,
-  border: '1px solid #ddd',
-  borderRadius: 12,
-}
-
-const inputStyle: React.CSSProperties = {
-  display: 'block',
-  width: '100%',
-  padding: 10,
-  margin: '8px 0 4px',
-  boxSizing: 'border-box',
-  borderRadius: 6,
-  border: '1px solid #ccc',
-}
-
-const buttonStyle: React.CSSProperties = {
-  marginTop: 16,
-  width: '100%',
-  padding: 12,
-  borderRadius: 6,
-  border: 'none',
-  backgroundColor: '#1a73e8',
-  color: '#fff',
-  fontSize: 16,
-  cursor: 'pointer',
-}
-
-const errorStyle: React.CSSProperties = { color: '#c0392b', fontSize: 14, marginTop: 8 }
+import { AlertIcon, EyeIcon, EyeOffIcon, PawIcon, SpinnerIcon } from '../components/icons'
+import {
+  apiErrorMessageForStatus,
+  normalizeFieldName,
+  translateApiFieldMessage,
+  translateApiMessage,
+  validateConfirmPassword,
+  validateEmail,
+  validateFirstName,
+  validateLoginForm,
+  validatePassword,
+  validatePhone,
+  validateRegisterForm,
+} from '../validation/auth'
+import type { AuthFieldErrors, AuthFieldName } from '../validation/auth'
+import '../styles/auth.css'
 
 interface Props {
   mode: 'login' | 'register'
 }
 
+
 export default function AuthPage({ mode }: Props) {
+  const isLogin = mode === 'login'
   const { user, loading, login, register } = useAuth()
   const navigate = useNavigate()
+
+  const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
-  const [errors, setErrors] = useState<FieldError[]>([])
+  const [confirmPassword, setConfirmPassword] = useState('')
+
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (!loading && user) return <Navigate to="/" replace />
 
+  const setError = (field: AuthFieldName, message: string | null) =>
+    setFieldErrors((prev) => {
+      if (message === null) {
+        if (!(field in prev)) return prev
+        const next = { ...prev }
+        delete next[field]
+        return next
+      }
+      if (prev[field] === message) return prev
+      return { ...prev, [field]: message }
+    })
+
+  const runFieldValidation = (field: AuthFieldName): string | null => {
+    switch (field) {
+      case 'email':
+        return validateEmail(email)
+      case 'password':
+        return validatePassword(password, isLogin)
+      case 'confirmPassword':
+        return isLogin ? null : validateConfirmPassword(password, confirmPassword)
+      case 'firstName':
+        return isLogin ? null : validateFirstName(firstName)
+      case 'phone':
+        return isLogin ? null : validatePhone(phone)
+    }
+  }
+
+  const handleBlur = (field: AuthFieldName) => setError(field, runFieldValidation(field))
+
+  /** При вводе чистим ошибку только того поля, с которым работал пользователь. */
+  const handleChange = (field: AuthFieldName, value: string, apply: (v: string) => void) => {
+    apply(value)
+    if (fieldErrors[field]) setError(field, null)
+    if (formError) setFormError(null)
+  }
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    setErrors([])
+    if (submitting) return
+
+    const values = { firstName, email, phone, password, confirmPassword }
+    const errors = isLogin ? validateLoginForm(values) : validateRegisterForm(values)
+    setFieldErrors(errors)
     setFormError(null)
+    if (Object.keys(errors).length > 0) return
+
     setSubmitting(true)
     try {
-      if (mode === 'login') await login(email, password)
-      else await register(email, password)
+      if (isLogin) {
+        await login(email.trim(), password)
+      } else {
+        await register(email.trim(), password, {
+          firstName: firstName.trim(),
+          phone: phone.trim() || undefined,
+        })
+      }
       navigate('/', { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
-        setErrors(err.details)
-        setFormError(err.message)
+        // Полевые ошибки backend → конкретные поля (API-контракт не меняем, только отображение).
+        const mapped: AuthFieldErrors = {}
+        for (const d of err.details) {
+          const field = normalizeFieldName(d.field)
+          if (field) mapped[field] = translateApiFieldMessage(field, d.message)
+        }
+        setFieldErrors(mapped)
+
+        // Сообщения уровня формы (401/409 и т.п.).
+        let message: string | null = null
+        if (err.status === 409 && !mapped.email) {
+          message = 'Эта почта уже зарегистрирована. Попробуйте войти.'
+        } else if (err.status === 401) {
+          message = 'Неверная почта или пароль. Проверьте данные и попробуйте ещё раз.'
+        } else if (Object.keys(mapped).length === 0) {
+          message = apiErrorMessageForStatus(err.status) ?? translateApiMessage(err.message)
+        }
+        setFormError(message)
       } else {
-        setFormError('Network error. Is the backend running?')
+        setFormError('Сервер недоступен. Проверьте подключение к сети и попробуйте ещё раз.')
       }
     } finally {
       setSubmitting(false)
     }
   }
 
-  const isLogin = mode === 'login'
+  const hasFieldError = Object.keys(fieldErrors).length > 0
+  const alertId = formError ? 'auth-form-alert' : undefined
 
   return (
-    <main style={pageStyle}>
-      <h2>{isLogin ? 'Sign in' : 'Create account'}</h2>
-      <form onSubmit={handleSubmit}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          style={inputStyle}
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-        />
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          style={inputStyle}
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete={isLogin ? 'current-password' : 'new-password'}
-          minLength={isLogin ? undefined : 8}
-          required
-        />
-        {errors.map((fieldError) => (
-          <p key={fieldError.field} style={errorStyle}>
-            {fieldError.field}: {fieldError.message}
+    <main className="auth-page">
+      <div className="auth-card">
+        <header className="auth-brand">
+          <span className="auth-brand-logo" aria-hidden="true">
+            <PawIcon size={26} />
+          </span>
+          <h1 className="auth-title">{isLogin ? 'Вход в PetCare' : 'Создание аккаунта'}</h1>
+          <p className="auth-subtitle">
+            {isLogin
+              ? 'Здоровье и забота о вашем питомце — под контролем.'
+              : 'Регистрируйтесь, чтобы вести историю здоровья и напоминания.'}
           </p>
-        ))}
-        {formError && <p style={errorStyle}>{formError}</p>}
-        <button style={buttonStyle} type="submit" disabled={submitting}>
-          {submitting ? 'Please wait…' : isLogin ? 'Sign in' : 'Register'}
-        </button>
-      </form>
-      <p style={{ marginTop: 16, textAlign: 'center' }}>
-        {isLogin ? (
-          <>
-            No account? <Link to="/register">Register</Link>
-          </>
-        ) : (
-          <>
-            Already registered? <Link to="/login">Sign in</Link>
-          </>
-        )}
-      </p>
+        </header>
+
+        <form className="auth-form" onSubmit={handleSubmit} noValidate aria-describedby={alertId}>
+          {formError && (
+            <div className="auth-banner" role="alert" id="auth-form-alert">
+              <AlertIcon size={18} />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="auth-field auth-field--full">
+              <label className="auth-label" htmlFor="firstName">
+                Имя
+              </label>
+              <input
+                id="firstName"
+                name="given-name"
+                className="auth-input"
+                type="text"
+                value={firstName}
+                onChange={(e) => handleChange('firstName', e.target.value, setFirstName)}
+                onBlur={() => handleBlur('firstName')}
+                autoComplete="given-name"
+                maxLength={80}
+                placeholder="Например, Анна"
+                aria-invalid={fieldErrors.firstName ? 'true' : undefined}
+                aria-describedby={fieldErrors.firstName ? 'firstName-error' : undefined}
+                disabled={submitting}
+              />
+              {fieldErrors.firstName && (
+                <p className="auth-error" id="firstName-error">
+                  {fieldErrors.firstName}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="auth-field auth-field--full">
+            <label className="auth-label" htmlFor="email">
+              Электронная почта
+            </label>
+            <input
+              id="email"
+              name="email"
+              className="auth-input"
+              type="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => handleChange('email', e.target.value, setEmail)}
+              onBlur={() => handleBlur('email')}
+              autoComplete="email"
+              placeholder="name@example.com"
+              aria-invalid={fieldErrors.email ? 'true' : undefined}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+              disabled={submitting}
+            />
+            {fieldErrors.email && (
+              <p className="auth-error" id="email-error">
+                {fieldErrors.email}
+              </p>
+            )}
+          </div>
+
+          {!isLogin && (
+            <div className="auth-field auth-field--full">
+              <label className="auth-label" htmlFor="phone">
+                Телефон <span className="auth-optional">(необязательно)</span>
+              </label>
+              <input
+                id="phone"
+                name="tel"
+                className="auth-input"
+                type="tel"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => handleChange('phone', e.target.value, setPhone)}
+                onBlur={() => handleBlur('phone')}
+                autoComplete="tel"
+                maxLength={20}
+                placeholder="+7 900 123-45-67"
+                aria-invalid={fieldErrors.phone ? 'true' : undefined}
+                aria-describedby={fieldErrors.phone ? 'phone-error' : 'phone-hint'}
+                disabled={submitting}
+              />
+              {fieldErrors.phone ? (
+                <p className="auth-error" id="phone-error">
+                  {fieldErrors.phone}
+                </p>
+              ) : (
+                <p className="auth-hint" id="phone-hint">
+                  Нужен для SMS-напоминаний, можно указать позже.
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="auth-field auth-field--full">
+            <label className="auth-label" htmlFor="password">
+              Пароль
+            </label>
+            <div className="auth-input-wrap">
+              <input
+                id="password"
+                name={isLogin ? 'current-password' : 'new-password'}
+                className="auth-input auth-input--password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => handleChange('password', e.target.value, setPassword)}
+                onBlur={() => handleBlur('password')}
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                maxLength={72}
+                placeholder={isLogin ? 'Введите пароль' : 'Минимум 8 символов'}
+                aria-invalid={fieldErrors.password ? 'true' : undefined}
+                aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+                disabled={submitting}
+              />
+              <button
+                type="button"
+                className="auth-reveal"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+              </button>
+            </div>
+            {fieldErrors.password && (
+              <p className="auth-error" id="password-error">
+                {fieldErrors.password}
+              </p>
+            )}
+          </div>
+
+          {!isLogin && (
+            <div className="auth-field auth-field--full">
+              <label className="auth-label" htmlFor="confirmPassword">
+                Повторите пароль
+              </label>
+              <div className="auth-input-wrap">
+                <input
+                  id="confirmPassword"
+                  name="confirm-password"
+                  className="auth-input auth-input--password"
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => handleChange('confirmPassword', e.target.value, setConfirmPassword)}
+                  onBlur={() => handleBlur('confirmPassword')}
+                  autoComplete="new-password"
+                  maxLength={72}
+                  placeholder="Ещё раз — тот же пароль"
+                  aria-invalid={fieldErrors.confirmPassword ? 'true' : undefined}
+                  aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
+                  disabled={submitting}
+                />
+                <button
+                  type="button"
+                  className="auth-reveal"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  aria-label={showConfirm ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-pressed={showConfirm}
+                >
+                  {showConfirm ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+                </button>
+              </div>
+              {fieldErrors.confirmPassword && (
+                <p className="auth-error" id="confirmPassword-error">
+                  {fieldErrors.confirmPassword}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button type="submit" className="auth-submit" disabled={submitting} aria-busy={submitting}>
+            {submitting && <SpinnerIcon size={18} />}
+            {submitting
+              ? isLogin
+                ? 'Входим…'
+                : 'Создаём аккаунт…'
+              : isLogin
+                ? 'Войти'
+                : 'Зарегистрироваться'}
+          </button>
+        </form>
+
+        <p className="auth-switch">
+          {isLogin ? (
+            <>
+              Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+            </>
+          ) : (
+            <>
+              Уже есть аккаунт? <Link to="/login">Войти</Link>
+            </>
+          )}
+        </p>
+
+        {/* Доступность: объявляем ошибки после ответа сервера. */}
+        <div aria-live="assertive" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+          {hasFieldError || formError ? 'В форме есть ошибки. Исправьте отмеченные поля.' : ''}
+        </div>
+      </div>
     </main>
   )
 }

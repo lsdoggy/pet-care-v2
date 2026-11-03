@@ -24,6 +24,14 @@ public class UserEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** Design Sprint 1: optional profile fields collected at sign-up. */
+    @Column(name = "first_name")
+    private String firstName;
+
+    /** Design Sprint 1: optional contact phone (nullable, backward compatible). */
+    @Column(name = "phone")
+    private String phone;
+
     /** Sprint 6: user-level channel switches (profile settings Push On/Off). */
     @Column(name = "push_notifications_enabled", nullable = false)
     private boolean pushNotificationsEnabled = true;
@@ -43,6 +51,14 @@ public class UserEntity {
         this.passwordHash = passwordHash;
     }
 
+    /** Design Sprint 1: extended constructor with optional profile fields. */
+    public UserEntity(String email, String passwordHash, String firstName, String phone) {
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.firstName = firstName;
+        this.phone = phone;
+    }
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {
@@ -60,6 +76,14 @@ public class UserEntity {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getPhone() {
+        return phone;
     }
 
     public boolean isPushNotificationsEnabled() {

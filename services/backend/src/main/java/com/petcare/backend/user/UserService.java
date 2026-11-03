@@ -33,7 +33,11 @@ public class UserService {
         if (repository.existsByEmailIgnoreCase(email)) {
             throw new EmailAlreadyRegisteredException(email);
         }
-        UserEntity user = repository.save(new UserEntity(email, passwordEncoder.encode(request.password())));
+        UserEntity user = repository.save(new UserEntity(
+                email,
+                passwordEncoder.encode(request.password()),
+                blankToNull(request.firstName()),
+                blankToNull(normalizePhone(request.phone()))));
         return AuthResponse.of(jwtService.generateToken(user), UserDto.from(user));
     }
 
@@ -66,5 +70,21 @@ public class UserService {
 
     private static String normalize(String email) {
         return email.trim().toLowerCase();
+    }
+
+    /** Design Sprint 1: trim optional profile fields; empty strings become null. */
+    private static String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    /** Design Sprint 1: strip visual separators from the phone number before storing. */
+    private static String normalizePhone(String phone) {
+        if (phone == null) {
+            return null;
+        }
+        return phone.replaceAll("[\\s()\\-]", "");
     }
 }
