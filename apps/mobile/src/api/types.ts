@@ -65,15 +65,17 @@ export const PET_SPECIES: readonly PetSpecies[] = [
   'OTHER',
 ] as const;
 
+// Design Sprint 2: UI copy language is Russian (approved in the sprint plan).
+// Backend enum values stay unchanged — only display labels are localized.
 export const SPECIES_LABELS: Record<PetSpecies, string> = {
-  DOG: 'Dog',
-  CAT: 'Cat',
-  BIRD: 'Bird',
-  HAMSTER: 'Hamster',
-  RABBIT: 'Rabbit',
-  TURTLE: 'Turtle',
-  FISH: 'Fish',
-  OTHER: 'Other',
+  DOG: 'Собака',
+  CAT: 'Кошка',
+  BIRD: 'Птица',
+  HAMSTER: 'Хомяк',
+  RABBIT: 'Кролик',
+  TURTLE: 'Черепаха',
+  FISH: 'Рыбка',
+  OTHER: 'Другое',
 };
 
 export interface PetDto {
@@ -121,17 +123,27 @@ export type CareTaskType =
   | 'OTHER';
 
 export const TASK_TYPE_LABELS: Record<CareTaskType, string> = {
-  VACCINATION: 'Vaccination',
-  VET: 'Vet visit',
-  FOOD: 'Food',
-  GROOMING: 'Grooming',
-  MEDICATION: 'Medication',
-  WALK: 'Walk',
-  OTHER: 'Other',
+  VACCINATION: 'Прививка',
+  VET: 'Визит к врачу',
+  FOOD: 'Кормление',
+  GROOMING: 'Груминг',
+  MEDICATION: 'Лекарство',
+  WALK: 'Прогулка',
+  OTHER: 'Другое',
 };
 
 /** Mirrors backend com.petcare.backend.task.CareTaskStatus enum. */
 export type CareTaskStatus = 'PENDING' | 'DONE';
+
+/** POST /api/v1/tasks request (mirror of web client contract). */
+export interface CreateTaskRequest {
+  petId: number;
+  title: string;
+  type: CareTaskType;
+  /** UTC ISO instant. */
+  dueAt: string;
+  recurrenceRule?: string | null;
+}
 
 export interface CareTaskDto {
   id: number;
@@ -158,9 +170,9 @@ export function formatDueAt(iso: string): string {
 export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 
 export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
-  SCHEDULED: 'Scheduled',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  SCHEDULED: 'Запланирован',
+  COMPLETED: 'Завершён',
+  CANCELLED: 'Отменён',
 };
 
 export interface VetAppointmentDto {
@@ -245,11 +257,11 @@ export interface HistoryEventDto {
 export type FoodCategory = 'DRY' | 'WET' | 'TREAT' | 'SUPPLEMENT' | 'LITTER';
 
 export const FOOD_CATEGORY_LABELS: Record<FoodCategory, string> = {
-  DRY: 'Dry food',
-  WET: 'Wet food',
-  TREAT: 'Treats',
-  SUPPLEMENT: 'Supplement',
-  LITTER: 'Litter',
+  DRY: 'Сухой корм',
+  WET: 'Влажный корм',
+  TREAT: 'Лакомства',
+  SUPPLEMENT: 'Добавка',
+  LITTER: 'Наполнитель',
 };
 
 export type StockUnit = 'PCS' | 'KG' | 'G';

@@ -16,7 +16,7 @@ interface NavItem {
  * Pages render through <Outlet/>; existing routes/pages are untouched.
  */
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Питомцы', icon: HomeIcon },
+  { to: '/', label: 'Главная', icon: HomeIcon },
   { to: '/stock', label: 'Запасы', icon: BoxIcon },
   { to: '/shopping', label: 'Купить', icon: CartIcon },
   { to: '/settings', label: 'Профиль', icon: GearIcon },
