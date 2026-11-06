@@ -16,6 +16,8 @@ import { api, ApiError } from '../api/client';
 import type { CreateRecordRequest } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
+import { DateField } from '../components/DateField';
+import { localDateValue } from '../components/DateField.types';
 
 interface Props {
   petId: number;
@@ -25,7 +27,7 @@ interface Props {
 /** Sprint 4: create a medical record, optionally attaching a photo (camera/gallery) or PDF-like document. */
 export function RecordFormScreen({ petId, petName }: Props) {
   const navigation = useNavigation();
-  const [visitDate, setVisitDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [visitDate, setVisitDate] = useState(() => localDateValue(new Date()));
   const [diagnosis, setDiagnosis] = useState('');
   const [recommendations, setRecommendations] = useState('');
   const [prescriptions, setPrescriptions] = useState('');
@@ -75,10 +77,11 @@ export function RecordFormScreen({ petId, petName }: Props) {
   };
 
   const onSubmit = async () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate.trim())) {
-      Alert.alert('Check the form', 'Visit date must be YYYY-MM-DD');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate) || visitDate > localDateValue(new Date())) {
+      Alert.alert('Проверьте дату', 'Выберите дату не позднее сегодняшнего дня');
       return;
     }
+    setSaving(true);
     try {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Not authenticated');
@@ -110,8 +113,7 @@ export function RecordFormScreen({ petId, petName }: Props) {
         <Text style={styles.title}>New medical record</Text>
         {petName ? <Text style={styles.subtitle}>For {petName}</Text> : null}
 
-        <Text style={styles.label}>Visit date * (YYYY-MM-DD)</Text>
-        <TextInput style={styles.input} value={visitDate} onChangeText={setVisitDate} autoCapitalize="none" placeholder="2026-11-02" />
+        <DateField label="Дата медицинской записи *" value={visitDate} onChange={setVisitDate} maximum={localDateValue(new Date())} disabled={saving} />
 
         <Text style={styles.label}>Diagnosis</Text>
         <TextInput style={[styles.input, styles.multiline]} value={diagnosis} onChangeText={setDiagnosis} multiline placeholder="Otitis media, mild" />
@@ -140,7 +142,6 @@ export function RecordFormScreen({ petId, petName }: Props) {
           style={({ pressed }) => [styles.submitBtn, pressed && styles.pressed, saving && styles.disabled]}
           onPress={() => {
             if (saving) return;
-            setSaving(true);
             void onSubmit();
           }}
           disabled={saving}

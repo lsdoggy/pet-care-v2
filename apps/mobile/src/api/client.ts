@@ -88,6 +88,8 @@ export const api = {
     }),
 
   me: (token: string) => request<UserDto>('/users/me', { method: 'GET' }, token),
+  updateProfile: (body: { firstName: string; phone: string }, token: string) =>
+    request<UserDto>('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, token),
 
   listPets: (token: string) => request<PetDto[]>('/pets', { method: 'GET' }, token),
 

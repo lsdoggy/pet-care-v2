@@ -18,6 +18,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +38,8 @@ import { tokenStore } from '../auth/tokenStore';
 import { useNavigation, type TabName } from '../navigation/AppStack';
 import { ScreenHeader, headerActionStyles } from '../components/ScreenHeader';
 import { DashboardSkeleton } from '../components/DashboardSkeleton';
+import { DateField } from '../components/DateField';
+import { localDateValue } from '../components/DateField.types';
 import {
   ageLabel,
   buildAttention,
@@ -68,6 +71,11 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
   const navigation = useNavigation();
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [busyVisitId, setBusyVisitId] = useState<number | null>(null);
+  const [visitError, setVisitError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now);
   const [pets, setPets] = useState<PetDto[]>([]);
   const [tasks, setTasks] = useState<CareTaskDto[]>([]);
   const [appointments, setAppointments] = useState<VetAppointmentDto[]>([]);
@@ -83,16 +91,21 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Необходима авторизация');
       // Параллельная загрузка — те же четыре GET-эндпоинта, что использует web-дашборд.
-      const [p, t, a, f] = await Promise.all([
+      const results = await Promise.allSettled([
         api.listPets(token),
         api.listTasks(token),
         api.listAppointments(token),
         api.listFoodProducts(token),
       ]);
-      setPets(p);
-      setTasks(t);
-      setAppointments(a);
-      setProducts(f);
+      const [petResult, taskResult, appointmentResult, productResult] = results;
+      if (petResult.status === 'rejected') throw new Error('Не удалось загрузить питомцев. Проверьте соединение и повторите попытку.');
+      setPets(petResult.value);
+      if (taskResult.status === 'fulfilled') setTasks(taskResult.value);
+      if (appointmentResult.status === 'fulfilled') setAppointments(appointmentResult.value);
+      if (productResult.status === 'fulfilled') setProducts(productResult.value);
+      const labels = ['питомцев', 'задачи', 'визиты к врачу', 'запасы'];
+      setWarnings(results.flatMap((result, index) => result.status === 'rejected' ? [labels[index]] : []));
+      setNow(Date.now());
       setPhase('ready');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Не удалось загрузить данные');
@@ -106,6 +119,26 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
 
   const attention = useMemo(() => buildAttention(tasks, products, appointments), [tasks, products, appointments]);
   const events = useMemo(() => buildUpcomingEvents(tasks, appointments), [tasks, appointments]);
+  const missedVisits = useMemo(() => appointments.filter((visit) => visit.status === 'SCHEDULED' && Date.parse(visit.scheduledAt) < now)
+    .sort((first, second) => Date.parse(first.scheduledAt) - Date.parse(second.scheduledAt)), [appointments, now]);
+
+  const updateVisit = async (visit: VetAppointmentDto, status: 'COMPLETED' | 'CANCELLED') => {
+    if (busyVisitId !== null) return;
+    setBusyVisitId(visit.id);
+    setVisitError(null);
+    setNotice(null);
+    try {
+      const token = await tokenStore.get();
+      if (!token) throw new Error();
+      const updated = await api.updateAppointment(visit.id, { status }, token);
+      setAppointments((previous) => previous.map((item) => item.id === updated.id ? updated : item));
+      setNotice(status === 'COMPLETED' ? 'Визит отмечен завершённым' : 'Визит отменён');
+    } catch {
+      setVisitError('Не удалось изменить статус визита. Попробуйте ещё раз.');
+    } finally {
+      setBusyVisitId(null);
+    }
+  };
 
   const goVet = useCallback(() => {
     if (pets.length === 0) {
@@ -166,22 +199,40 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={undefined}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={() => void load()} />}
       >
         {/* Приветствие */}
-        <Text style={styles.greeting}>{greetingForNow()}, {user.email.split('@')[0]}!</Text>
+        {warnings.length > 0 && <View style={styles.stateBox}>
+          <Text style={styles.warnText} accessibilityRole="alert">Не удалось загрузить: {warnings.join(', ')}. Сводка может быть неполной.</Text>
+          <Pressable accessibilityRole="button" style={styles.primaryBtn} onPress={() => void load()}><Text style={styles.primaryBtnText}>Повторить загрузку</Text></Pressable>
+        </View>}
+        {visitError && <Text style={styles.warnText} accessibilityRole="alert">{visitError}</Text>}
+        {notice && <Text style={styles.okText} accessibilityLiveRegion="polite">{notice}</Text>}
+        <Text style={styles.greeting}>{greetingForNow()}, {user.firstName?.trim() || user.email.split('@')[0]}!</Text>
         <Text style={styles.greetingSub}>
-          {attention.overdueCount > 0
+          {warnings.length > 0
+            ? 'Часть данных недоступна — обновите сводку.'
+            : missedVisits.length > 0 ? `Визитов без отметки о завершении: ${missedVisits.length}.`
+            : attention.overdueCount > 0
             ? `⚠ Просрочено задач: ${attention.overdueCount}. Откройте «Требует внимания» ниже.`
             : attention.todayCount > 0
               ? `На сегодня задач: ${attention.todayCount}. Хорошего дня!`
-              : 'Срочных дел нет — всё под контролем.'}
+              : attention.items.length > 0 ? 'Есть события и запасы, требующие внимания.' : 'Срочных дел нет — всё под контролем.'}
         </Text>
 
         {/* Требует внимания */}
-        <Section title="Требует внимания" badge={attention.items.length}>
-          {attention.items.length === 0 ? (
-            <Text style={styles.okText}>✅ Всё сделано. Ближайшие 14 дней спокойны.</Text>
+        <Section title="Требует внимания" badge={attention.items.length + missedVisits.length}>
+          {missedVisits.map((visit) => <View key={visit.id} style={styles.attentionBody}>
+            <Text style={styles.attentionTitle}>{visit.clinicName} · {visit.petName}</Text>
+            <Text style={styles.attentionMeta}>{formatDateTime(visit.scheduledAt)} · дата визита прошла</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Завершить визит: ${visit.clinicName}, ${visit.petName}`} disabled={busyVisitId !== null} style={headerActionStyles.pill} onPress={() => void updateVisit(visit, 'COMPLETED')}><Text>Завершить</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Перенести визит: ${visit.clinicName}, ${visit.petName}`} disabled={busyVisitId !== null} style={headerActionStyles.pill} onPress={() => navigation.push({ name: 'AppointmentForm', petId: visit.petId, petName: visit.petName, appointment: visit })}><Text>Перенести</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`Отменить визит: ${visit.clinicName}, ${visit.petName}`} disabled={busyVisitId !== null} style={headerActionStyles.pill} onPress={() => void updateVisit(visit, 'CANCELLED')}><Text>Отменить</Text></Pressable>
+            </View>
+          </View>)}
+          {attention.items.length === 0 && missedVisits.length === 0 ? (
+            <Text style={styles.okText}>{warnings.length > 0 ? 'Загрузите все данные, чтобы проверить срочные дела.' : '✅ Срочных дел нет.'}</Text>
           ) : (
             attention.items.map((item) => {
               const kind = KIND_STYLE[item.kind];
@@ -253,7 +304,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
         {/* Ближайшие события */}
         <Section title="Ближайшие события" actionLabel="Все задачи" onAction={() => onTabChange('Tasks')}>
           {events.length === 0 ? (
-            <Text style={styles.okText}>Впереди нет запланированных событий.</Text>
+            <Text style={styles.okText}>{warnings.includes('задачи') || warnings.includes('визиты к врачу') ? 'Не все события загружены. Повторите загрузку.' : missedVisits.length > 0 ? 'Будущих событий нет. Проверьте незавершённые визиты выше.' : 'Впереди нет запланированных событий.'}</Text>
           ) : (
             events.map((ev: UpcomingEvent) => (
               <View key={ev.key} style={styles.eventRow}>
@@ -449,6 +500,10 @@ function QuickTaskModal({
       setErr('Некорректные дата и время.');
       return;
     }
+    if (dueAt.getTime() <= Date.now()) {
+      setErr('Выберите дату и время в будущем.');
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -496,16 +551,10 @@ function QuickTaskModal({
             </Pressable>
           ))}
 
-          <Text style={styles.fieldLabel}>Дата и время (ГГГГ-ММ-ДДЧЧ:ММ)</Text>
-          <TextInput
-            style={styles.input}
-            value={dueLocal}
-            onChangeText={setDueLocal}
-            placeholder="2026-11-05T18:00"
-            placeholderTextColor={colors.textTertiary}
-            autoCapitalize="none"
-            accessibilityLabel="Дата и время выполнения"
-          />
+          <DateField label="Дата выполнения" value={dueLocal.split('T')[0]} minimum={localDateValue(new Date())} disabled={busy}
+            onChange={(date) => setDueLocal(`${date}T${dueLocal.split('T')[1] || '09:00'}`)} />
+          <DateField label="Местное время" mode="time" value={dueLocal.split('T')[1] ?? ''} disabled={busy}
+            onChange={(time) => setDueLocal(`${dueLocal.split('T')[0]}T${time}`)} />
 
           {err ? <Text style={styles.errText}>{err}</Text> : null}
 

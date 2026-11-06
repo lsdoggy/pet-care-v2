@@ -12,7 +12,8 @@
         {
           "photosPermission": "Pet Care needs access to your photos to set a pet picture."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "ios": {
       "supportsTablet": true

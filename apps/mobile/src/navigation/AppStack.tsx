@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing, typography, layout, radius } from '../theme/tokens';
 import { useSafeAreaInsets } from '../theme/useSafeAreaInsets';
+import type { VetAppointmentDto } from '../api/types';
 
 export type Route =
   | { name: 'Home' }
@@ -13,7 +14,7 @@ export type Route =
   | { name: 'PetForm'; petId?: number }
   | { name: 'PetDetail'; petId: number; petName?: string }
   | { name: 'PetHistory'; petId: number; petName: string }
-  | { name: 'AppointmentForm'; petId: number; petName?: string }
+  | { name: 'AppointmentForm'; petId: number; petName?: string; appointment?: VetAppointmentDto }
   | { name: 'RecordForm'; petId: number; petName?: string };
 
 /**
@@ -31,7 +32,7 @@ export const ROUTE_TITLES: Record<Route['name'], string> = {
   Tasks: 'Upcoming tasks',
   Shopping: 'Shopping list',
   Stock: 'Food stock',
-  Settings: 'Settings',
+  Settings: 'Профиль',
   PetForm: 'Pet details',
   PetDetail: 'Pet profile',
   PetHistory: 'Health history',
@@ -105,11 +106,11 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
 }
 
 const TABS: { name: TabName; label: string; icon: string }[] = [
-  { name: 'Home', label: 'Pets', icon: '🐾' },
-  { name: 'Tasks', label: 'Tasks', icon: '📅' },
-  { name: 'Shopping', label: 'Buy', icon: '🛒' },
-  { name: 'Stock', label: 'Stock', icon: '📦' },
-  { name: 'Settings', label: 'Profile', icon: '⚙️' },
+  { name: 'Home', label: 'Главная', icon: '🐾' },
+  { name: 'Tasks', label: 'Задачи', icon: '📅' },
+  { name: 'Shopping', label: 'Купить', icon: '🛒' },
+  { name: 'Stock', label: 'Запасы', icon: '📦' },
+  { name: 'Settings', label: 'Профиль', icon: '⚙️' },
 ];
 
 function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {

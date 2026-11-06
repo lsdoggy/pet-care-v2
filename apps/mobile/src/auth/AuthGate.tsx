@@ -100,13 +100,13 @@ export function AuthGate() {
               case 'PetHistory':
                 return <PetHistoryScreen key={`history-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'AppointmentForm':
-                return <AppointmentFormScreen key={`appt-${top.petId}`} petId={top.petId} petName={top.petName} />;
+                return <AppointmentFormScreen key={`appt-${top.appointment?.id ?? top.petId}`} petId={top.petId} petName={top.petName} appointment={top.appointment} />;
               case 'RecordForm':
                 return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
               case 'Settings':
-                return <SettingsScreen key="settings" user={user} onUserChange={setUser} />;
+                return <SettingsScreen key="settings" user={user} onUserChange={setUser} onLogout={handleLogout} />;
               case 'Shopping':
                 return <ShoppingScreen key="shopping" />;
               case 'Stock':

@@ -1,6 +1,8 @@
 export interface UserDto {
   id: number;
   email: string;
+  firstName: string | null;
+  phone: string | null;
   /** Sprint 6: profile push switch (Push On/Off). */
   pushNotificationsEnabled: boolean;
   /** Sprint 6: profile email switch (Email On/Off, opt-in). */

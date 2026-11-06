@@ -407,6 +407,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.x8,
   },
   card: {
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.x6,
