@@ -267,3 +267,12 @@ curl -s -X POST http://localhost:8080/api/v1/shopping-list/items \
 # Подсказки низкого стока
 curl -s http://localhost:8080/api/v1/shopping-list/suggestions -H "Authorization: Bearer $TOKEN"
 ```
+
+## Database-specific Flyway migrations
+
+Shared migrations are loaded from `db/migration`; database-specific variants are
+loaded from `db/vendor/{vendor}` (`postgresql` for local development, `h2` for tests).
+V10 has separate variants because H2 requires one `ADD COLUMN` per statement.
+The PostgreSQL V10 contents are unchanged, so existing database checksums remain valid.
+Run backend checks with `cd services/backend && ./mvnw clean test`;
+Flyway stays enabled and Hibernate validates the migrated test schema.

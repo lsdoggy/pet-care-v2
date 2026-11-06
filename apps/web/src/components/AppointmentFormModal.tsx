@@ -90,29 +90,29 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
     setError(null)
 
     if (!clinicName.trim()) {
-      setError('Clinic name is required')
+      setError('Укажите название клиники')
       return
     }
     const when = new Date(scheduledAtLocal)
     if (Number.isNaN(when.getTime())) {
-      setError('Invalid scheduled date/time')
+      setError('Укажите корректные дату и время')
       return
     }
     if (durationMinutes < 5 || durationMinutes > 480) {
-      setError('Duration must be between 5 and 480 minutes')
+      setError('Длительность должна быть от 5 до 480 минут')
       return
     }
     let costValue: number | undefined
     if (cost.trim() !== '') {
       const parsed = Number(cost)
       if (Number.isNaN(parsed) || parsed < 0) {
-        setError('Cost must be a non-negative number')
+        setError('Стоимость должна быть неотрицательным числом')
         return
       }
       costValue = parsed
     }
     if (currency.trim() !== '' && !/^[A-Za-z]{3}$/.test(currency.trim())) {
-      setError('Currency must be a 3-letter code, e.g. USD')
+      setError('Укажите код валюты из трёх букв, например RUB')
       return
     }
 
@@ -136,7 +136,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
         : await api.createAppointment(body, token)
       onSaved(saved)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : 'Не удалось сохранить визит')
     } finally {
       setSaving(false)
     }
@@ -145,18 +145,18 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>{appointment ? 'Edit appointment' : 'New vet appointment'}</h2>
+        <h2 style={{ margin: 0, fontSize: 20 }}>{appointment ? 'Редактировать визит' : 'Запись к ветеринару'}</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label style={labelStyle}>
-            Clinic *
+            Клиника *
             <input style={inputStyle} value={clinicName} onChange={(e) => setClinicName(e.target.value)} maxLength={150} />
           </label>
           <label style={labelStyle}>
-            Doctor
+            Врач
             <input style={inputStyle} value={doctorName} onChange={(e) => setDoctorName(e.target.value)} maxLength={150} />
           </label>
           <label style={labelStyle}>
-            Scheduled at *
+            Дата и время *
             <input
               style={inputStyle}
               type="datetime-local"
@@ -166,7 +166,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
           </label>
           <div style={{ display: 'flex', gap: 12 }}>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Duration, min
+              Длительность, мин
               <input
                 style={inputStyle}
                 type="number"
@@ -177,7 +177,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
               />
             </label>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Status
+              Статус
               <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as AppointmentStatus)}>
                 {APPOINTMENT_STATUSES.map((s) => (
                   <option key={s} value={s}>
@@ -188,21 +188,21 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
             </label>
           </div>
           <label style={labelStyle}>
-            Address
+            Адрес
             <input style={inputStyle} value={address} onChange={(e) => setAddress(e.target.value)} maxLength={255} />
           </label>
           <div style={{ display: 'flex', gap: 12 }}>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Cost
+              Стоимость
               <input style={inputStyle} type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
             </label>
             <label style={{ ...labelStyle, width: 90 }}>
-              Currency
+              Валюта
               <input style={inputStyle} value={currency} onChange={(e) => setCurrency(e.target.value)} maxLength={3} placeholder="USD" />
             </label>
           </div>
           <label style={labelStyle}>
-            Notes
+            Заметки
             <textarea style={{ ...inputStyle, minHeight: 60 }} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
           </label>
 
@@ -210,14 +210,14 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer' }}>
-              Cancel
+              Отмена
             </button>
             <button
               type="submit"
               disabled={saving}
               style={{ padding: '8px 20px', borderRadius: 6, border: 'none', backgroundColor: '#4f46e5', color: '#fff', cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Сохранение…' : 'Сохранить'}
             </button>
           </div>
         </form>

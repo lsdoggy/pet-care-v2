@@ -82,6 +82,10 @@ public class UserEntity {
         return firstName;
     }
 
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public void setPhone(String phone) { this.phone = phone; }
+
     public String getPhone() {
         return phone;
     }
