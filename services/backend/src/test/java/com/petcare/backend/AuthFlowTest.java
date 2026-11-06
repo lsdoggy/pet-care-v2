@@ -64,6 +64,35 @@ class AuthFlowTest {
     }
 
     @Test
+    void profileChangesPersistAndAreIsolated() throws Exception {
+        String email = uniqueEmail();
+        String token = JSON.readTree(register(email, "Secret123!")).get("accessToken").asText();
+        String otherToken = JSON.readTree(register(uniqueEmail(), "Secret123!")).get("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of("firstName", "  Макс  ", "phone", "+7 (999) 123-45-67"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Макс"))
+                .andExpect(jsonPath("$.phone").value("+79991234567"));
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + token))
+                .andExpect(jsonPath("$.firstName").value("Макс"))
+                .andExpect(jsonPath("$.email").value(email));
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + otherToken))
+                .andExpect(jsonPath("$.firstName").isEmpty());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"phone\":\"invalid\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"firstName\":\"\",\"phone\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").isEmpty())
+                .andExpect(jsonPath("$.phone").isEmpty());
+    }
+
+    @Test
     void duplicateEmailReturnsConflict() throws Exception {
         String email = uniqueEmail();
         register(email, "Secret123!");

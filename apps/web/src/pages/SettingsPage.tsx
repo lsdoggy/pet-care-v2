@@ -1,117 +1,97 @@
-import { useCallback, useState } from 'react'
-import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
+import { Navigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { tokenStore } from '../auth/tokenStore'
 import { useAuth } from '../auth/useAuth'
+import '../styles/settings.css'
 
-/**
- * Sprint 6 — Settings page: Push On/Off and Email On/Off switches backed by
- * PATCH /api/v1/users/notification-settings. The updated UserDto is pushed
- * into the auth context so the whole app stays in sync.
- */
 export default function SettingsPage() {
-  const { user, setUser } = useAuth()
-  const [saving, setSaving] = useState<'push' | 'email' | null>(null)
+  const { user, loading, setUser, logout } = useAuth()
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState<string | null>(null)
 
-  const toggle = useCallback(
-    async (key: 'push' | 'email', value: boolean) => {
-      if (!user) return
-      setSaving(key)
-      setError(null)
-      setSaved(false)
-      try {
-        const token = tokenStore.get() ?? ''
-        const pushEnabled = key === 'push' ? value : user.pushNotificationsEnabled
-        const emailEnabled = key === 'email' ? value : user.emailNotificationsEnabled
-        const updated = await api.updateNotificationSettings(pushEnabled, emailEnabled, token)
-        setUser(updated)
-        setSaved(true)
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to save settings')
-      } finally {
-        setSaving(null)
-      }
-    },
-    [user, setUser],
-  )
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    await save(async () => {
+      const updated = await api.updateProfile({
+        firstName: String(data.get('firstName') ?? '').trim(),
+        phone: String(data.get('phone') ?? '').trim(),
+      }, tokenStore.get() ?? '')
+      setUser(updated)
+    }, 'Данные профиля сохранены')
+  }
 
-  if (!user) return null
+  async function save(action: () => Promise<void>, message: string) {
+    setSaving(true)
+    setError(null)
+    setSaved(null)
+    try {
+      await action()
+      setSaved(message)
+    } catch {
+      setError('Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function toggle(key: 'push' | 'email', value: boolean) {
+    if (!user) return
+    await save(async () => {
+      const updated = await api.updateNotificationSettings(
+        key === 'push' ? value : user!.pushNotificationsEnabled,
+        key === 'email' ? value : user!.emailNotificationsEnabled,
+        tokenStore.get() ?? '',
+      )
+      setUser(updated)
+    }, 'Настройки уведомлений сохранены')
+  }
+
+  if (loading) return <p role="status">Загрузка профиля…</p>
+  if (!user) return <Navigate to="/login" replace />
 
   return (
-    <main style={pageStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: 26 }}>Settings</h1>
-        <span style={{ color: '#6b7280', fontSize: 14 }}>{user.email}</span>
-      </div>
-
-      {error && <p style={{ color: '#c0392b' }}>{error}</p>}
-      {saved && !error && <p style={{ color: '#16a34a' }}>Saved.</p>}
-
-      <section style={cardStyle}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Notifications</h2>
-
-        <label style={rowStyle}>
-          <span>
-            <strong>Push notifications</strong>
-            <br />
-            <small style={hintStyle}>Care-task reminders on your registered mobile devices</small>
-          </span>
-          <input
-            type="checkbox"
-            checked={user.pushNotificationsEnabled}
-            disabled={saving !== null}
-            onChange={(e) => void toggle('push', e.target.checked)}
-            style={{ width: 20, height: 20, accentColor: '#4f46e5', cursor: 'pointer' }}
-          />
+    <div className="pc-settings">
+      <header>
+        <h1>Профиль</h1>
+        <p className="pc-settings__hint">Ваши данные и напоминания об уходе за питомцами</p>
+      </header>
+      {error && <p className="pc-settings__error" role="alert">{error}</p>}
+      {saved && <p className="pc-settings__success" role="status">{saved}</p>}
+      <section className="pc-settings__card" aria-labelledby="profile-data-title">
+        <h2 id="profile-data-title">Личные данные</h2>
+        <form onSubmit={(e) => void saveProfile(e)} className="pc-settings__form">
+          <label>Имя
+            <input name="firstName" autoComplete="given-name" defaultValue={user.firstName ?? ''} maxLength={80} placeholder="Как к вам обращаться" />
+          </label>
+          <label>Телефон <span className="pc-settings__hint">(необязательно)</span>
+            <input name="phone" type="tel" autoComplete="tel" defaultValue={user.phone ?? ''} maxLength={20} pattern={String.raw`[+0-9 \(\)\-]{6,20}`} placeholder="+7 999 123-45-67" />
+          </label>
+          <label>Электронная почта
+            <input value={user.email} readOnly autoComplete="email" />
+          </label>
+          <button className="pc-btn pc-btn--primary" disabled={saving} type="submit">{saving ? 'Сохранение…' : 'Сохранить изменения'}</button>
+        </form>
+      </section>
+      <section className="pc-settings__card" aria-labelledby="profile-notifications-title" aria-busy={saving}>
+        <h2 id="profile-notifications-title">Уведомления</h2>
+        <label className="pc-settings__row">
+          <span><strong>Push-уведомления</strong><small>Напоминания на мобильных устройствах, подключённых через приложение.</small></span>
+          <input type="checkbox" role="switch" checked={user.pushNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('push', e.target.checked)} />
         </label>
-
-        <label style={rowStyle}>
-          <span>
-            <strong>Email notifications</strong>
-            <br />
-            <small style={hintStyle}>Important events only (medication, vaccination)</small>
-          </span>
-          <input
-            type="checkbox"
-            checked={user.emailNotificationsEnabled}
-            disabled={saving !== null}
-            onChange={(e) => void toggle('email', e.target.checked)}
-            style={{ width: 20, height: 20, accentColor: '#4f46e5', cursor: 'pointer' }}
-          />
+        <label className="pc-settings__row">
+          <span><strong>Письма на почту</strong><small>Важные события: приём лекарств и вакцинация.</small></span>
+          <input type="checkbox" role="switch" checked={user.emailNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('email', e.target.checked)} />
         </label>
       </section>
-    </main>
+      <section className="pc-settings__card" aria-labelledby="profile-session-title">
+        <h2 id="profile-session-title">Аккаунт</h2>
+        <p className="pc-settings__hint">Вы вошли как {user.email}</p>
+        <button className="pc-btn" disabled={saving} type="button" onClick={logout}>Выйти из аккаунта</button>
+      </section>
+    </div>
   )
 }
-
-const pageStyle: CSSProperties = {
-  maxWidth: 720,
-  margin: '0 auto',
-  padding: 24,
-  fontFamily: 'system-ui, sans-serif',
-}
-
-const cardStyle: CSSProperties = {
-  marginTop: 24,
-  background: '#fff',
-  border: '1px solid #e2e8f0',
-  borderRadius: 12,
-  padding: 20,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-}
-
-const rowStyle: CSSProperties = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  gap: 16,
-  borderTop: '1px solid #f1f5f9',
-  paddingTop: 12,
-  cursor: 'pointer',
-}
-
-const hintStyle: CSSProperties = { color: '#6b7280' }

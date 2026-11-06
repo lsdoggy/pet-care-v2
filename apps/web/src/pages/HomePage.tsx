@@ -42,6 +42,7 @@ import {
 } from '../lib/dashboard'
 import '../styles/dashboard.css'
 import '../styles/pets.css'
+import '../styles/settings.css'
 
 /**
  * Design Sprint 2 — Dashboard (web, mobile-first).
@@ -52,7 +53,7 @@ import '../styles/pets.css'
 type Modal =
   | { name: 'pet'; pet?: PetDto }
   | { name: 'task'; pet: PetDto }
-  | { name: 'appointment'; pet: PetDto }
+  | { name: 'appointment'; pet: PetDto; appointment?: VetAppointmentDto }
   | { name: 'purchase' }
   | { name: 'pickPet'; for: 'task' | 'appointment' }
   | null
@@ -73,6 +74,11 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [now, setNow] = useState(Date.now)
+  const [warnings, setWarnings] = useState<string[]>([])
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [busyVisitId, setBusyVisitId] = useState<number | null>(null)
   const [modal, setModal] = useState<Modal>(null)
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null)
   // Design Sprint 3: удаление питомца через доступный ConfirmDialog.
@@ -85,6 +91,7 @@ export default function HomePage() {
   const loadAll = useCallback(async () => {
     if (!tokenStore.get()) return
     setLoading(true)
+    setNow(Date.now())
     setError(null)
     const results = await Promise.allSettled([
       api.listPets(token),
@@ -93,6 +100,8 @@ export default function HomePage() {
       api.listFoodProducts(token),
     ])
     const [petsRes, tasksRes, apptRes, prodRes] = results
+    const labels = ['питомцев', 'задачи', 'визиты к врачу', 'запасы']
+    setWarnings(results.flatMap((result, i) => result.status === 'rejected' ? [labels[i]] : []))
     if (petsRes.status === 'fulfilled') setPets(petsRes.value)
     if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value)
     if (apptRes.status === 'fulfilled') setAppointments(apptRes.value)
@@ -100,7 +109,7 @@ export default function HomePage() {
 
     // Pets failing is fatal for the dashboard → full error state with retry.
     if (petsRes.status === 'rejected') {
-      setError(petsRes.reason instanceof Error ? petsRes.reason.message : 'Не удалось загрузить данные')
+      setError('Не удалось загрузить питомцев. Проверьте соединение и повторите попытку.')
     }
     setLoading(false)
   }, [token])
@@ -115,25 +124,47 @@ export default function HomePage() {
     const today = tasks.filter((t) => classifyTask(t) === 'today').sort(taskComparator)
     const low = lowStockProducts(products)
     const visit = nextVisit(appointments, 7)
-    return { overdue, today, low, visit }
-  }, [tasks, products, appointments])
+    const missedVisits = appointments.filter((a) => a.status === 'SCHEDULED' && new Date(a.scheduledAt).getTime() < now)
+      .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt))
+    return { overdue, today, low, visit, missedVisits }
+  }, [tasks, products, appointments, now])
 
   const events = useMemo(() => buildUpcomingEvents(tasks, appointments).slice(0, 6), [tasks, appointments])
 
   const attentionCount =
-    attention.overdue.length + attention.today.length + attention.low.length + (attention.visit ? 1 : 0)
+    attention.missedVisits.length + attention.overdue.length + attention.today.length + attention.low.length + (attention.visit ? 1 : 0)
 
   /* ---------- task completion (existing API: POST /tasks/{id}/complete) ---------- */
   async function completeTask(task: CareTaskDto) {
     setBusyTaskId(task.id)
+    setActionError(null)
+    setNotice(null)
     try {
       await api.completeTask(task.id, token)
+      setNotice(`Задача «${task.title}» выполнена`)
       // Refetch so a newly spawned recurring task appears immediately.
       const [nextTasks, nextProducts] = await Promise.all([api.listUpcomingTasks(token), api.listFoodProducts(token)])
       setTasks(nextTasks)
       setProducts(nextProducts)
+    } catch {
+      setActionError('Не удалось обновить список задач. Повторите загрузку, чтобы проверить результат.')
     } finally {
       setBusyTaskId(null)
+    }
+  }
+
+  async function updateVisit(visit: VetAppointmentDto, status: 'COMPLETED' | 'CANCELLED') {
+    setBusyVisitId(visit.id)
+    setActionError(null)
+    setNotice(null)
+    try {
+      const updated = await api.updateAppointment(visit.id, { status }, token)
+      setAppointments((prev) => prev.map((a) => a.id === updated.id ? updated : a))
+      setNotice(status === 'COMPLETED' ? 'Визит отмечен завершённым' : 'Визит отменён')
+    } catch {
+      setActionError('Не удалось изменить статус визита. Попробуйте ещё раз.')
+    } finally {
+      setBusyVisitId(null)
     }
   }
 
@@ -182,7 +213,7 @@ export default function HomePage() {
   if (authLoading) return <DashboardSkeleton />
   if (!user) return <Navigate to="/login" replace />
 
-  const firstName = displayNameFromEmail(user.email)
+  const firstName = user.firstName?.trim() || displayNameFromEmail(user.email)
 
   return (
     <main className="pc-dash" aria-busy={loading}>
@@ -203,6 +234,14 @@ export default function HomePage() {
         </div>
       ) : (
         <>
+          {warnings.length > 0 && (
+            <div className="pc-dashboard-warning" role="alert">
+              Не удалось загрузить: {warnings.join(', ')}. Сводка может быть неполной.
+              <button className="pc-linkbtn" type="button" onClick={() => void loadAll()}>Повторить загрузку</button>
+            </div>
+          )}
+          {actionError && <div className="pc-dashboard-warning" role="alert">{actionError} <button className="pc-linkbtn" onClick={() => void loadAll()}>Обновить данные</button></div>}
+          {notice && <p className="pc-settings__success" role="status">{notice}</p>}
           {/* ---------- 1. Greeting ---------- */}
           <header>
             <p className="pc-dash__greeting-date">{todayLabel()}</p>
@@ -210,10 +249,12 @@ export default function HomePage() {
               {greetingWord()}, {firstName}!
             </h1>
             <p className="pc-dash__greeting-sub">
-              {attention.overdue.length > 0
+              {warnings.length > 0
+                ? 'Часть данных недоступна — обновите сводку'
+                : attention.overdue.length > 0
                 ? `Просрочено: ${pluralRu(attention.overdue.length, ['задача', 'задачи', 'задач'])} — начните с блока «Требует внимания»`
                 : attentionCount > 0
-                  ? `${pluralRu(attentionCount, ['Задача', 'Задачи', 'Задач'])} в поле зрения на ближайшие дни`
+                  ? `Требуют внимания: ${attentionCount}`
                   : 'Всё под контролем — срочных дел нет 🐾'}
             </p>
           </header>
@@ -236,7 +277,7 @@ export default function HomePage() {
                 {attentionCount === 0 ? (
                   <div className="pc-card pc-attention pc-attention--ok">
                     <CheckIcon size={20} />
-                    Всё спокойно: ничего не просрочено, корм в порядке, визитов на неделе нет.
+                    {warnings.length > 0 ? 'Не все данные загружены. Пока нельзя проверить, есть ли срочные дела.' : 'Всё спокойно: ничего не просрочено, корм в порядке, визитов на неделе нет.'}
                   </div>
                 ) : (
                   <div className="pc-card pc-attention">
@@ -251,6 +292,29 @@ export default function HomePage() {
                             onComplete={completeTask}
                             onOpen={() => navigate(`/pets/${t.petId}`)}
                           />
+                        ))}
+                      </AttentionGroup>
+                    )}
+                    {attention.missedVisits.length > 0 && (
+                      <AttentionGroup label={`Визиты без отметки о завершении · ${attention.missedVisits.length}`}>
+                        {attention.missedVisits.map((visit) => (
+                          <div key={visit.id}>
+                            <button type="button" className="pc-attention__row" onClick={() => navigate(`/pets/${visit.petId}`)}>
+                              <span className="pc-attention__dot pc-attention__dot--danger" aria-hidden="true" />
+                              <span className="pc-attention__row-main">
+                                <span className="pc-attention__row-title">{visit.clinicName} · {visit.petName}</span>
+                                <span className="pc-attention__row-meta">{formatVisitLabel(visit.scheduledAt)} · дата визита прошла</span>
+                              </span>
+                            </button>
+                            <div className="pc-visit-actions" role="group" aria-label={`Действия с визитом: ${visit.clinicName}, ${visit.petName}`}>
+                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'COMPLETED')}>Завершить</button>
+                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => {
+                                const pet = pets.find((p) => p.id === visit.petId)
+                                if (pet) setModal({ name: 'appointment', pet, appointment: visit })
+                              }}>Перенести</button>
+                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'CANCELLED')}>Отменить визит</button>
+                            </div>
+                          </div>
                         ))}
                       </AttentionGroup>
                     )}
@@ -405,7 +469,7 @@ export default function HomePage() {
 
                 <div className="pc-card pc-events">
                   {events.length === 0 ? (
-                    <p className="pc-event__empty">Ближайших событий нет — можно выдохнуть 🐾</p>
+                    <p className="pc-event__empty">{warnings.includes('задачи') || warnings.includes('визиты к врачу') ? 'Не удалось загрузить все события. Повторите загрузку.' : attention.missedVisits.length > 0 ? 'Будущих событий нет. Проверьте незавершённые визиты в блоке «Требует внимания».' : 'Ближайших событий нет 🐾'}</p>
                   ) : (
                     events.map((ev) =>
                       ev.kind === 'task' ? (
@@ -511,6 +575,7 @@ export default function HomePage() {
           {modal?.name === 'appointment' && (
             <AppointmentFormModal
               petId={modal.pet.id}
+              appointment={modal.appointment}
               token={token}
               onClose={() => setModal(null)}
               onSaved={() => {
