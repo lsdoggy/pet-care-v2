@@ -1,13 +1,11 @@
 package com.petcare.backend.notification;
 
-import jakarta.persistence.EnumeratedValue;
 
 /** Delivery channel of a notification (stored lowercase in the DB, see V6 migration). */
 public enum NotificationType {
     PUSH("push"),
     EMAIL("email");
 
-    @EnumeratedValue
     private final String value;
 
     NotificationType(String value) {

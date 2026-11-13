@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
+import Modal from './Modal'
 import type { CreateFoodProductRequest, FoodCategory, FoodProductDto, StockUnit } from '../api/types'
 import { FOOD_CATEGORIES, FOOD_CATEGORY_LABELS, STOCK_UNITS } from '../api/types'
 
@@ -10,26 +11,6 @@ interface Props {
   onClose: () => void
 }
 
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  backgroundColor: 'rgba(0,0,0,0.4)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 50,
-}
-
-const modalStyle: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 10,
-  padding: 20,
-  width: 'min(440px, 92vw)',
-  maxHeight: '88vh',
-  overflowY: 'auto',
-  fontFamily: 'inherit',
-}
-
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, marginBottom: 4, color: '#555' }
 
 const inputStyle: React.CSSProperties = {
@@ -37,7 +18,7 @@ const inputStyle: React.CSSProperties = {
   padding: '8px 10px',
   borderRadius: 6,
   border: '1px solid #ccc',
-  fontSize: 14,
+  fontSize: 'var(--font-size-md)',
   boxSizing: 'border-box',
 }
 
@@ -53,6 +34,7 @@ function toIntOrNull(value: string): number | null {
  * Validation mirrors backend @Valid constraints; server errors are shown inline by the page.
  */
 export default function ProductFormModal({ initial, submitting, onSubmit, onClose }: Props) {
+  const titleId = useId()
   const [name, setName] = useState(initial?.name ?? '')
   const [brand, setBrand] = useState(initial?.brand ?? '')
   const [category, setCategory] = useState<FoodCategory>(initial?.category ?? 'DRY')
@@ -85,109 +67,107 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
   }
 
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: '0 0 14px', fontSize: 18 }}>{initial ? 'Edit product' : 'New product'}</h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>Name *</label>
-            <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} maxLength={150} />
+    <Modal labelledBy={titleId} onClose={onClose}>
+      <h2 id={titleId} className="pc-modal__title">{initial ? 'Edit product' : 'New product'}</h2>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label style={labelStyle}>Name *</label>
+          <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} maxLength={150} />
+        </div>
+        <div>
+          <label style={labelStyle}>Brand</label>
+          <input style={inputStyle} value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={150} />
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Category</label>
+            <select style={inputStyle} value={category} onChange={(e) => setCategory(e.target.value as FoodCategory)}>
+              {FOOD_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {FOOD_CATEGORY_LABELS[c]}
+                </option>
+              ))}
+            </select>
           </div>
-          <div>
-            <label style={labelStyle}>Brand</label>
-            <input style={inputStyle} value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={150} />
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Unit</label>
+            <select style={inputStyle} value={unit} onChange={(e) => setUnit(e.target.value as StockUnit)}>
+              {STOCK_UNITS.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
           </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Category</label>
-              <select style={inputStyle} value={category} onChange={(e) => setCategory(e.target.value as FoodCategory)}>
-                {FOOD_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {FOOD_CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Unit</label>
-              <select style={inputStyle} value={unit} onChange={(e) => setUnit(e.target.value as StockUnit)}>
-                {STOCK_UNITS.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Stock quantity</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                max={1000000}
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Reorder threshold</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                max={1000000}
-                value={threshold}
-                onChange={(e) => setThreshold(e.target.value)}
-              />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Package size, g</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={1}
-                max={1000000}
-                value={packageSize}
-                onChange={(e) => setPackageSize(e.target.value)}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Daily portion, g</label>
-              <input
-                style={inputStyle}
-                type="number"
-                min={0}
-                max={100000}
-                value={dailyPortion}
-                onChange={(e) => setDailyPortion(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label style={labelStyle}>Notes</label>
-            <textarea
-              style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              maxLength={2000}
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Stock quantity</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={0}
+              max={1000000}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
             />
           </div>
-          {localError ? <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>{localError}</p> : null}
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-            <button type="button" style={cancelBtn} onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" style={primaryBtn} disabled={submitting}>
-              {submitting ? 'Saving…' : 'Save'}
-            </button>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Reorder threshold</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={0}
+              max={1000000}
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
+            />
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Package size, g</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={1}
+              max={1000000}
+              value={packageSize}
+              onChange={(e) => setPackageSize(e.target.value)}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Daily portion, g</label>
+            <input
+              style={inputStyle}
+              type="number"
+              min={0}
+              max={100000}
+              value={dailyPortion}
+              onChange={(e) => setDailyPortion(e.target.value)}
+            />
+          </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Notes</label>
+          <textarea
+            style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            maxLength={2000}
+          />
+        </div>
+        {localError ? <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>{localError}</p> : null}
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button type="button" style={cancelBtn} onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" style={primaryBtn} disabled={submitting}>
+            {submitting ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

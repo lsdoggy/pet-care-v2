@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from './auth/AuthContext'
+import { AuthProvider } from './auth/AuthProvider'
 import AppShell from './components/layout/AppShell'
 import AuthPage from './pages/AuthPage'
 import RestoreAccountPage from './pages/RestoreAccountPage'

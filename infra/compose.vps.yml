@@ -1,0 +1,73 @@
+name: petcare-vps
+
+x-service: &service
+  restart: unless-stopped
+  logging:
+    driver: local
+
+services:
+  postgres:
+    <<: *service
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: petcare
+      POSTGRES_USER: petcare
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in infra/.env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "petcare", "-d", "petcare"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [database]
+
+  backend:
+    <<: *service
+    build: ../services/backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/petcare
+      DB_USER: petcare
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in infra/.env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in infra/.env}
+      UPLOAD_DIR: /app/uploads
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      EXPO_PUSH_ENABLED: "false"
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    networks: [default, database]
+
+  caddy:
+    <<: *service
+    image: caddy:2-alpine
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in infra/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+networks:
+  database:
+    internal: true
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:
