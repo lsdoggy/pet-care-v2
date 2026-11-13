@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { FoodProductDto } from '../api/types';
 import { FOOD_CATEGORY_LABELS } from '../api/types';

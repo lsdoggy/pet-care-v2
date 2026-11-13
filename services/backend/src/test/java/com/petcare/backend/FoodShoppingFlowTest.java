@@ -98,6 +98,33 @@ class FoodShoppingFlowTest {
     /* ---------------- Food product CRUD ---------------- */
 
     @Test
+    void lowStockNotificationIsCreatedOnlyWhenCrossingTheThreshold() throws Exception {
+        String token = registerAndLogin(uniqueEmail());
+        long id = createProduct(token, dryFoodPayload("Acana Adult", 10, 2, 200));
+        mockMvc.perform(patch("/api/v1/users/notification-settings")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pushEnabled":true,"emailEnabled":false,"lowStockNotificationEnabled":true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lowStockNotificationEnabled").value(true));
+
+        for (int stock : new int[] {2, 1}) {
+            mockMvc.perform(patch("/api/v1/food-products/" + id)
+                            .header("Authorization", "Bearer " + token)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(JSON.writeValueAsString(Map.of("stockQuantity", stock))))
+                    .andExpect(status().isOk());
+        }
+
+        mockMvc.perform(get("/api/v1/notifications").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("Мало корма"));
+    }
+
+    @Test
     void productCrudLifecycle() throws Exception {
         String token = registerAndLogin(uniqueEmail());
 

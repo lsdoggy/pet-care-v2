@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { FoodProductDto, ShoppingItemDto } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';

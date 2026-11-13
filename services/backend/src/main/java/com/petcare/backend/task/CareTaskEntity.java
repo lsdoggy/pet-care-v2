@@ -117,6 +117,11 @@ public class CareTaskEntity {
     }
 
     public void setDueAt(Instant dueAt) {
+        if (!java.util.Objects.equals(this.dueAt, dueAt)) {
+            reminderSent = false;
+            dayReminderSent = false;
+            overdueReminderSent = false;
+        }
         this.dueAt = dueAt;
     }
 
@@ -134,6 +139,20 @@ public class CareTaskEntity {
 
     public void setRecurrenceRule(String recurrenceRule) {
         this.recurrenceRule = recurrenceRule;
+    }
+
+    @Column(name = "day_reminder_sent", nullable = false)
+    private boolean dayReminderSent;
+
+    public void markDayReminderSent() {
+        dayReminderSent = true;
+    }
+
+    @Column(name = "overdue_reminder_sent", nullable = false)
+    private boolean overdueReminderSent;
+
+    public void markOverdueReminderSent() {
+        overdueReminderSent = true;
     }
 
     public boolean isReminderSent() {

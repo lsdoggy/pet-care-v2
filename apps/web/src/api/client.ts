@@ -71,6 +71,10 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 
 export const api = {
+  restoreAccount: (token: string) =>
+    request<void>('/auth/restore-account', { method: 'POST', body: JSON.stringify({ token }) }),
+  deactivateAccount: (token: string) =>
+    request<void>('/users/me/deactivate', { method: 'POST' }, token),
   register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
@@ -212,10 +216,10 @@ export const api = {
   markNotificationRead: (id: number, token: string) =>
     request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, token),
 
-  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, token: string) =>
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, token: string, reminders?: Partial<Pick<UserDto, 'hourReminderEnabled' | 'dayReminderEnabled' | 'overdueReminderEnabled' | 'lowStockNotificationEnabled'>>) =>
     request<UserDto>(
       '/users/notification-settings',
-      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled, ...reminders }) },
       token,
     ),
   /* ---------- Food products & shopping list (Sprint 5) ---------- */

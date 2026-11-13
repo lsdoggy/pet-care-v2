@@ -14,7 +14,7 @@ import { api, ApiError } from '../api/client';
  */
 export function usePushRegistration(jwt: string | null): void {
   useEffect(() => {
-    if (!jwt) return;
+    if (!jwt || Platform.OS === 'web') return;
 
     // Show incoming pushes while the app is foregrounded.
     void Notifications.setNotificationHandler({

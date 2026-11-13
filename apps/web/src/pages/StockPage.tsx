@@ -9,7 +9,7 @@ import NavTabs from '../components/NavTabs'
 import ProductFormModal from '../components/ProductFormModal'
 
 const pageStyle: React.CSSProperties = {
-  fontFamily: 'sans-serif',
+  fontFamily: 'inherit',
   maxWidth: 860,
   margin: '4vh auto',
   padding: '0 16px',

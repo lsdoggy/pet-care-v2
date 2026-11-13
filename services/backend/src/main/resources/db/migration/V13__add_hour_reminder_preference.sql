@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN hour_reminder_enabled BOOLEAN NOT NULL DEFAULT TRUE;

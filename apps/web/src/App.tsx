@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import AppShell from './components/layout/AppShell'
 import AuthPage from './pages/AuthPage'
+import RestoreAccountPage from './pages/RestoreAccountPage'
 import HomePage from './pages/HomePage'
 import PetDetailPage from './pages/PetDetailPage'
 import SettingsPage from './pages/SettingsPage'
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           {/* Public auth routes: no shell (no user context yet) */}
           <Route path="/login" element={<AuthPage mode="login" />} />
+          <Route path="/restore-account" element={<RestoreAccountPage />} />
           <Route path="/register" element={<AuthPage mode="register" />} />
 
           {/* Design Sprint 0: AppShell layout wrapper around existing pages.

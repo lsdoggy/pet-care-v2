@@ -52,6 +52,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
+  if (response.status === 204) return undefined as T;
+
   let body: unknown;
   try {
     body = await response.json();
@@ -73,6 +75,8 @@ export interface RegisterProfile {
 }
 
 export const api = {
+  deactivateAccount: (token: string) =>
+    request<void>('/users/me/deactivate', { method: 'POST' }, token),
   register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
@@ -88,6 +92,8 @@ export const api = {
     }),
 
   me: (token: string) => request<UserDto>('/users/me', { method: 'GET' }, token),
+  updateProfile: (body: { firstName: string; phone: string }, token: string) =>
+    request<UserDto>('/users/me', { method: 'PATCH', body: JSON.stringify(body) }, token),
 
   listPets: (token: string) => request<PetDto[]>('/pets', { method: 'GET' }, token),
 
@@ -226,10 +232,10 @@ export const api = {
   markNotificationRead: (id: number, jwt: string) =>
     request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, jwt),
 
-  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, jwt: string) =>
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, jwt: string, reminders?: Partial<Pick<UserDto, 'hourReminderEnabled' | 'dayReminderEnabled' | 'overdueReminderEnabled' | 'lowStockNotificationEnabled'>>) =>
     request<UserDto>(
       '/users/notification-settings',
-      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled, ...reminders }) },
       jwt,
     ),
   /* ---------- Food products & shopping list (Sprint 5) ---------- */

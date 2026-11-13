@@ -45,7 +45,7 @@ public class SmtpMailSender implements MailSender {
             sender.send(message);
             return true;
         } catch (Exception e) {
-            log.error("SMTP send to {} failed: {}", to, e.getMessage());
+            log.error("SMTP send failed ({})", e.getClass().getSimpleName());
             return false;
         }
     }

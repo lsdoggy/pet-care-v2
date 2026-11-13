@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import * as ImagePicker from 'expo-image-picker';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { PetSpecies } from '../api/types';
@@ -26,6 +16,8 @@ import {
   type PetFormValues,
 } from '../lib/petUtils';
 import { colors } from '../theme/tokens';
+import { DateField } from '../components/DateField';
+import { localDateValue } from '../components/DateField.types';
 
 interface Props {
   /** When set — edit mode (PATCH + optional photo re-upload). Otherwise create mode. */
@@ -230,15 +222,13 @@ export function PetFormScreen({ petId }: Props) {
         />
         {shownError('breed') ? <Text style={styles.error}>{shownError('breed')}</Text> : null}
 
-        <Text style={styles.label}>Дата рождения (ГГГГ-ММ-ДД)</Text>
-        <TextInput
-          style={[styles.input, !!shownError('birthDate') && styles.inputError]}
+        <DateField
+          label="Дата рождения (необязательно)"
           value={values.birthDate}
-          onChangeText={(t) => setField('birthDate', t)}
-          placeholder="2020-05-01"
-          autoCapitalize="none"
-          keyboardType="numbers-and-punctuation"
-          accessibilityLabel="Дата рождения, формат год-месяц-день"
+          onChange={(value) => setField('birthDate', value)}
+          maximum={localDateValue(new Date())}
+          optional
+          disabled={submitting}
         />
         {shownError('birthDate') ? <Text style={styles.error}>{shownError('birthDate')}</Text> : null}
 

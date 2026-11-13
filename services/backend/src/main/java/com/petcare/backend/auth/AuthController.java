@@ -30,6 +30,14 @@ public class AuthController {
         return userService.register(request);
     }
 
+    record RestoreAccountRequest(String token) {}
+
+    @PostMapping("/restore-account")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void restore(@RequestBody RestoreAccountRequest request) {
+        userService.restore(request.token());
+    }
+
     @PostMapping("/login")
     AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return userService.login(request);

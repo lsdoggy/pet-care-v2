@@ -9,6 +9,10 @@ export interface UserDto {
   pushNotificationsEnabled: boolean
   /** Sprint 6: profile email switch (Email On/Off, opt-in). */
   emailNotificationsEnabled: boolean
+  hourReminderEnabled: boolean
+  dayReminderEnabled: boolean
+  overdueReminderEnabled: boolean
+  lowStockNotificationEnabled: boolean
   createdAt: string
 }
 

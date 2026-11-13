@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, View, Text } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/types';
 import { APPOINTMENT_STATUS_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
 import { DetailHeader } from '../components/ScreenHeader';
+import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
 
 interface Props {
   petId: number;
@@ -183,6 +185,7 @@ function AppointmentCard({ a }: { a: VetAppointmentDto }) {
         {a.doctorName ? ` · ${a.doctorName}` : ''} · {a.durationMinutes} min
       </Text>
       {a.address ? <Text style={styles.muted}>{a.address}</Text> : null}
+      {a.status === 'SCHEDULED' && <AddToGoogleCalendar title={`Ветеринар: ${a.clinicName} · ${a.petName}`} startsAt={a.scheduledAt} durationMinutes={a.durationMinutes} location={a.address} />}
       {a.cost != null ? (
         <Text style={styles.muted}>
           {a.cost.toFixed(2)} {a.currency ?? ''}

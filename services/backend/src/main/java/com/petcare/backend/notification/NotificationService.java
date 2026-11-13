@@ -86,7 +86,7 @@ public class NotificationService {
      */
     @Transactional
     public void push(UserEntity user, String title, String body, Map<String, Object> payload) {
-        if (!user.isPushNotificationsEnabled()) {
+        if (user.isDeactivated() || !user.isPushNotificationsEnabled()) {
             log.debug("Push suppressed for user {}: channel disabled in settings", user.getId());
             return;
         }
@@ -106,7 +106,7 @@ public class NotificationService {
     /** Creates an email notification row and sends it (only called for important events). */
     @Transactional
     public void email(UserEntity user, String title, String body, Map<String, Object> payload) {
-        if (!user.isEmailNotificationsEnabled()) {
+        if (user.isDeactivated() || !user.isEmailNotificationsEnabled()) {
             return;
         }
         NotificationEntity notification = notificationRepository.save(
@@ -130,6 +130,10 @@ public class NotificationService {
             if (n.getSentAt() != null && n.getSentAt().isBefore(now.minusSeconds(GIVE_UP_AFTER_SECONDS))) {
                 continue; // older than the give-up window: leave it as failed history
             }
+            UserEntity owner = userRepository.findById(n.getUserId()).orElse(null);
+            if (owner == null || owner.isDeactivated()) {
+                continue;
+            }
             if (n.getType() == NotificationType.PUSH) {
                 List<String> tokens = deviceRepository
                         .findByUserIdAndPushEnabledTrue(n.getUserId()).stream()
@@ -142,8 +146,7 @@ public class NotificationService {
                 bumpAttempt(n, now);
                 retried++;
             } else {
-                String to = userRepository.findById(n.getUserId()).map(UserEntity::getEmail).orElse(null);
-                if (to != null && mailSender.send(to, n.getTitle(), n.getBody())) {
+                if (mailSender.send(owner.getEmail(), n.getTitle(), n.getBody())) {
                     applyDeliveryResult(n, true);
                     retried++;
                 } else {

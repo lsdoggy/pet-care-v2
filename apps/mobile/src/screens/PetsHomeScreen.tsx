@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { CareTaskDto, PetDto, UserDto } from '../api/types';
 import { SPECIES_LABELS, TASK_TYPE_LABELS } from '../api/types';

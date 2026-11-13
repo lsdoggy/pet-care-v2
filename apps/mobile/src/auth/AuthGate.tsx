@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
@@ -100,13 +101,13 @@ export function AuthGate() {
               case 'PetHistory':
                 return <PetHistoryScreen key={`history-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'AppointmentForm':
-                return <AppointmentFormScreen key={`appt-${top.petId}`} petId={top.petId} petName={top.petName} />;
+                return <AppointmentFormScreen key={`appt-${top.appointment?.id ?? top.petId}`} petId={top.petId} petName={top.petName} appointment={top.appointment} />;
               case 'RecordForm':
                 return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} appointmentId={top.appointmentId} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
               case 'Settings':
-                return <SettingsScreen key="settings" user={user} onUserChange={setUser} />;
+                return <SettingsScreen key="settings" user={user} onUserChange={setUser} onLogout={handleLogout} />;
               case 'Shopping':
                 return <ShoppingScreen key="shopping" />;
               case 'Stock':

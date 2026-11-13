@@ -1,5 +1,6 @@
 package com.petcare.backend.notification;
 
+
 /** Delivery channel of a notification (stored lowercase in the DB, see V6 migration). */
 public enum NotificationType {
     PUSH("push"),

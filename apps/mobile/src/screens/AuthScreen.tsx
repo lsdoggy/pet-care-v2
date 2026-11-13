@@ -11,17 +11,8 @@
  */
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { ApiError } from '../api/client';
 import type { RegisterProfile } from '../api/client';
 import { colors, spacing, stack, radius, layout, typography, fontSize } from '../theme/tokens';
@@ -407,6 +398,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.x8,
   },
   card: {
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.x6,

@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "app.account.recovery-page=https://petcare.example/restore-account")
 @AutoConfigureMockMvc
 class AuthFlowTest {
 
@@ -22,6 +22,36 @@ class AuthFlowTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.petcare.backend.notification.MailSender mailSender;
+
+    @Test
+    void deactivateAndRestoreInvalidatesOldSessionsAndConsumesLink() throws Exception {
+        String email = uniqueEmail();
+        String password = "Secret123!";
+        String jwt = JSON.readTree(register(email, password)).get("accessToken").asText();
+        var sentBody = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.when(mailSender.send(
+                org.mockito.ArgumentMatchers.eq(email), org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(true);
+
+        mockMvc.perform(post("/api/v1/users/me/deactivate").header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isNoContent());
+        org.mockito.Mockito.verify(mailSender).send(
+                org.mockito.ArgumentMatchers.eq(email), org.mockito.ArgumentMatchers.anyString(), sentBody.capture());
+        String recovery = sentBody.getValue().split("#", 2)[1];
+        var login = post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.writeValueAsString(java.util.Map.of("email", email, "password", password)));
+        mockMvc.perform(login).andExpect(status().isUnauthorized());
+        var restore = post("/api/v1/auth/restore-account").contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.writeValueAsString(java.util.Map.of("token", recovery)));
+        mockMvc.perform(restore).andExpect(status().isNoContent());
+        mockMvc.perform(restore).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + jwt))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(login).andExpect(status().isOk());
+    }
 
     private String uniqueEmail() {
         return "user" + System.nanoTime() + "@example.com";

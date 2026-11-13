@@ -1,6 +1,7 @@
 package com.petcare.backend.food;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import com.petcare.backend.error.FoodProductNotFoundException;
 import com.petcare.backend.food.dto.CreateFoodProductRequest;
 import com.petcare.backend.food.dto.FoodProductDto;
 import com.petcare.backend.food.dto.UpdateFoodProductRequest;
+import com.petcare.backend.notification.NotificationService;
 import com.petcare.backend.shopping.ShoppingListService;
 import com.petcare.backend.user.UserEntity;
 import com.petcare.backend.user.UserRepository;
@@ -25,13 +27,16 @@ public class FoodProductService {
     private final FoodProductRepository foodProductRepository;
     private final UserRepository userRepository;
     private final ShoppingListService shoppingListService;
+    private final NotificationService notificationService;
 
     public FoodProductService(FoodProductRepository foodProductRepository,
                               UserRepository userRepository,
-                              ShoppingListService shoppingListService) {
+                              ShoppingListService shoppingListService,
+                              NotificationService notificationService) {
         this.foodProductRepository = foodProductRepository;
         this.userRepository = userRepository;
         this.shoppingListService = shoppingListService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
@@ -69,6 +74,7 @@ public class FoodProductService {
     @Transactional
     public FoodProductDto updateProduct(Long id, UpdateFoodProductRequest request, String email) {
         FoodProductEntity product = loadOwnedProduct(id, email);
+        boolean wasLowStock = product.isLowStock();
         if (request.name() != null && !request.name().isBlank()) {
             product.setName(request.name().trim());
         }
@@ -96,6 +102,7 @@ public class FoodProductService {
         if (request.notes() != null) {
             product.setNotes(blankToNull(request.notes()));
         }
+        notifyIfStockBecameLow(product, wasLowStock);
         return FoodProductDto.from(product);
     }
 
@@ -124,9 +131,26 @@ public class FoodProductService {
     /** Adds delta to the stock counter, clamped at 0 (never negative — DB CHECK mirrors this). */
     @Transactional
     public int addStockQuantity(FoodProductEntity product, int delta) {
+        boolean wasLowStock = product.isLowStock();
         int next = Math.max(0, product.getStockQuantity() + delta);
         product.setStockQuantity(next);
+        notifyIfStockBecameLow(product, wasLowStock);
         return next;
+    }
+
+    private void notifyIfStockBecameLow(FoodProductEntity product, boolean wasLowStock) {
+        if (wasLowStock || !product.isLowStock()) {
+            return;
+        }
+        userRepository.findById(product.getOwnerId())
+                .filter(UserEntity::isLowStockNotificationEnabled)
+                .ifPresent(owner -> {
+                    String title = "Мало корма";
+                    String body = "Остаток «%s» достиг порога закупки.".formatted(product.getName());
+                    Map<String, Object> payload = Map.of("foodProductId", product.getId(), "type", "low_stock");
+                    notificationService.push(owner, title, body, payload);
+                    notificationService.email(owner, title, body, payload);
+                });
     }
 
     /**

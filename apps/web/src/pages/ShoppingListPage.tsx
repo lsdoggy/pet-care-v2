@@ -7,7 +7,7 @@ import { tokenStore } from '../auth/tokenStore'
 import NavTabs from '../components/NavTabs'
 
 const pageStyle: React.CSSProperties = {
-  fontFamily: 'sans-serif',
+  fontFamily: 'inherit',
   maxWidth: 860,
   margin: '4vh auto',
   padding: '0 16px',

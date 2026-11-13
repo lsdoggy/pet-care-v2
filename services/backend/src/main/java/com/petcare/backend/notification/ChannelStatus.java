@@ -1,5 +1,6 @@
 package com.petcare.backend.notification;
 
+
 /**
  * Delivery state of a notification row (V6 CHECK constraint keeps these four values).
  * pending -> sent | failed is set by the sender; read is set when the user opens the push.

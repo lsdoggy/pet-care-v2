@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { PetDto } from '../api/types';
 import { SPECIES_LABELS } from '../api/types';
