@@ -121,7 +121,7 @@ export function StockScreen() {
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${pct}%`, backgroundColor: item.lowStock ? '#c0392b' : pct < 50 ? '#f39c12' : '#27ae60' },
+                    { width: `${item.stockQuantity > 0 ? Math.max(pct, 2) : 0}%`, backgroundColor: item.lowStock ? '#c0392b' : pct < 50 ? '#f39c12' : '#27ae60' },
                   ]}
                 />
               </View>
