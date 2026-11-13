@@ -66,7 +66,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
   const [busyVisitId, setBusyVisitId] = useState<number | null>(null);
   const [visitError, setVisitError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [now, setNow] = useState(Date.now);
+  const dashboardDate = useDashboardNow();
   const [pets, setPets] = useState<PetDto[]>([]);
   const [tasks, setTasks] = useState<CareTaskDto[]>([]);
   const [appointments, setAppointments] = useState<VetAppointmentDto[]>([]);
@@ -96,7 +96,6 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
       if (productResult.status === 'fulfilled') setProducts(productResult.value);
       const labels = ['питомцев', 'задачи', 'визиты к врачу', 'запасы'];
       setWarnings(results.flatMap((result, index) => result.status === 'rejected' ? [labels[index]] : []));
-      setNow(Date.now());
       setPhase('ready');
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Не удалось загрузить данные');
@@ -108,11 +107,10 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
     void load();
   }, [load]);
 
-  const dashboardDate = useMemo(() => new Date(now), [now]);
   const attention = useMemo(() => buildAttention(tasks, products, appointments, 6, dashboardDate), [tasks, products, appointments, dashboardDate]);
   const events = useMemo(() => buildUpcomingEvents(tasks, appointments, 8, dashboardDate), [tasks, appointments, dashboardDate]);
-  const missedVisits = useMemo(() => appointments.filter((visit) => visit.status === 'SCHEDULED' && Date.parse(visit.scheduledAt) < now)
-    .sort((first, second) => Date.parse(first.scheduledAt) - Date.parse(second.scheduledAt)), [appointments, now]);
+  const missedVisits = useMemo(() => appointments.filter((visit) => visit.status === 'SCHEDULED' && Date.parse(visit.scheduledAt) < dashboardDate.getTime())
+    .sort((first, second) => Date.parse(first.scheduledAt) - Date.parse(second.scheduledAt)), [appointments, dashboardDate]);
 
   const updateVisit = async (visit: VetAppointmentDto, status: 'COMPLETED' | 'CANCELLED') => {
     if (busyVisitId !== null) return;
