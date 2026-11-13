@@ -41,7 +41,7 @@ export function dueLabel(iso: string, now: Date = new Date()): string {
     const late = Math.abs(days);
     return late === 1 ? 'Просрочено на 1 день' : `Просрочено на ${pluralRu(late, ['дней', 'день', 'дня'])}`;
   }
-  if (days === 0) return 'Сегодня';
+  if (days === 0) return due.getTime() < now.getTime() ? 'Просрочено сегодня' : 'Сегодня';
   if (days === 1) return 'Завтра';
   if (days < 7) return `Через ${pluralRu(days, ['дней', 'день', 'дня'])}`;
   return formatDate(iso);
@@ -119,18 +119,19 @@ export function buildAttention(
   const items: AttentionItem[] = [];
 
   const pending = tasks.filter((t) => t.status === 'PENDING');
-  const startToday = startOfDay(now).getTime();
-  const endToday = startToday + 86_400_000;
+  const timestamp = now.getTime();
 
+  const byDueTime = (a: CareTaskDto, b: CareTaskDto) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
   const overdue = pending
-    .filter((t) => new Date(t.dueAt).getTime() < startToday)
-    .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    .filter((t) => new Date(t.dueAt).getTime() < timestamp)
+    .sort(byDueTime);
   const today = pending
     .filter((t) => {
-      const ts = new Date(t.dueAt).getTime();
-      return ts >= startToday && ts < endToday;
+      const due = new Date(t.dueAt);
+      return due.getTime() >= timestamp && due.getFullYear() === now.getFullYear()
+        && due.getMonth() === now.getMonth() && due.getDate() === now.getDate();
     })
-    .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+    .sort(byDueTime);
 
   for (const t of overdue) {
     items.push({

@@ -23,9 +23,9 @@ function startOfDay(d: Date): number {
 }
 
 /** Overdue → today → soon; inside a bucket — by due date ascending. */
-export function taskComparator(a: CareTaskDto, b: CareTaskDto): number {
+export function taskComparator(a: CareTaskDto, b: CareTaskDto, now: number): number {
   const rank = (t: CareTaskDto) => {
-    const u = classifyTask(t)
+    const u = classifyTask(t, now)
     return u === 'overdue' ? 0 : u === 'today' ? 1 : 2
   }
   const r = rank(a) - rank(b)
@@ -33,7 +33,8 @@ export function taskComparator(a: CareTaskDto, b: CareTaskDto): number {
   return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()
 }
 
-export function classifyTask(task: CareTaskDto, now: number = Date.now()): TaskUrgency {
+export function classifyTask(task: CareTaskDto, now: number): TaskUrgency | null {
+  if (task.status !== 'PENDING') return null
   const due = new Date(task.dueAt).getTime()
   if (due < now) return 'overdue'
   if (startOfDay(new Date(due)) === startOfDay(new Date(now))) return 'today'
@@ -178,7 +179,7 @@ export function buildUpcomingEvents(
   appointments: VetAppointmentDto[],
   now: number = Date.now(),
 ): DashboardEvent[] {
-  const taskEvents: DashboardEvent[] = tasks.map((t) => ({ kind: 'task', at: new Date(t.dueAt).getTime(), task: t }))
+  const taskEvents: DashboardEvent[] = tasks.filter((t) => t.status === 'PENDING').map((t) => ({ kind: 'task', at: new Date(t.dueAt).getTime(), task: t }))
   const visitEvents: DashboardEvent[] = appointments
     .filter((a) => a.status === 'SCHEDULED' && new Date(a.scheduledAt).getTime() >= now)
     .map((a) => ({ kind: 'visit', at: new Date(a.scheduledAt).getTime(), appointment: a }))
