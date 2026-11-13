@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Зафиксировать baseline backend pet-care-v2 для ленты уведомлений, настроек, реестра устройств, каналов доставки и планировщика напоминаний. Спецификация разделяет реализованные ветви Java-кода и ограничения их исполнения. Основание: контроллеры, сервисы, DTO, сущности, отправители, миграции V6–V8 и конфигурация приложения/тестов. Успешная сквозная доставка не подтверждена тестами: отдельных тестов notifications/devices/scheduler в текущем backend нет.
+Зафиксировать baseline backend pet-care-v2 для ленты уведомлений, настроек, реестра устройств, каналов доставки и планировщика напоминаний. Спецификация разделяет реализованные ветви Java-кода и ограничения их исполнения. Основание: контроллеры, сервисы, DTO, сущности, отправители, миграции V6–V8 и конфигурация приложения/тестов. Интеграционный тест NotificationPersistenceTest проверяет хранение на PostgreSQL с миграциями Flyway. Сквозная доставка через Expo и SMTP этим тестом не проверяется.
 
-Критическое ограничение baseline: NotificationEntity использует `@Enumerated(EnumType.STRING)` для NotificationType и ChannelStatus с Java-значениями PUSH/EMAIL и PENDING/SENT/FAILED/READ, тогда как CHECK-ограничения миграции V6 разрешают только lowercase push/email и pending/sent/failed/read. Конвертер для этих полей не задан. Поэтому описанные ниже сервисные ветви создания и переходов статуса не являются гарантией успешного сохранения в мигрированной базе: запись может завершиться ошибкой ограничения при flush/commit. Методы getValue/fromValue enum сами по себе не устраняют это несоответствие.
+JPA-конвертеры NotificationEntity сохраняют тип канала как push или email и статус как pending, sent, failed или read. При чтении они преобразуют эти значения обратно в Java enum. Формат соответствует CHECK-ограничениям миграции V6.
 
 Источники реализации: [NotificationService](../../../services/backend/src/main/java/com/petcare/backend/notification/NotificationService.java), [NotificationEntity](../../../services/backend/src/main/java/com/petcare/backend/notification/NotificationEntity.java), [ReminderScheduler](../../../services/backend/src/main/java/com/petcare/backend/notification/ReminderScheduler.java), [DeviceService](../../../services/backend/src/main/java/com/petcare/backend/device/DeviceService.java), [RegisterDeviceRequest](../../../services/backend/src/main/java/com/petcare/backend/device/dto/RegisterDeviceRequest.java), [NotificationSettingsRequest](../../../services/backend/src/main/java/com/petcare/backend/notification/dto/NotificationSettingsRequest.java), [ExpoPushSender](../../../services/backend/src/main/java/com/petcare/backend/notification/ExpoPushSender.java), [FcmPushSender](../../../services/backend/src/main/java/com/petcare/backend/notification/FcmPushSender.java), [SmtpMailSender](../../../services/backend/src/main/java/com/petcare/backend/notification/SmtpMailSender.java), [миграция V6](../../../services/backend/src/main/resources/db/migration/V6__create_notifications_table.sql), [миграция V7](../../../services/backend/src/main/resources/db/migration/V7__create_user_devices_table.sql), [миграция V8](../../../services/backend/src/main/resources/db/migration/V8__add_notification_settings_and_reminder_flag.sql), [application.properties](../../../services/backend/src/main/resources/application.properties), [тестовая конфигурация](../../../services/backend/src/test/resources/application.properties).
 
@@ -100,7 +100,7 @@ Backend SHALL предоставлять POST `/api/v1/devices/register`, GET `/
 
 ### Requirement: Создание push и агрегированный результат устройств
 
-NotificationService SHALL в реализованной сервисной ветви создавать одну PUSH-запись на событие пользователя и отправлять её на все его устройства с pushEnabled=true, сохраняя агрегированный, а не поустройственный статус. Исполнение этой ветви ограничено несоответствием enum/DDL, описанным в Purpose.
+NotificationService SHALL в реализованной сервисной ветви создавать одну PUSH-запись на событие пользователя и отправлять её на все его устройства с pushEnabled=true, сохраняя агрегированный, а не поустройственный статус.
 
 #### Scenario: Нет устройств
 - **WHEN** push включён у пользователя, но включённых устройств нет
@@ -152,7 +152,7 @@ Backend SHALL в реализованной email-ветви создавать 
 
 #### Scenario: Доступен SMTP sender
 - **WHEN** доступен JavaMailSender и его send завершается без исключения
-- **THEN** используется адрес пользователя и настроенный from, а сервис назначает EMAIL-записи SENT и sentAt; фактическая фиксация ограничена enum/DDL, SENT не подтверждает прочтение письма.
+- **THEN** используется адрес пользователя и настроенный from, а сервис назначает EMAIL-записи SENT и sentAt. SENT не подтверждает прочтение письма.
 
 #### Scenario: Отправка без рабочего SMTP
 - **WHEN** JavaMailSender отсутствует либо SMTP отправка завершается исключением
