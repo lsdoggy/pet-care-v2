@@ -102,7 +102,7 @@ export function AuthGate() {
               case 'AppointmentForm':
                 return <AppointmentFormScreen key={`appt-${top.petId}`} petId={top.petId} petName={top.petName} />;
               case 'RecordForm':
-                return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
+                return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} appointmentId={top.appointmentId} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
               case 'Settings':

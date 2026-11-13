@@ -176,14 +176,15 @@ export const api = {
     fileName: string,
     mimeType: string,
     token: string,
+    file?: File,
   ): Promise<VetRecordDto> => {
     const form = new FormData();
-    // RN fetch supports uploading from device URIs via this object shape.
-    form.append('file', {
-      uri: fileUri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+    if (file) {
+      form.append('file', file, fileName);
+    } else {
+      // Native React Native fetch resolves multipart attachments from device URIs.
+      form.append('file', { uri: fileUri, name: fileName, type: mimeType } as unknown as Blob);
+    }
 
     const response = await fetch(`${BASE_URL}/records/${id}/attachments`, {
       method: 'POST',

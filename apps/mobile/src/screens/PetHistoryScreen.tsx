@@ -1,15 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Linking,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, View, Text } from 'react-native';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/types';
 import { APPOINTMENT_STATUS_LABELS } from '../api/types';
@@ -112,7 +102,14 @@ export function PetHistoryScreen({ petId, petName }: Props) {
             </View>
           }
           renderItem={({ item }) => (
-            <TimelineItem event={item} onDelete={() => removeEvent(item)} />
+            <TimelineItem
+              event={item}
+              linkedRecords={events.flatMap(({ record }) =>
+                record?.appointmentId != null && record.appointmentId === item.appointment?.id ? [record] : []
+              )}
+              onAddRecord={(appointmentId) => navigation.push({ name: 'RecordForm', petId, petName, appointmentId })}
+              onDelete={() => removeEvent(item)}
+            />
           )}
         />
       )}
@@ -138,13 +135,26 @@ export function PetHistoryScreen({ petId, petName }: Props) {
   );
 }
 
-function TimelineItem({ event, onDelete }: { event: HistoryEventDto; onDelete: () => void }) {
+function TimelineItem({ event, linkedRecords, onAddRecord, onDelete }: {
+  event: HistoryEventDto;
+  linkedRecords: VetRecordDto[];
+  onAddRecord: (appointmentId: number) => void;
+  onDelete: () => void;
+}) {
   return (
     <View style={styles.row}>
       <View style={[styles.dot, event.kind === 'APPOINTMENT' ? styles.dotAppt : styles.dotRec]} />
       <View style={styles.card}>
         {event.kind === 'APPOINTMENT' && event.appointment ? (
-          <AppointmentCard a={event.appointment} />
+          <>
+            <AppointmentCard a={event.appointment} />
+            {linkedRecords.map((record) => <RecordCard key={record.id} r={record} />)}
+            {linkedRecords.length === 0 && (
+              <Pressable onPress={() => onAddRecord(event.appointment!.id)} hitSlop={8}>
+                <Text style={styles.backLink}>Добавить запись о визите</Text>
+              </Pressable>
+            )}
+          </>
         ) : event.record ? (
           <RecordCard r={event.record} />
         ) : null}
@@ -178,6 +188,7 @@ function AppointmentCard({ a }: { a: VetAppointmentDto }) {
           {a.cost.toFixed(2)} {a.currency ?? ''}
         </Text>
       ) : null}
+      {a.reason ? <Text style={styles.line}>Причина визита: {a.reason}</Text> : null}
       {a.notes ? <Text style={styles.notes}>{a.notes}</Text> : null}
     </>
   );

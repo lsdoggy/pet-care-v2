@@ -45,5 +45,8 @@ public record CreateAppointmentRequest(
         String currency,
 
         @Size(max = 2000, message = "Notes must be at most 2000 characters")
-        String notes) {
+        String notes,
+
+        @Size(max = 2000, message = "Reason must be at most 2000 characters")
+        String reason) {
 }

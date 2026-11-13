@@ -59,6 +59,9 @@ public class VetAppointmentEntity {
     @Column(columnDefinition = "text")
     private String notes;
 
+    @Column(length = 2000)
+    private String reason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -163,6 +166,14 @@ public class VetAppointmentEntity {
 
     public void setCurrency(String currency) {
         this.currency = currency;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 
     public String getNotes() {

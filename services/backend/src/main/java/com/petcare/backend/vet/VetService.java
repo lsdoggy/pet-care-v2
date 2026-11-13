@@ -24,6 +24,7 @@ import com.petcare.backend.user.UserRepository;
 import com.petcare.backend.vet.dto.AppointmentDto;
 import com.petcare.backend.vet.dto.AttachmentDto;
 import com.petcare.backend.vet.dto.CreateAppointmentRequest;
+import com.petcare.backend.vet.dto.CreateClinicAppointmentRequest;
 import com.petcare.backend.vet.dto.CreateRecordRequest;
 import com.petcare.backend.vet.dto.HistoryEventDto;
 import com.petcare.backend.vet.dto.RecordDto;
@@ -72,13 +73,28 @@ public class VetService {
     public AppointmentDto createAppointment(CreateAppointmentRequest request, String email) {
         UserEntity user = resolveUser(email);
         PetEntity pet = loadOwnedPet(request.petId(), user.getId());
+        return saveAppointment(request, pet, user.getId());
+    }
+
+    @Transactional
+    public Long createClinicAppointment(Long petId, String clinicName, CreateClinicAppointmentRequest request) {
+        PetEntity pet = petRepository.findByIdAndDeletedFalse(petId)
+                .orElseThrow(() -> new PetNotFoundException(petId));
+        var appointment = new CreateAppointmentRequest(petId, clinicName, request.doctorName(),
+                request.scheduledAt(), request.durationMinutes(), AppointmentStatus.SCHEDULED,
+                request.address(), request.cost(), request.currency(), request.notes(), request.reason());
+        return saveAppointment(appointment, pet, pet.getOwnerId()).id();
+    }
+
+    private AppointmentDto saveAppointment(CreateAppointmentRequest request, PetEntity pet, Long ownerId) {
         VetAppointmentEntity appointment = new VetAppointmentEntity(
                 pet.getId(),
-                user.getId(),
+                ownerId,
                 request.clinicName().trim(),
                 request.scheduledAt());
         applyAppointmentFields(appointment, request.doctorName(), request.durationMinutes(),
                 request.status(), request.address(), request.cost(), request.currency(), request.notes());
+        appointment.setReason(blankToNull(request.reason()));
         return toAppointmentDto(appointmentRepository.save(appointment));
     }
 
@@ -112,6 +128,9 @@ public class VetService {
         }
         if (request.notes() != null) {
             appointment.setNotes(blankToNull(request.notes()));
+        }
+        if (request.reason() != null) {
+            appointment.setReason(blankToNull(request.reason()));
         }
         return toAppointmentDto(appointment);
     }
