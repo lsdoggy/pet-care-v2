@@ -108,8 +108,9 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
     void load();
   }, [load]);
 
-  const attention = useMemo(() => buildAttention(tasks, products, appointments, 6, now), [tasks, products, appointments, now]);
-  const events = useMemo(() => buildUpcomingEvents(tasks, appointments, 8, now), [tasks, appointments, now]);
+  const dashboardDate = useMemo(() => new Date(now), [now]);
+  const attention = useMemo(() => buildAttention(tasks, products, appointments, 6, dashboardDate), [tasks, products, appointments, dashboardDate]);
+  const events = useMemo(() => buildUpcomingEvents(tasks, appointments, 8, dashboardDate), [tasks, appointments, dashboardDate]);
   const missedVisits = useMemo(() => appointments.filter((visit) => visit.status === 'SCHEDULED' && Date.parse(visit.scheduledAt) < now)
     .sort((first, second) => Date.parse(first.scheduledAt) - Date.parse(second.scheduledAt)), [appointments, now]);
 
@@ -199,7 +200,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
         </View>}
         {visitError && <Text style={styles.warnText} accessibilityRole="alert">{visitError}</Text>}
         {notice && <Text style={styles.okText} accessibilityLiveRegion="polite">{notice}</Text>}
-        <Text style={styles.greeting}>{greetingForNow(now)}, {user.firstName?.trim() || user.email.split('@')[0]}!</Text>
+        <Text style={styles.greeting}>{greetingForNow(dashboardDate)}, {user.firstName?.trim() || user.email.split('@')[0]}!</Text>
         <Text style={styles.greetingSub}>
           {warnings.length > 0
             ? 'Часть данных недоступна — обновите сводку.'
