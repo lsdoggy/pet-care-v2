@@ -34,6 +34,41 @@ it('HomePage updates counts and explicit overdue feed at ticks/foreground with n
   expect(fetchMock).toHaveBeenCalledTimes(4)
 })
 
+it('keeps purchase input focus and selection through clock ticks and foreground updates', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2026, 10, 13, 12))
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => [] })))
+  await act(async () => { render(<MemoryRouter><HomePage /></MemoryRouter>) })
+
+  const opener = screen.getByRole('button', { name: 'Добавить покупку' })
+  opener.focus()
+  fireEvent.click(opener)
+  const name = screen.getByLabelText('Название *') as HTMLInputElement
+  const quantity = screen.getByLabelText('Количество (шт.)') as HTMLInputElement
+  expect(document.activeElement).toBe(name)
+  fireEvent.change(name, { target: { value: 'Корм' } })
+  fireEvent.change(quantity, { target: { value: '12' } })
+  quantity.focus()
+  quantity.setSelectionRange(1, 1)
+
+  act(() => vi.advanceTimersByTime(60_000))
+  expect(document.activeElement).toBe(quantity)
+  expect(quantity.selectionStart).toBe(1)
+  expect(quantity.selectionEnd).toBe(1)
+
+  vi.setSystemTime(new Date(2026, 10, 13, 12, 2))
+  act(() => window.dispatchEvent(new Event('focus')))
+  expect(document.activeElement).toBe(quantity)
+  expect(quantity.selectionStart).toBe(1)
+  expect(quantity.selectionEnd).toBe(1)
+  expect(name.value).toBe('Корм')
+  expect(quantity.value).toBe('12')
+
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(document.activeElement).toBe(opener)
+})
+
 it('successful custom purchase closes even if dashboard refresh fails; no second POST', async () => {
   let requests = 0
   const fetchMock = vi.fn(async (url: string, options: RequestInit) => {
@@ -48,6 +83,6 @@ it('successful custom purchase closes even if dashboard refresh fails; no second
   fireEvent.change(screen.getByLabelText('Название *'), { target: { value: 'Корм' } })
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Добавить' })))
   expect(screen.queryByRole('dialog')).toBeNull()
-  expect(screen.getByRole('alert').textContent).toContain('refresh failed')
+  expect(screen.getByRole('alert').textContent).toContain('Не удалось загрузить питомцев')
   expect(fetchMock.mock.calls.filter(([, opts]) => opts.method === 'POST')).toHaveLength(1)
 })

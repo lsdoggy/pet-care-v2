@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.petcare.backend.notification.dto.NotificationSettingsRequest;
 import com.petcare.backend.user.dto.UserDto;
+import com.petcare.backend.user.dto.UpdateProfileRequest;
 
 import jakarta.validation.Valid;
 
@@ -27,6 +28,11 @@ public class UserController {
     @GetMapping("/me")
     UserDto me(Authentication authentication) {
         return userService.findByEmail(authentication.getName());
+    }
+
+    @PatchMapping("/me")
+    UserDto updateProfile(@Valid @RequestBody UpdateProfileRequest request, Authentication authentication) {
+        return userService.updateProfile(request, authentication.getName());
     }
 
     /** Sprint 6: notification preferences (Push On/Off, Email On/Off) in the profile. */
