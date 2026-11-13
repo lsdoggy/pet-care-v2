@@ -17,6 +17,104 @@ cd apps/mobile && npm install && npx expo start
 cd infra && docker compose up -d
 ```
 
+## VPS для Android-пилота
+
+### 1. DNS и сервер
+
+На Linux VPS установите Docker Engine с плагином Compose и включите автозапуск Docker.
+Направьте A-запись домена API на публичный IPv4 VPS. Добавляйте AAAA только при рабочем публичном IPv6.
+Откройте входящие TCP 80 и 443 и оставьте доступ к SSH для администратора. Caddy сам получит
+и обновит сертификат и перенаправит HTTP на HTTPS. Проверьте на VPS исходящий доступ к реестру
+образов, репозиториям Maven и центру сертификации. [Документация Caddy](https://caddyserver.com/docs/automatic-https)
+
+### 2. Секреты и запуск
+
+Клонируйте репозиторий на VPS и переключитесь на ревизию для пилота. Из корня репозитория:
+
+```bash
+cd infra
+# Выполните один раз при создании окружения.
+(
+  umask 077
+  set -o noclobber
+  printf 'API_DOMAIN=%s\nDB_PASSWORD=%s\nJWT_SECRET=%s\n' \
+    api.example.com "$(openssl rand -hex 32)" "$(openssl rand -base64 32)" > .env
+)
+# Замените api.example.com в .env на свой домен.
+docker compose --env-file .env -f compose.vps.yml config --quiet
+docker compose --env-file .env -f compose.vps.yml up -d --build --wait
+docker compose --env-file .env -f compose.vps.yml ps
+curl --fail https://api.example.com/api/v1/health
+```
+
+Ожидаемый ответ — `{"status":"ok"}`. При обновлении кода сначала сделайте резервную копию,
+затем повторите `up -d --build --wait`. Для диагностики выполните
+`docker compose --env-file .env -f compose.vps.yml logs --tail=100`.
+Храните `.env` с правами 0600 и сохраните его в защищённом хранилище.
+Пароль PostgreSQL задаётся при инициализации тома. Для его смены измените пароль роли в БД,
+обновите `.env` и пересоздайте контейнеры.
+
+PostgreSQL и Spring доступны внутри Compose, наружу опубликован Caddy. Тома хранят БД,
+файлы приложения (включая фото и медицинские вложения) и сертификаты.
+Для штатной остановки используйте `stop`. Команда `down -v` удаляет тома и данные.
+Создайте пять отдельных тестовых аккаунтов через приложение. Регистрация доступна по публичному API,
+а файлы открываются по прямой ссылке без входа. Используйте синтетические данные и вложения.
+Для APK-пилота Expo Push отключён в VPS-конфигурации. Для push в самостоятельном Android APK
+понадобится отдельная настройка FCM.
+
+### 3. Резервное копирование
+
+Создайте закрытый каталог резервных копий и вручную проверьте первый запуск под пользователем,
+у которого есть доступ к Docker. Затем добавьте команду в его `crontab -e`.
+
+```bash
+install -d -m 700 "$HOME/petcare-backups"
+./backup-postgres.sh "$HOME/petcare-backups"
+```
+
+```cron
+0 3 * * * /absolute/path/to/pet-care-v2/infra/backup-postgres.sh "$HOME/petcare-backups"
+```
+
+Скрипт сохраняет дамп в формате PostgreSQL custom и удаляет дампы старше 14 суток
+после успешной записи нового. Сохраняйте копии вне VPS в закрытом хранилище.
+Дамп содержит ссылки на вложения. Для согласованной копии БД и файлов остановите backend,
+снимите дамп и архив тома `petcare-vps_uploads`, затем снова запустите backend.
+
+Пробное восстановление выполните в отдельную пустую базу в контейнере PostgreSQL.
+Команды выполняются из `infra`. Подставьте путь к выбранному дампу.
+
+```bash
+docker compose --env-file .env -f compose.vps.yml exec -T postgres \
+  createdb -U petcare petcare_restore
+docker compose --env-file .env -f compose.vps.yml exec -T postgres \
+  pg_restore --exit-on-error -U petcare -d petcare_restore < /path/to/petcare.dump
+docker compose --env-file .env -f compose.vps.yml exec -T postgres \
+  psql -U petcare -d petcare_restore -c 'SELECT count(*) FROM flyway_schema_history;'
+```
+
+### 4. Android APK
+
+После проверки HTTPS откройте `apps/mobile`. Профиль `preview` формирует APK
+для установки на Android без Google Play и Metro. Выбран идентификатор `com.lsdoggy.petcare`.
+
+```bash
+npm ci
+npx eas-cli login
+npx eas-cli init
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_API_URL \
+  --value https://api.example.com --visibility plaintext
+npx eas-cli build --platform android --profile preview
+```
+
+Привяжите приложение к своему проекту Expo и используйте один и тот же ключ подписи для обновлений.
+Укажите HTTPS-адрес без завершающего слеша и без `/api/v1`, который клиент добавляет сам.
+Адрес встраивается в APK, поэтому после его изменения потребуется новая сборка.
+В `EXPO_PUBLIC_*` передавайте только публичные значения.
+Проверьте на Android через мобильную сеть вход, загрузку и открытие тестового вложения,
+а после пересоздания контейнера backend повторно откройте тот же файл.
+[Инструкция Expo по сборке APK](https://docs.expo.dev/build-reference/apk/)
+
 ## Sprint 3 — Care Tasks
 
 ### Модель данных (Flyway `V3__create_care_tasks_table.sql`)
