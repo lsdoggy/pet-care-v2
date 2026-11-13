@@ -1,3 +1,4 @@
+import { useLanguage, type Language } from '../i18n/language';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -28,17 +29,17 @@ export type TabName = 'Home' | 'Tasks' | 'Shopping' | 'Stock' | 'Settings';
  * Screen title per route — single source of truth for headers.
  * Used by DetailHeader on pushed (non-tab) screens.
  */
-export const ROUTE_TITLES: Record<Route['name'], string> = {
-  Home: 'Главная',
-  Tasks: 'Upcoming tasks',
-  Shopping: 'Shopping list',
-  Stock: 'Food stock',
-  Settings: 'Профиль',
-  PetForm: 'Pet details',
-  PetDetail: 'Pet profile',
-  PetHistory: 'Health history',
-  AppointmentForm: 'New vet visit',
-  RecordForm: 'New health record',
+export const ROUTE_TITLES: Record<Route['name'], Record<Language, string>> = {
+  Home: { ru: 'Главная', en: 'Home' },
+  Tasks: { ru: 'Предстоящие задачи', en: 'Upcoming tasks' },
+  Shopping: { ru: 'Список покупок', en: 'Shopping list' },
+  Stock: { ru: 'Запасы корма', en: 'Food stock' },
+  Settings: { ru: 'Профиль', en: 'Profile' },
+  PetForm: { ru: 'Данные питомца', en: 'Pet details' },
+  PetDetail: { ru: 'Профиль питомца', en: 'Pet profile' },
+  PetHistory: { ru: 'История здоровья', en: 'Health history' },
+  AppointmentForm: { ru: 'Новый визит к ветеринару', en: 'New vet visit' },
+  RecordForm: { ru: 'Новая медицинская запись', en: 'New health record' },
 };
 
 interface NavigationValue {
@@ -106,15 +107,16 @@ export function AppStack({ activeTab, onTabChange, children }: AppStackProps) {
   );
 }
 
-const TABS: { name: TabName; label: string; icon: string }[] = [
-  { name: 'Home', label: 'Главная', icon: '🐾' },
-  { name: 'Tasks', label: 'Задачи', icon: '📅' },
-  { name: 'Shopping', label: 'Купить', icon: '🛒' },
-  { name: 'Stock', label: 'Запасы', icon: '📦' },
-  { name: 'Settings', label: 'Профиль', icon: '⚙️' },
+const TABS: { name: TabName; label: Record<Language, string>; icon: string }[] = [
+  { name: 'Home', label: { ru: 'Главная', en: 'Home' }, icon: '🐾' },
+  { name: 'Tasks', label: { ru: 'Задачи', en: 'Tasks' }, icon: '📅' },
+  { name: 'Shopping', label: { ru: 'Купить', en: 'Shopping' }, icon: '🛒' },
+  { name: 'Stock', label: { ru: 'Запасы', en: 'Stock' }, icon: '📦' },
+  { name: 'Settings', label: { ru: 'Профиль', en: 'Profile' }, icon: '⚙️' },
 ];
 
 function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: TabName) => void }) {
+  const language = useLanguage();
   return (
     <View style={tabBarStyles.bar} accessibilityRole="tablist">
       {TABS.map((tab) => {
@@ -126,7 +128,7 @@ function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: T
             onPress={() => onChange(tab.name)}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            accessibilityLabel={tab.label}
+            accessibilityLabel={tab.label[language]}
           >
             {/* Active indicator: small teal pill above the icon — state is not
                 conveyed by color alone (WCAG 1.4.1). */}
@@ -134,7 +136,7 @@ function TabBar({ activeTab, onChange }: { activeTab: TabName; onChange: (tab: T
             <Text style={[tabBarStyles.icon, active && tabBarStyles.iconActive]} importantForAccessibility="no">
               {tab.icon}
             </Text>
-            <Text style={[tabBarStyles.label, active && tabBarStyles.labelActive]}>{tab.label}</Text>
+            <Text style={[tabBarStyles.label, active && tabBarStyles.labelActive]}>{tab.label[language]}</Text>
           </Pressable>
         );
       })}

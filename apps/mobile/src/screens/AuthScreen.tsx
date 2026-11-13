@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 /**
  * Design Sprint 1 · Auth screen (mobile).
  *
@@ -46,6 +47,7 @@ interface Props {
 type TouchedState = Partial<Record<AuthFieldName, boolean>>;
 
 export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
+  const language = useLanguage();
   const isLogin = mode === 'login';
 
   const [firstName, setFirstName] = useState('');
@@ -175,14 +177,14 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
           <Text style={styles.logo} accessibilityElementsHidden>
             🐾
           </Text>
-          <Text style={styles.title}>{isLogin ? 'Вход в аккаунт' : 'Создание аккаунта'}</Text>
-          <Text style={styles.subtitle}>Pet Care — забота о питомце без напоминаний вслух</Text>
+          <Text style={styles.title}>{isLogin ? (language === 'ru' ? 'Вход в аккаунт' : 'Sign in') : (language === 'ru' ? 'Создание аккаунта' : 'Create an account')}</Text>
+          <Text style={styles.subtitle}>{language === 'ru' ? 'Pet Care — забота о питомце без напоминаний вслух' : 'Pet Care — keep track of your pet’s care'}</Text>
 
           {!isLogin && (
-            <Field label="Имя" error={fieldError('firstName')}>
+            <Field label={language === 'ru' ? 'Имя' : 'First name'} error={fieldError('firstName')}>
               <TextInput
                 style={[styles.input, fieldError('firstName') ? styles.inputError : null]}
-                placeholder="Как к вам обращаться?"
+                placeholder={language === 'ru' ? 'Как к вам обращаться?' : 'What should we call you?'}
                 value={firstName}
                 onChangeText={(v) => {
                   setFirstName(v);
@@ -193,14 +195,14 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
                 textContentType="givenName"
                 maxLength={80}
                 editable={!busy}
-                accessibilityLabel="Имя"
+                accessibilityLabel={language === 'ru' ? 'Имя' : 'First name'}
                 accessibilityRole="text"
                 accessibilityState={{ disabled: busy }}
               />
             </Field>
           )}
 
-          <Field label="Электронная почта" error={fieldError('email')}>
+          <Field label={language === 'ru' ? 'Электронная почта' : 'Email'} error={fieldError('email')}>
             <TextInput
               style={[styles.input, fieldError('email') ? styles.inputError : null]}
               placeholder="name@example.com"
@@ -217,14 +219,14 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
               inputMode="email"
               maxLength={255}
               editable={!busy}
-              accessibilityLabel="Электронная почта"
+              accessibilityLabel={language === 'ru' ? 'Электронная почта' : 'Email'}
               accessibilityRole="text"
               accessibilityState={{ disabled: busy }}
             />
           </Field>
 
           {!isLogin && (
-            <Field label="Телефон" optional error={fieldError('phone')}>
+            <Field label={language === 'ru' ? 'Телефон' : 'Phone'} optional error={fieldError('phone')}>
               <TextInput
                 style={[styles.input, fieldError('phone') ? styles.inputError : null]}
                 placeholder="+7 900 123-45-67"
@@ -238,7 +240,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
                 keyboardType="phone-pad"
                 maxLength={20}
                 editable={!busy}
-                accessibilityLabel="Телефон, необязательно"
+                accessibilityLabel={language === 'ru' ? 'Телефон, необязательно' : 'Phone, optional'}
                 accessibilityRole="text"
                 accessibilityState={{ disabled: busy }}
               />
@@ -246,7 +248,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
           )}
 
           <Field
-            label="Пароль"
+            label={language === 'ru' ? 'Пароль' : 'Password'}
             error={fieldError('password')}
             trailing={
               <Pressable
@@ -254,7 +256,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
                 hitSlop={spacing.x2}
                 style={({ pressed }) => [styles.eyeButton, pressed ? styles.pressed : null]}
                 accessibilityRole="button"
-                accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                accessibilityLabel={showPassword ? (language === 'ru' ? 'Скрыть пароль' : 'Hide password') : (language === 'ru' ? 'Показать пароль' : 'Show password')}
                 accessibilityState={{ selected: showPassword }}
               >
                 <Text style={styles.eyeIcon} accessibilityElementsHidden>
@@ -269,7 +271,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
                 styles.inputWithTrailing,
                 fieldError('password') ? styles.inputError : null,
               ]}
-              placeholder={isLogin ? 'Введите пароль' : 'Минимум 8 символов'}
+              placeholder={isLogin ? (language === 'ru' ? 'Введите пароль' : 'Enter your password') : (language === 'ru' ? 'Минимум 8 символов' : 'At least 8 characters')}
               value={password}
               onChangeText={(v) => {
                 setPassword(v);
@@ -285,16 +287,16 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
               textContentType={isLogin ? 'password' : 'newPassword'}
               maxLength={72}
               editable={!busy}
-              accessibilityLabel="Пароль"
+              accessibilityLabel={language === 'ru' ? 'Пароль' : 'Password'}
               accessibilityState={{ disabled: busy }}
             />
           </Field>
 
           {!isLogin && (
-            <Field label="Подтверждение пароля" error={fieldError('confirmPassword')}>
+            <Field label={language === 'ru' ? 'Подтверждение пароля' : 'Confirm password'} error={fieldError('confirmPassword')}>
               <TextInput
                 style={[styles.input, fieldError('confirmPassword') ? styles.inputError : null]}
-                placeholder="Повторите пароль"
+                placeholder={language === 'ru' ? 'Повторите пароль' : 'Repeat password'}
                 value={confirmPassword}
                 onChangeText={(v) => {
                   setConfirmPassword(v);
@@ -309,7 +311,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
                 textContentType="newPassword"
                 maxLength={72}
                 editable={!busy}
-                accessibilityLabel="Подтверждение пароля"
+                accessibilityLabel={language === 'ru' ? 'Подтверждение пароля' : 'Confirm password'}
                 accessibilityState={{ disabled: busy }}
               />
             </Field>
@@ -330,13 +332,13 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
               busy ? styles.buttonDisabled : null,
             ]}
             accessibilityRole="button"
-            accessibilityLabel={isLogin ? 'Войти' : 'Создать аккаунт'}
+            accessibilityLabel={isLogin ? (language === 'ru' ? 'Войти' : 'Sign in') : (language === 'ru' ? 'Создать аккаунт' : 'Create account')}
             accessibilityState={{ busy, disabled: busy }}
           >
             {busy ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.buttonText}>{isLogin ? 'Войти' : 'Создать аккаунт'}</Text>
+              <Text style={styles.buttonText}>{isLogin ? (language === 'ru' ? 'Войти' : 'Sign in') : (language === 'ru' ? 'Создать аккаунт' : 'Create account')}</Text>
             )}
           </Pressable>
 
@@ -346,11 +348,11 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
             hitSlop={spacing.x2}
             style={({ pressed }) => [styles.switchLink, pressed ? styles.pressed : null]}
             accessibilityRole="link"
-            accessibilityLabel={isLogin ? 'Перейти к регистрации' : 'Перейти ко входу'}
+            accessibilityLabel={isLogin ? (language === 'ru' ? 'Перейти к регистрации' : 'Go to sign up') : (language === 'ru' ? 'Перейти ко входу' : 'Go to sign in')}
             accessibilityState={{ disabled: busy }}
           >
             <Text style={styles.switchText}>
-              {isLogin ? 'Нет аккаунта? Зарегистрироваться' : 'Уже есть аккаунт? Войти'}
+              {isLogin ? (language === 'ru' ? 'Нет аккаунта? Зарегистрироваться' : 'New to Pet Care? Sign up') : (language === 'ru' ? 'Уже есть аккаунт? Войти' : 'Already have an account? Sign in')}
             </Text>
           </Pressable>
         </View>
@@ -370,11 +372,12 @@ interface FieldProps {
 }
 
 function Field({ label, optional, error, children, trailing }: FieldProps) {
+  const language = useLanguage();
   return (
     <View style={styles.field}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{label}</Text>
-        {optional ? <Text style={styles.optional}>необязательно</Text> : null}
+        {optional ? <Text style={styles.optional}>{language === 'ru' ? 'необязательно' : 'optional'}</Text> : null}
       </View>
       <View style={styles.inputWrap}>
         {children}

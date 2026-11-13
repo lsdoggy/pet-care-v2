@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
@@ -15,6 +16,7 @@ import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
  * native gesture library, which was excluded from this sprint's approved plan).
  */
 export function TasksScreen() {
+  const language = useLanguage();
   const [tasks, setTasks] = useState<CareTaskDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -89,9 +91,9 @@ export function TasksScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader
-        title="Upcoming tasks"
+        title={language === 'ru' ? 'Предстоящие задачи' : 'Upcoming tasks'}
         actions={
-          <Pressable onPress={() => void load()} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh tasks">
+          <Pressable onPress={() => void load()} hitSlop={8} accessibilityRole="button" accessibilityLabel={language === 'ru' ? 'Обновить задачи' : 'Refresh tasks'}>
             <Text style={styles.refresh}>⟳</Text>
           </Pressable>
         }
@@ -112,7 +114,7 @@ export function TasksScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>🎉</Text>
-              <Text style={styles.emptyText}>No upcoming tasks. Enjoy the free time!</Text>
+              <Text style={styles.emptyText}>{language === 'ru' ? 'Предстоящих задач нет.' : 'No upcoming tasks. Enjoy the free time!'}</Text>
             </View>
           }
         />

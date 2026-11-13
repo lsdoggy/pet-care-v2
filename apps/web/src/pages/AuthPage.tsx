@@ -1,3 +1,5 @@
+import { useLanguage } from '../i18n/language'
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
@@ -26,6 +28,7 @@ interface Props {
 
 
 export default function AuthPage({ mode }: Props) {
+  const { language } = useLanguage()
   const isLogin = mode === 'login'
   const { user, loading, login, register } = useAuth()
   const navigate = useNavigate()
@@ -136,15 +139,16 @@ export default function AuthPage({ mode }: Props) {
   return (
     <main className="auth-page">
       <div className="auth-card">
+        <LanguageSwitcher />
         <header className="auth-brand">
           <span className="auth-brand-logo" aria-hidden="true">
             <PawIcon size={26} />
           </span>
-          <h1 className="auth-title">{isLogin ? 'Вход в PetCare' : 'Создание аккаунта'}</h1>
+          <h1 className="auth-title">{isLogin ? (language === 'ru' ? 'Вход в PetCare' : 'Sign in to Pet Care') : (language === 'ru' ? 'Создание аккаунта' : 'Create an account')}</h1>
           <p className="auth-subtitle">
             {isLogin
-              ? 'Здоровье и забота о вашем питомце — под контролем.'
-              : 'Регистрируйтесь, чтобы вести историю здоровья и напоминания.'}
+              ? (language === 'ru' ? 'Здоровье и забота о вашем питомце — под контролем.' : 'Keep track of your pet’s health and care.')
+              : (language === 'ru' ? 'Регистрируйтесь, чтобы вести историю здоровья и напоминания.' : 'Create an account to track health history and reminders.')}
           </p>
         </header>
 
@@ -159,7 +163,7 @@ export default function AuthPage({ mode }: Props) {
           {!isLogin && (
             <div className="auth-field auth-field--full">
               <label className="auth-label" htmlFor="firstName">
-                Имя
+                {language === 'ru' ? 'Имя' : 'First name'}
               </label>
               <input
                 id="firstName"
@@ -171,7 +175,7 @@ export default function AuthPage({ mode }: Props) {
                 onBlur={() => handleBlur('firstName')}
                 autoComplete="given-name"
                 maxLength={80}
-                placeholder="Например, Анна"
+                placeholder={language === 'ru' ? 'Например, Анна' : 'For example, Anna'}
                 aria-invalid={fieldErrors.firstName ? 'true' : undefined}
                 aria-describedby={fieldErrors.firstName ? 'firstName-error' : undefined}
                 disabled={submitting}
@@ -186,7 +190,7 @@ export default function AuthPage({ mode }: Props) {
 
           <div className="auth-field auth-field--full">
             <label className="auth-label" htmlFor="email">
-              Электронная почта
+              {language === 'ru' ? 'Электронная почта' : 'Email'}
             </label>
             <input
               id="email"
@@ -213,7 +217,7 @@ export default function AuthPage({ mode }: Props) {
           {!isLogin && (
             <div className="auth-field auth-field--full">
               <label className="auth-label" htmlFor="phone">
-                Телефон <span className="auth-optional">(необязательно)</span>
+                {language === 'ru' ? 'Телефон' : 'Phone'} <span className="auth-optional">{language === 'ru' ? '(необязательно)' : '(optional)'}</span>
               </label>
               <input
                 id="phone"
@@ -237,7 +241,7 @@ export default function AuthPage({ mode }: Props) {
                 </p>
               ) : (
                 <p className="auth-hint" id="phone-hint">
-                  Нужен для SMS-напоминаний, можно указать позже.
+                  {language === 'ru' ? 'Нужен для SMS-напоминаний, можно указать позже.' : 'Used for SMS reminders. You can add it later.'}
                 </p>
               )}
             </div>
@@ -245,7 +249,7 @@ export default function AuthPage({ mode }: Props) {
 
           <div className="auth-field auth-field--full">
             <label className="auth-label" htmlFor="password">
-              Пароль
+              {language === 'ru' ? 'Пароль' : 'Password'}
             </label>
             <div className="auth-input-wrap">
               <input
@@ -258,7 +262,7 @@ export default function AuthPage({ mode }: Props) {
                 onBlur={() => handleBlur('password')}
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
                 maxLength={72}
-                placeholder={isLogin ? 'Введите пароль' : 'Минимум 8 символов'}
+                placeholder={isLogin ? (language === 'ru' ? 'Введите пароль' : 'Enter your password') : (language === 'ru' ? 'Минимум 8 символов' : 'At least 8 characters')}
                 aria-invalid={fieldErrors.password ? 'true' : undefined}
                 aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                 disabled={submitting}
@@ -267,7 +271,7 @@ export default function AuthPage({ mode }: Props) {
                 type="button"
                 className="auth-reveal"
                 onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                aria-label={showPassword ? (language === 'ru' ? 'Скрыть пароль' : 'Hide password') : (language === 'ru' ? 'Показать пароль' : 'Show password')}
                 aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
@@ -283,7 +287,7 @@ export default function AuthPage({ mode }: Props) {
           {!isLogin && (
             <div className="auth-field auth-field--full">
               <label className="auth-label" htmlFor="confirmPassword">
-                Повторите пароль
+                {language === 'ru' ? 'Повторите пароль' : 'Repeat password'}
               </label>
               <div className="auth-input-wrap">
                 <input
@@ -296,7 +300,7 @@ export default function AuthPage({ mode }: Props) {
                   onBlur={() => handleBlur('confirmPassword')}
                   autoComplete="new-password"
                   maxLength={72}
-                  placeholder="Ещё раз — тот же пароль"
+                  placeholder={language === 'ru' ? 'Ещё раз — тот же пароль' : 'Enter the same password again'}
                   aria-invalid={fieldErrors.confirmPassword ? 'true' : undefined}
                   aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
                   disabled={submitting}
@@ -305,7 +309,7 @@ export default function AuthPage({ mode }: Props) {
                   type="button"
                   className="auth-reveal"
                   onClick={() => setShowConfirm((v) => !v)}
-                  aria-label={showConfirm ? 'Скрыть пароль' : 'Показать пароль'}
+                  aria-label={showConfirm ? (language === 'ru' ? 'Скрыть пароль' : 'Hide password') : (language === 'ru' ? 'Показать пароль' : 'Show password')}
                   aria-pressed={showConfirm}
                 >
                   {showConfirm ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
@@ -323,29 +327,29 @@ export default function AuthPage({ mode }: Props) {
             {submitting && <SpinnerIcon size={18} />}
             {submitting
               ? isLogin
-                ? 'Входим…'
-                : 'Создаём аккаунт…'
+                ? (language === 'ru' ? 'Входим…' : 'Signing in…')
+                : (language === 'ru' ? 'Создаём аккаунт…' : 'Creating account…')
               : isLogin
-                ? 'Войти'
-                : 'Зарегистрироваться'}
+                ? (language === 'ru' ? 'Войти' : 'Sign in')
+                : (language === 'ru' ? 'Зарегистрироваться' : 'Sign up')}
           </button>
         </form>
 
         <p className="auth-switch">
           {isLogin ? (
             <>
-              Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+              {language === 'ru' ? 'Нет аккаунта?' : 'New to Pet Care?'} <Link to="/register">{language === 'ru' ? 'Зарегистрироваться' : 'Sign up'}</Link>
             </>
           ) : (
             <>
-              Уже есть аккаунт? <Link to="/login">Войти</Link>
+              {language === 'ru' ? 'Уже есть аккаунт?' : 'Already have an account?'} <Link to="/login">{language === 'ru' ? 'Войти' : 'Sign in'}</Link>
             </>
           )}
         </p>
 
         {/* Доступность: объявляем ошибки после ответа сервера. */}
         <div aria-live="assertive" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-          {hasFieldError || formError ? 'В форме есть ошибки. Исправьте отмеченные поля.' : ''}
+          {hasFieldError || formError ? (language === 'ru' ? 'В форме есть ошибки. Исправьте отмеченные поля.' : 'Correct the highlighted fields.') : ''}
         </div>
       </div>
     </main>

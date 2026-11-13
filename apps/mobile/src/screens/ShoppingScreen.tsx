@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
@@ -14,6 +15,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
  * the product in the same transaction (server-side @Transactional).
  */
 export function ShoppingScreen() {
+  const language = useLanguage();
   const navigation = useNavigation();
   const [items, setItems] = useState<ShoppingItemDto[] | null>(null);
   const [suggestions, setSuggestions] = useState<FoodProductDto[]>([]);
@@ -124,7 +126,7 @@ export function ShoppingScreen() {
       <View style={styles.container}>
         {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
         <ScreenHeader
-          title="Shopping list"
+          title={language === 'ru' ? 'Список покупок' : 'Shopping list'}
           actions={
             <Pressable
               onPress={() => navigation.push({ name: 'Stock' })}
@@ -143,14 +145,14 @@ export function ShoppingScreen() {
             style={styles.input}
             value={quickName}
             onChangeText={setQuickName}
-            placeholder="Add item… e.g. Salmon treats"
+            placeholder={language === 'ru' ? 'Добавить покупку, например лакомство с лососем' : 'Add item… e.g. Salmon treats'}
             placeholderTextColor="#9ca3af"
             maxLength={150}
             returnKeyType="done"
             onSubmitEditing={() => void addItem()}
           />
           <Pressable style={[styles.addBtn, !quickName.trim() && styles.addBtnDisabled]} onPress={() => void addItem()}>
-            <Text style={styles.addBtnText}>Add</Text>
+            <Text style={styles.addBtnText}>{language === 'ru' ? 'Добавить' : 'Add'}</Text>
           </Pressable>
         </View>
 
@@ -205,7 +207,7 @@ export function ShoppingScreen() {
           ListFooterComponent={
             purchased.length > 0 ? (
               <View>
-                <Text style={[styles.sectionTitle, { marginTop: 16 }]}>Purchased</Text>
+                <Text style={[styles.sectionTitle, { marginTop: 16 }]}>{language === 'ru' ? 'Куплено' : 'Purchased'}</Text>
                 {purchased.map((item) => (
                   <View key={`done-${item.id}`} style={[styles.row, styles.rowDone]}>
                     <View style={[styles.checkbox, styles.checkboxChecked]}>

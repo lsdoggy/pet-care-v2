@@ -1,9 +1,12 @@
+import { useLanguage } from '../i18n/language'
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
 import '../styles/settings.css'
 
 export default function RestoreAccountPage() {
+  const { language } = useLanguage()
   const { hash } = useLocation()
   const token = hash.slice(1)
   const [status, setStatus] = useState<'idle' | 'pending' | 'restored' | 'failed'>('idle')
@@ -23,17 +26,18 @@ export default function RestoreAccountPage() {
 
   return (
     <main className="pc-settings">
+      <LanguageSwitcher />
       <section className="pc-settings__card">
-        <h1>Восстановление аккаунта</h1>
+        <h1>{language === 'ru' ? 'Восстановление аккаунта' : 'Restore account'}</h1>
         {status === 'restored' ? (
-          <p role="status">Аккаунт восстановлен. Теперь можно войти.</p>
+          <p role="status">{language === 'ru' ? 'Аккаунт восстановлен. Теперь можно войти.' : 'Your account has been restored. You can now sign in.'}</p>
         ) : validLink ? (
           <button className="pc-btn pc-btn--primary" disabled={status === 'pending'} onClick={() => void restore()}>
-            {status === 'pending' ? 'Восстановление…' : 'Восстановить аккаунт'}
+            {status === 'pending' ? (language === 'ru' ? 'Восстановление…' : 'Restoring…') : (language === 'ru' ? 'Восстановить аккаунт' : 'Restore account')}
           </button>
-        ) : <p role="alert">Ссылка для восстановления недействительна.</p>}
-        {status === 'failed' && <p role="alert">Не удалось восстановить аккаунт. Проверьте ссылку и попробуйте ещё раз.</p>}
-        <Link to="/login">Перейти ко входу</Link>
+        ) : <p role="alert">{language === 'ru' ? 'Ссылка для восстановления недействительна.' : 'The recovery link is invalid.'}</p>}
+        {status === 'failed' && <p role="alert">{language === 'ru' ? 'Не удалось восстановить аккаунт. Проверьте ссылку и попробуйте ещё раз.' : 'Could not restore the account. Check the link and try again.'}</p>}
+        <Link to="/login">{language === 'ru' ? 'Перейти ко входу' : 'Go to sign in'}</Link>
       </section>
     </main>
   )

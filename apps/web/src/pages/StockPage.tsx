@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
@@ -62,6 +63,7 @@ function daysLeft(p: FoodProductDto): string | null {
  * edit/delete and the "Add to Shopping List" button (linked create — idempotent on backend).
  */
 export default function StockPage() {
+  const { language } = useLanguage()
   const { user, loading } = useAuth()
   const [products, setProducts] = useState<FoodProductDto[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -143,16 +145,16 @@ export default function StockPage() {
     }
   }
 
-  if (loading) return <main style={pageStyle}>Loading…</main>
+  if (loading) return <main style={pageStyle}>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</main>
   if (!user) return <Navigate to="/login" replace />
 
   return (
     <main style={pageStyle}>
       <NavTabs />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: 26, margin: 0 }}>Stock</h1>
+        <h1 style={{ fontSize: 26, margin: 0 }}>{language === 'ru' ? 'Запасы' : 'Stock'}</h1>
         <button style={primaryBtn} onClick={() => setEditing('new')}>
-          + New product
+          {language === 'ru' ? '+ Новый товар' : '+ New product'}
         </button>
       </div>
 
@@ -160,7 +162,7 @@ export default function StockPage() {
       {notice && <p style={{ color: '#27ae60' }}>{notice}</p>}
 
       {products.length === 0 && !error && (
-        <p style={{ color: '#6b7280', marginTop: 16 }}>No products yet. Add your first food/litter product.</p>
+        <p style={{ color: '#6b7280', marginTop: 16 }}>{language === 'ru' ? 'Товаров пока нет. Добавьте корм или наполнитель.' : 'No products yet. Add your first food/litter product.'}</p>
       )}
 
       <div style={{ marginTop: 20 }}>
@@ -186,17 +188,17 @@ export default function StockPage() {
                       padding: '2px 8px',
                     }}
                   >
-                    {p.stockQuantity === 0 ? 'Out of stock' : p.lowStock ? 'Low stock' : 'In stock'}
+                    {p.stockQuantity === 0 ? (language === 'ru' ? 'Нет в наличии' : 'Out of stock') : p.lowStock ? (language === 'ru' ? 'Заканчивается' : 'Low stock') : (language === 'ru' ? 'В наличии' : 'In stock')}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <button style={smallBtn} onClick={() => adjustStock(p, -1)} aria-label="Decrease stock">
+                  <button style={smallBtn} onClick={() => adjustStock(p, -1)} aria-label={language === 'ru' ? 'Уменьшить запас' : 'Decrease stock'}>
                     −
                   </button>
                   <span style={{ minWidth: 70, textAlign: 'center', fontSize: 14 }}>
                     {p.stockQuantity} {p.unit.toLowerCase()}
                   </span>
-                  <button style={smallBtn} onClick={() => adjustStock(p, 1)} aria-label="Increase stock">
+                  <button style={smallBtn} onClick={() => adjustStock(p, 1)} aria-label={language === 'ru' ? 'Увеличить запас' : 'Increase stock'}>
                     +
                   </button>
                 </div>
@@ -233,16 +235,16 @@ export default function StockPage() {
 
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 <button style={smallBtn} onClick={() => addToShoppingList(p)}>
-                  🛒 Add to Shopping List
+                  {language === 'ru' ? '🛒 В список покупок' : '🛒 Add to Shopping List'}
                 </button>
                 <button style={smallBtn} onClick={() => setEditing(p)}>
-                  Edit
+                  {language === 'ru' ? 'Изменить' : 'Edit'}
                 </button>
                 <button
                   style={{ ...smallBtn, borderColor: '#c0392b', color: '#c0392b' }}
                   onClick={() => removeProduct(p)}
                 >
-                  Delete
+                  {language === 'ru' ? 'Удалить' : 'Delete'}
                 </button>
               </div>
             </div>

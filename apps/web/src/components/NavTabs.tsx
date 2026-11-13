@@ -1,14 +1,15 @@
+import { useLanguage } from '../i18n/language'
 import { NavLink } from 'react-router-dom'
 
 export interface NavTabDef {
   to: string
-  label: string
+  label: { ru: string; en: string }
 }
 
 const tabs: NavTabDef[] = [
-  { to: '/', label: 'Главная' },
-  { to: '/stock', label: 'Stock' },
-  { to: '/shopping', label: 'Shopping' },
+  { to: '/', label: { ru: 'Главная', en: 'Home' } },
+  { to: '/stock', label: { ru: 'Запасы', en: 'Stock' } },
+  { to: '/shopping', label: { ru: 'Покупки', en: 'Shopping' } },
 ]
 
 /**
@@ -16,8 +17,9 @@ const tabs: NavTabDef[] = [
  * The active tab is underlined; links use client-side routing (no full reload).
  */
 export default function NavTabs() {
+  const { language } = useLanguage()
   return (
-    <nav style={navStyle} aria-label="Primary">
+    <nav style={navStyle} aria-label={language === 'ru' ? 'Основная навигация' : 'Main navigation'}>
       {tabs.map((tab) => (
         <NavLink
           key={tab.to}
@@ -32,7 +34,7 @@ export default function NavTabs() {
             borderBottom: isActive ? '2px solid #2c3e50' : '2px solid transparent',
           })}
         >
-          {tab.label}
+          {tab.label[language]}
         </NavLink>
       ))}
     </nav>
