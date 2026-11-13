@@ -66,9 +66,13 @@
 
   .pc-modal {
     max-width: none;
-    max-height: 88dvh;
+    max-height: 88vh;
+    max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top, 0px)));
+    overscroll-behavior-y: contain;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    padding-inline: max(var(--space-6), env(safe-area-inset-left, 0px))
+      max(var(--space-6), env(safe-area-inset-right, 0px));
   }
 
   /* Визуальная «ручка» листа */
@@ -103,6 +107,7 @@
 
 .pc-field__input {
   width: 100%;
+  min-width: 0;
   min-height: 44px; /* touch target ≥ 44px (WCAG AA) */
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-size-md); /* 16px — без iOS auto-zoom */

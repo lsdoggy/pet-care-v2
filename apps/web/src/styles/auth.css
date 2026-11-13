@@ -9,11 +9,15 @@
 
 .auth-page {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: var(--space-6) var(--page-padding-x);
+  padding: max(var(--space-6), env(safe-area-inset-top, 0px))
+    max(var(--page-padding-x), env(safe-area-inset-right, 0px))
+    max(var(--space-6), env(safe-area-inset-bottom, 0px))
+    max(var(--page-padding-x), env(safe-area-inset-left, 0px));
   background:
     radial-gradient(120% 90% at 50% 0%, var(--color-primary-subtle) 0%, transparent 55%),
     var(--color-bg-page);
