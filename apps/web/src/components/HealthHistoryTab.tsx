@@ -40,6 +40,7 @@ export default function HealthHistoryTab({ petId, token }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [showApptForm, setShowApptForm] = useState(false)
   const [editingAppt, setEditingAppt] = useState<VetAppointmentDto | null>(null)
+  const [recordAppointmentId, setRecordAppointmentId] = useState<number>()
   const [showRecordForm, setShowRecordForm] = useState(false)
 
   const reload = useCallback(() => {
@@ -87,6 +88,24 @@ export default function HealthHistoryTab({ petId, token }: Props) {
 
   const linkedRecordIds = events.filter((e) => e.kind === 'RECORD' && e.record?.appointmentId != null).map((e) => e.record!.appointmentId as number)
 
+  function renderAttachments(record: VetRecordDto) {
+    return record.attachments.length > 0 && (
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+        {record.attachments.map((att) =>
+          att.type === 'pdf' ? (
+            <a key={att.url} href={att.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#4f46e5' }}>
+              📄 {att.name} ({formatFileSize(att.size)})
+            </a>
+          ) : (
+            <a key={att.url} href={att.url} target="_blank" rel="noreferrer" title={att.name} style={{ display: 'inline-block' }}>
+              <img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
+            </a>
+          ),
+        )}
+      </div>
+    )
+  }
+
   function renderAppointment(appt: VetAppointmentDto) {
     return (
       <div style={cardStyle}>
@@ -102,8 +121,25 @@ export default function HealthHistoryTab({ petId, token }: Props) {
           {appt.cost != null ? ` · ${appt.cost.toFixed(2)} ${appt.currency ?? ''}` : ''}
         </p>
         {appt.address && <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>{appt.address}</p>}
+        {appt.reason && <p><strong>Причина визита:</strong> {appt.reason}</p>}
         {appt.notes && <p style={{ margin: '4px 0 0', fontSize: 14 }}>{appt.notes}</p>}
-        <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+        {events.flatMap(({ record }) => record?.appointmentId === appt.id ? [record] : []).map((record) => (
+          <div key={record.id}>
+            {record.diagnosisText && <p><strong>Диагноз:</strong> {record.diagnosisText}</p>}
+            {record.recommendationsText && <p><strong>Рекомендации:</strong> {record.recommendationsText}</p>}
+            {record.prescriptionsText && <p><strong>Препараты:</strong> {record.prescriptionsText}</p>}
+            {renderAttachments(record)}
+          </div>
+        ))}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10 }}>
+          {!linkedRecordIds.includes(appt.id) && (
+            <button type="button" onClick={() => {
+              setRecordAppointmentId(appt.id)
+              setShowRecordForm(true)
+            }}>
+              Добавить запись о визите
+            </button>
+          )}
           {appt.status === 'SCHEDULED' && (
             <>
               <button onClick={() => handleSetStatus(appt, 'COMPLETED')} style={{ border: 'none', background: 'none', color: '#16a34a', cursor: 'pointer', padding: 0, fontSize: 13 }}>
@@ -148,21 +184,7 @@ export default function HealthHistoryTab({ petId, token }: Props) {
             <strong>Prescriptions:</strong> {record.prescriptionsText}
           </p>
         )}
-        {record.attachments.length > 0 && (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
-            {record.attachments.map((att) =>
-              att.type === 'pdf' ? (
-                <a key={att.url} href={att.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#4f46e5' }}>
-                  📄 {att.name} ({formatFileSize(att.size)})
-                </a>
-              ) : (
-                <a key={att.url} href={att.url} target="_blank" rel="noreferrer" title={att.name} style={{ display: 'inline-block' }}>
-                  <img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
-                </a>
-              ),
-            )}
-          </div>
-        )}
+        {renderAttachments(record)}
         <div style={{ marginTop: 10 }}>
           <button onClick={() => handleDeleteRecord(record.id)} style={{ border: 'none', background: 'none', color: '#c0392b', cursor: 'pointer', padding: 0, fontSize: 13 }}>
             Delete
@@ -243,9 +265,14 @@ export default function HealthHistoryTab({ petId, token }: Props) {
           token={token}
           appointments={appointments}
           existingRecordIds={linkedRecordIds}
-          onClose={() => setShowRecordForm(false)}
+          initialAppointmentId={recordAppointmentId}
+          onClose={() => {
+            setShowRecordForm(false)
+            setRecordAppointmentId(undefined)
+          }}
           onSaved={() => {
             setShowRecordForm(false)
+            setRecordAppointmentId(undefined)
             reload()
           }}
         />

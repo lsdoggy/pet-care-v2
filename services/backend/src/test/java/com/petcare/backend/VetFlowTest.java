@@ -19,8 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -28,7 +30,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Sprint 4: Veterinary Appointments & Records — CRUD, ownership isolation,
  * merged per-pet history and record attachment upload.
  */
-@SpringBootTest
+@SpringBootTest(properties = {
+        "petcare.vetinfo.token=clinic-integration-test-token-only",
+        "petcare.vetinfo.pet-id=9223372036854775807",
+        "petcare.vetinfo.clinic-name=Test Clinic"
+})
 @AutoConfigureMockMvc
 class VetFlowTest {
 
@@ -36,6 +42,9 @@ class VetFlowTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     private String uniqueEmail() {
         return "vetuser" + System.nanoTime() + "@example.com";
@@ -73,6 +82,7 @@ class VetFlowTest {
         payload.put("durationMinutes", 45);
         payload.put("cost", 45.50);
         payload.put("currency", "usd");
+        payload.put("reason", "  Annual checkup  ");
         String body = mockMvc.perform(post("/api/v1/appointments")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -80,6 +90,7 @@ class VetFlowTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("SCHEDULED"))
                 .andExpect(jsonPath("$.durationMinutes").value(45))
+                .andExpect(jsonPath("$.reason").value("Annual checkup"))
                 .andExpect(jsonPath("$.currency").value("USD")) // normalized to uppercase
                 .andReturn().getResponse().getContentAsString();
         return JSON.readTree(body).get("id").asLong();
@@ -104,6 +115,63 @@ class VetFlowTest {
     }
 
     @Test
+    void clinicIntakeRequiresScopedTokenAndValidJson() throws Exception {
+        String clinicAuthorization = "Bearer clinic-integration-test-token-only";
+        String userToken = registerAndLogin(uniqueEmail());
+        String body = JSON.writeValueAsString(Map.of("scheduledAt", Instant.now().plusSeconds(3600).toString()));
+
+        mockMvc.perform(post("/api/v1/vetinfo").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/v1/vetinfo").header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/appointments").header("Authorization", clinicAuthorization))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/vetinfo").header("Authorization", clinicAuthorization)
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/v1/vetinfo").header("Authorization", clinicAuthorization)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Transactional
+    void clinicVisitWithoutCostAppearsOnlyInConfiguredPetsHistory() throws Exception {
+        String email = uniqueEmail();
+        String ownerToken = registerAndLogin(email);
+        String otherToken = registerAndLogin(uniqueEmail());
+        long petId = Long.MAX_VALUE;
+        jdbc.update("""
+                INSERT INTO pets (id, owner_id, name, species)
+                SELECT ?, id, 'Clinic patient', 'DOG' FROM users WHERE email = ?
+                """, petId, email);
+
+        String response = mockMvc.perform(post("/api/v1/vetinfo")
+                        .header("Authorization", "Bearer clinic-integration-test-token-only")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(Map.of(
+                                "scheduledAt", Instant.now().plusSeconds(3600).toString(),
+                                "reason", "Routine exam"))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        long appointmentId = JSON.readTree(response).get("appointmentId").asLong();
+
+        mockMvc.perform(get("/api/v1/pets/" + petId + "/history")
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].appointment.id").value(appointmentId))
+                .andExpect(jsonPath("$[0].appointment.clinicName").value("Test Clinic"))
+                .andExpect(jsonPath("$[0].appointment.reason").value("Routine exam"))
+                .andExpect(jsonPath("$[0].appointment.status").value("SCHEDULED"))
+                .andExpect(jsonPath("$[0].appointment.cost").doesNotExist());
+
+        mockMvc.perform(get("/api/v1/appointments/" + appointmentId)
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void appointmentCrudLifecycle() throws Exception {
         String token = registerAndLogin(uniqueEmail());
         long petId = createPet(token, "Rex");
@@ -123,7 +191,15 @@ class VetFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("COMPLETED"))
                 .andExpect(jsonPath("$.notes").value("all good"))
+                .andExpect(jsonPath("$.reason").value("Annual checkup"))
                 .andExpect(jsonPath("$.clinicName").value("CityVet Clinic")); // untouched by PATCH
+
+        mockMvc.perform(patch("/api/v1/appointments/" + id)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(Map.of("reason", " "))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reason").doesNotExist());
 
         mockMvc.perform(delete("/api/v1/appointments/" + id).header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());

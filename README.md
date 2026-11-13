@@ -189,7 +189,7 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
 
 - **`veterinary_appointments`**: `id`, `pet_id` (FK → pets), `owner_id` (денормализация для проверки прав),
   `clinic_name`, `doctor_name`, `scheduled_at (TIMESTAMPTZ, UTC)`, `duration_minutes (CHECK 5–480)`,
-  `status (SCHEDULED | COMPLETED | CANCELLED)`, `address`, `cost (>= 0)`, `currency (ISO-4217)`, `notes`.
+  `status (SCHEDULED | COMPLETED | CANCELLED)`, `address`, `cost (>= 0)`, `currency (ISO-4217)`, `notes`, необязательное поле `reason` (Flyway V11).
 - **`veterinary_records`**: `id`, `appointment_id` (nullable FK → veterinary_appointments, связь визит→запись необязательна),
   `pet_id`, `owner_id`, `visit_date (DATE)`, `diagnosis_text`, `recommendations_text`, `prescriptions_text`,
   `attachments_jsonb JSONB DEFAULT '[]'` — список `{url, name, type, size}`.
@@ -200,7 +200,7 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
 Вложения хранятся на локальной файловой системе в `./uploads/records/` (директория в .gitignore),
 отдаются как статика Spring по URL `/files/records/<uuid>.<ext>` (разрешены pdf/jpg/jpeg/png/webp, максимум 10 МБ).
 
-### REST API (базовый путь `/api/v1`, всё требует `Authorization: Bearer <JWT>`, входные данные валидируются через `@Valid`)
+### REST API (базовый путь `/api/v1`, пользовательские методы требуют `Authorization: Bearer <JWT>`, входные данные валидируются через `@Valid`)
 
 | Метод | Путь | Описание |
 |---|---|---|
@@ -218,6 +218,36 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
 Ошибки — единый JSON от GlobalExceptionHandler (`{status, error, message, details[], timestamp}`);
 чужие ресурсы возвращают 404 (без утечки существования).
 
+### Приём записи от ветклиники
+
+`POST /api/v1/vetinfo` принимает JSON по HTTPS с заголовками
+`Authorization: Bearer <токен клиники>` и `Content-Type: application/json`.
+
+Для подключения оператор задаёт переменные окружения
+`PETCARE_VETINFO_TOKEN` (случайный секрет длиной от 32 символов),
+`PETCARE_VETINFO_PET_ID` и `PETCARE_VETINFO_CLINIC_NAME`.
+Конфигурация поддерживает одну пару «клиника — питомец» на экземпляр приложения.
+Для отзыва доступа оператор удаляет или меняет токен и перезапускает backend.
+Токен даёт доступ только к отправке визита, а питомца и название клиники сервер
+берёт из конфигурации.
+
+```json
+{
+  "scheduledAt": "2026-12-10T11:30:00+03:00",
+  "durationMinutes": 30,
+  "doctorName": "Анна Иванова",
+  "address": "ул. Лесная, 10",
+  "reason": "Плановый осмотр",
+  "notes": "Принести ветеринарный паспорт"
+}
+```
+
+Обязательно только `scheduledAt` с часовым смещением или `Z`. Длительность по
+умолчанию составляет 30 минут. При наличии цены можно передать `cost`
+(неотрицательное число) и `currency` (трёхбуквенный код, например `RUB`).
+Успешный ответ — HTTP 201 и JSON вида `{"appointmentId": 123}`. Визит появится
+в истории со статусом `SCHEDULED`. Каждый принятый POST создаёт отдельный визит.
+
 ### Клиенты
 
 - **Web** (`apps/web`): на странице питомца (`/pets/:id`) вкладки «Profile» / «Health History».
@@ -225,7 +255,7 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
   модалки `AppointmentFormModal` и `RecordFormModal` (прикрепление файла — после создания записи).
 - **Mobile** (`apps/mobile`): экран питомца → «🩺 Health history» (`PetHistoryScreen`, FlatList-таймлайн,
   pull-to-refresh, удаление свайп-альтернативой — кнопкой Delete). Формы `AppointmentFormScreen` и
-  `RecordFormScreen`; прикрепление документа — через `expo-image-picker` (камера или галерея), загрузка FormData.
+  `RecordFormScreen`; фото выбираются через `expo-image-picker`, PDF — через `expo-document-picker`.
 
 ### Проверка
 
@@ -266,6 +296,13 @@ curl -s -X POST http://localhost:8080/api/v1/records/1/attachments \
 # История питомца
 curl -s http://localhost:8080/api/v1/pets/1/history -H "Authorization: Bearer $TOKEN"
 ```
+
+### Ручная проверка ветеринарной истории
+
+1. На тестовом питомце создайте визит с причиной и без стоимости. Откройте историю и проверьте дату, клинику и причину.
+2. Из карточки визита добавьте медицинскую запись. На web перетащите PDF в форму. В Expo на Android и iOS проверьте выбор PDF из файлов и фото из галереи.
+3. Удалите выбранный файл из формы, прикрепите его снова и сохраните запись. Откройте вложение из карточки визита.
+4. Для проверки повторной отправки прервите соединение во время загрузки вложения после создания записи. Восстановите соединение, повторите сохранение и убедитесь, что в истории одна запись.
 
 ## Sprint 5 — Food Products & Shopping List
 

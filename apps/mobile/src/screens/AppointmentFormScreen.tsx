@@ -36,6 +36,7 @@ export function AppointmentFormScreen({ petId, petName }: Props) {
   const [address, setAddress] = useState('');
   const [costStr, setCostStr] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -75,6 +76,7 @@ export function AppointmentFormScreen({ petId, petName }: Props) {
         address: address.trim() || null,
         cost: costStr.trim() ? Number(costStr) : null,
         currency: costStr.trim() ? currency.trim().toUpperCase() : null,
+        reason: reason.trim(),
         notes: notes.trim() || null,
       };
 
@@ -142,6 +144,9 @@ export function AppointmentFormScreen({ petId, petName }: Props) {
 
         <Text style={styles.label}>Address</Text>
         <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="Main st 1" maxLength={255} />
+
+        <Text style={styles.label}>Причина визита</Text>
+        <TextInput style={styles.input} value={reason} onChangeText={setReason} maxLength={2000} multiline />
 
         <Text style={styles.label}>Notes</Text>
         <TextInput

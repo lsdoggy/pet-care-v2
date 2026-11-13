@@ -20,6 +20,7 @@ public record AppointmentDto(
         BigDecimal cost,
         String currency,
         String notes,
+        String reason,
         Instant createdAt,
         Instant updatedAt) {
 
@@ -37,6 +38,7 @@ public record AppointmentDto(
                 entity.getCost(),
                 entity.getCurrency(),
                 entity.getNotes(),
+                entity.getReason(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt());
     }

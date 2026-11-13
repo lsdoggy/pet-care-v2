@@ -1,12 +1,15 @@
 package com.petcare.backend.security;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,8 +26,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    private final String clinicToken;
+
+    public JwtAuthFilter(JwtService jwtService, @Value("${petcare.vetinfo.token:}") String clinicToken) {
         this.jwtService = jwtService;
+        this.clinicToken = clinicToken;
     }
 
     @Override
@@ -35,9 +41,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith(BEARER_PREFIX)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-                String subject = jwtService.extractSubject(header.substring(BEARER_PREFIX.length()));
+                String token = header.substring(BEARER_PREFIX.length());
+                boolean clinic = clinicToken.length() >= 32
+                        && MessageDigest.isEqual(clinicToken.getBytes(StandardCharsets.UTF_8),
+                                token.getBytes(StandardCharsets.UTF_8));
+                String subject = clinic ? "vet-clinic" : jwtService.extractSubject(token);
                 var authentication = new UsernamePasswordAuthenticationToken(
-                        subject, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+                        subject, null, List.of(new SimpleGrantedAuthority(clinic ? "ROLE_VET_CLINIC" : "ROLE_USER")));
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException e) {

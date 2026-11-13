@@ -206,6 +206,7 @@ export interface VetAppointmentDto {
   address: string | null
   cost: number | null
   currency: string | null
+  reason?: string | null
   notes: string | null
   createdAt: string
   updatedAt: string
@@ -222,6 +223,7 @@ export interface CreateAppointmentRequest {
   address?: string | null
   cost?: number | null
   currency?: string | null
+  reason?: string | null
   notes?: string | null
 }
 

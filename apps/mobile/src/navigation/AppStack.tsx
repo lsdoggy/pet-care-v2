@@ -14,7 +14,7 @@ export type Route =
   | { name: 'PetDetail'; petId: number; petName?: string }
   | { name: 'PetHistory'; petId: number; petName: string }
   | { name: 'AppointmentForm'; petId: number; petName?: string }
-  | { name: 'RecordForm'; petId: number; petName?: string };
+  | { name: 'RecordForm'; petId: number; petName?: string; appointmentId?: number };
 
 /**
  * Tab Bar destinations: Home (pets), Tasks, Buy/Stock, Settings.
