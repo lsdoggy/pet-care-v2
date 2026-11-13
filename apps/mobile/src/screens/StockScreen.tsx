@@ -108,7 +108,7 @@ export function StockScreen() {
                   <Text style={styles.meta}>
                     {FOOD_CATEGORY_LABELS[item.category]}
                     {item.brand ? ` · ${item.brand}` : ''}
-                    {item.lowStock ? ' · LOW STOCK' : ''}
+                     · {item.stockQuantity === 0 ? 'Out of stock' : item.lowStock ? 'Low stock' : 'In stock'}
                   </Text>
                 </View>
                 <Text style={[styles.qty, item.lowStock && styles.qtyLow]}>
@@ -117,11 +117,11 @@ export function StockScreen() {
               </View>
 
               {/* Stock progress bar */}
-              <View style={styles.barTrack}>
+              <View style={styles.barTrack} accessibilityRole="progressbar" accessibilityLabel={`Stock level for ${item.name}`} accessibilityValue={{ min: 0, max: 100, now: pct }}>
                 <View
                   style={[
                     styles.barFill,
-                    { width: `${Math.max(pct, 2)}%`, backgroundColor: item.lowStock ? '#c0392b' : pct < 50 ? '#f39c12' : '#27ae60' },
+                    { width: `${pct}%`, backgroundColor: item.lowStock ? '#c0392b' : pct < 50 ? '#f39c12' : '#27ae60' },
                   ]}
                 />
               </View>
@@ -130,10 +130,10 @@ export function StockScreen() {
               </Text>
 
               <View style={styles.actionsRow}>
-                <Pressable style={styles.stepBtn} disabled={busy} onPress={() => void adjustStock(item, -1)}>
+                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel="Decrease stock" disabled={busy || item.stockQuantity === 0} onPress={() => void adjustStock(item, -1)}>
                   <Text style={styles.stepBtnText}>−</Text>
                 </Pressable>
-                <Pressable style={styles.stepBtn} disabled={busy} onPress={() => void adjustStock(item, 1)}>
+                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel="Increase stock" disabled={busy} onPress={() => void adjustStock(item, 1)}>
                   <Text style={styles.stepBtnText}>+</Text>
                 </Pressable>
                 <Pressable style={styles.cartBtn} disabled={busy} onPress={() => void addToShoppingList(item)}>
@@ -174,8 +174,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 11, color: '#94a3b8', marginTop: 4 },
   actionsRow: { flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' },
   stepBtn: {
-    width: 36,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#cbd5e1',
@@ -189,6 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#4f46e5',
     borderRadius: 8,
     paddingHorizontal: 14,
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: 8,
   },
   cartBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },

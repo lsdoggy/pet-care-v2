@@ -25,6 +25,8 @@ const rowStyle: React.CSSProperties = {
 }
 
 const smallBtn: React.CSSProperties = {
+  minWidth: 44,
+  minHeight: 44,
   padding: '5px 10px',
   borderRadius: 6,
   border: '1px solid #cbd5e1',
@@ -179,15 +181,17 @@ export default function ShoppingListPage() {
       {openItems.length === 0 && !error && <p style={{ color: '#6b7280' }}>Nothing to buy. 🎉</p>}
       {openItems.map((item) => (
         <div key={item.id} style={rowStyle}>
-          <input
-            type="checkbox"
-            aria-label={`Mark ${item.customName} purchased`}
-            checked={false}
-            disabled={busyId === item.id}
-            onChange={() => markPurchased(item)}
-            style={{ width: 18, height: 18, cursor: 'pointer' }}
-          />
-          <span style={{ flex: 1 }}>
+          <label style={{ width: 44, height: 44, flexShrink: 0, display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              aria-label={`Mark ${item.customName} purchased`}
+              checked={false}
+              disabled={busyId === item.id}
+              onChange={() => markPurchased(item)}
+              style={{ width: 18, height: 18, cursor: 'pointer' }}
+            />
+          </label>
+          <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
             {item.customName}
             <span style={{ color: '#6b7280', fontSize: 13, marginLeft: 6 }}>
               × {item.quantity} {item.unit.toLowerCase()}

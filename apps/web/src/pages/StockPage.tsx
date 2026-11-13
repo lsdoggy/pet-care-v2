@@ -24,6 +24,8 @@ const cardStyle: React.CSSProperties = {
 }
 
 const smallBtn: React.CSSProperties = {
+  minWidth: 44,
+  minHeight: 44,
   padding: '6px 12px',
   borderRadius: 6,
   border: '1px solid #cbd5e1',
@@ -33,6 +35,7 @@ const smallBtn: React.CSSProperties = {
 }
 
 const primaryBtn: React.CSSProperties = {
+  minHeight: 44,
   padding: '8px 16px',
   borderRadius: 6,
   border: 'none',
@@ -173,20 +176,18 @@ export default function StockPage() {
                     {FOOD_CATEGORY_LABELS[p.category]}
                     {p.brand ? ` · ${p.brand}` : ''}
                   </span>
-                  {p.lowStock && (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        fontSize: 12,
-                        color: '#c0392b',
-                        background: '#fdecea',
-                        borderRadius: 10,
-                        padding: '2px 8px',
-                      }}
-                    >
-                      Low stock
-                    </span>
-                  )}
+                  <span
+                    style={{
+                      marginLeft: 8,
+                      fontSize: 12,
+                      color: p.lowStock ? '#a1271b' : '#166534',
+                      background: p.lowStock ? '#fdecea' : '#dcfce7',
+                      borderRadius: 10,
+                      padding: '2px 8px',
+                    }}
+                  >
+                    {p.stockQuantity === 0 ? 'Out of stock' : p.lowStock ? 'Low stock' : 'In stock'}
+                  </span>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <button style={smallBtn} onClick={() => adjustStock(p, -1)} aria-label="Decrease stock">
@@ -205,6 +206,7 @@ export default function StockPage() {
               <div
                 style={{ height: 8, background: '#edf2f7', borderRadius: 4, marginTop: 10, overflow: 'hidden' }}
                 role="progressbar"
+                aria-label={`Stock level for ${p.name}`}
                 aria-valuenow={pct}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -229,7 +231,7 @@ export default function StockPage() {
 
               {p.notes && <p style={{ fontSize: 13, color: '#4a5568', margin: '8px 0 0' }}>{p.notes}</p>}
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 <button style={smallBtn} onClick={() => addToShoppingList(p)}>
                   🛒 Add to Shopping List
                 </button>
