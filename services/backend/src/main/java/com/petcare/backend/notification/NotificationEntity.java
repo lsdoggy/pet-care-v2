@@ -4,8 +4,7 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
+import jakarta.persistence.Convert;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -24,7 +23,7 @@ public class NotificationEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = NotificationTypeConverter.class)
     @Column(nullable = false, length = 10)
     private NotificationType type;
 
@@ -38,7 +37,7 @@ public class NotificationEntity {
     @Column(name = "payload_json")
     private String payloadJson;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ChannelStatusConverter.class)
     @Column(name = "channel_status", nullable = false, length = 10)
     private ChannelStatus channelStatus = ChannelStatus.PENDING;
 

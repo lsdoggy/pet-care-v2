@@ -9,7 +9,9 @@
  * использующие те же api-методы, что и остальные экраны.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { validateQuickPurchase } from '../lib/quickPurchase';
+import { useDashboardNow } from '../lib/useDashboardNow';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -104,8 +106,9 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
     void load();
   }, [load]);
 
-  const attention = useMemo(() => buildAttention(tasks, products, appointments), [tasks, products, appointments]);
-  const events = useMemo(() => buildUpcomingEvents(tasks, appointments), [tasks, appointments]);
+  const now = useDashboardNow();
+  const attention = useMemo(() => buildAttention(tasks, products, appointments, 6, now), [tasks, products, appointments, now]);
+  const events = useMemo(() => buildUpcomingEvents(tasks, appointments, 8, now), [tasks, appointments, now]);
 
   const goVet = useCallback(() => {
     if (pets.length === 0) {
@@ -169,7 +172,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
         refreshControl={undefined}
       >
         {/* Приветствие */}
-        <Text style={styles.greeting}>{greetingForNow()}, {user.email.split('@')[0]}!</Text>
+        <Text style={styles.greeting}>{greetingForNow(now)}, {user.email.split('@')[0]}!</Text>
         <Text style={styles.greetingSub}>
           {attention.overdueCount > 0
             ? `⚠ Просрочено задач: ${attention.overdueCount}. Откройте «Требует внимания» ниже.`
@@ -532,7 +535,7 @@ function QuickTaskModal({
   );
 }
 
-function QuickPurchaseModal({
+export function QuickPurchaseModal({
   visible,
   onClose,
   onCreated,
@@ -543,7 +546,9 @@ function QuickPurchaseModal({
 }) {
   const [name, setName] = useState('');
   const [qty, setQty] = useState('1');
+  const inFlight = useRef(false);
   const [busy, setBusy] = useState(false);
+  const close = () => { if (!inFlight.current) onClose(); };
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
@@ -555,31 +560,32 @@ function QuickPurchaseModal({
   }, [visible]);
 
   const submit = async () => {
-    const quantity = Number(qty.replace(',', '.'));
-    if (!name.trim()) {
-      setErr('Укажите название товара.');
-      return;
-    }
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setErr('Количество должно быть больше нуля.');
-      return;
-    }
+    if (inFlight.current) return;
+    const result = validateQuickPurchase(name, qty);
+    if (!result.payload) { setErr(result.error); return; }
+    inFlight.current = true;
     setBusy(true);
     setErr(null);
     try {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Необходима авторизация');
-      await api.createShoppingItem({ customName: name.trim(), quantity, unit: 'PCS' }, token);
-      onCreated();
+      await api.createShoppingItem(result.payload, token);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Не удалось добавить покупку');
+      return;
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
+    setName('');
+    setQty('1');
+    onClose();
+    // Refresh has a separate outcome: it must never become a failed creation.
+    onCreated();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <View style={styles.modalOverlay}>
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Добавить в список покупок</Text>
@@ -587,6 +593,7 @@ function QuickPurchaseModal({
           <Text style={styles.fieldLabel}>Товар</Text>
           <TextInput
             style={styles.input}
+            editable={!busy}
             value={name}
             onChangeText={setName}
             placeholder="Например: корм Royal Canin 4 кг"
@@ -597,6 +604,7 @@ function QuickPurchaseModal({
           <Text style={styles.fieldLabel}>Количество (шт)</Text>
           <TextInput
             style={styles.input}
+            editable={!busy}
             value={qty}
             onChangeText={setQty}
             keyboardType="numeric"
@@ -606,7 +614,7 @@ function QuickPurchaseModal({
           {err ? <Text style={styles.errText}>{err}</Text> : null}
 
           <View style={styles.modalActions}>
-            <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={onClose}>
+            <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={close} disabled={busy}>
               <Text style={styles.secondaryBtnText}>Отмена</Text>
             </Pressable>
             <Pressable
@@ -614,6 +622,8 @@ function QuickPurchaseModal({
               onPress={() => void submit()}
               accessibilityRole="button"
               accessibilityLabel="Добавить покупку"
+              disabled={busy}
+              accessibilityState={{ disabled: busy }}
             >
               {busy ? (
                 <ActivityIndicator color={colors.onPrimary} />

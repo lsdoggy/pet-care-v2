@@ -50,6 +50,14 @@ export default function Modal({ labelledBy, onClose, children, className }: Moda
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
+    return () => {
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
+    }
+  }, [])
+
+  // Updating the close handler must not restart autofocus or restore focus.
+  useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -77,8 +85,6 @@ export default function Modal({ labelledBy, onClose, children, className }: Moda
     document.addEventListener('keydown', onKeyDown, true)
     return () => {
       document.removeEventListener('keydown', onKeyDown, true)
-      document.body.style.overflow = previousOverflow
-      previouslyFocused?.focus()
     }
   }, [onClose])
 

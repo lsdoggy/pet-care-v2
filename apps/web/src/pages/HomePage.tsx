@@ -40,6 +40,7 @@ import {
   taskComparator,
   todayLabel,
 } from '../lib/dashboard'
+import { useDashboardNow } from '../lib/useDashboardNow'
 import '../styles/dashboard.css'
 import '../styles/pets.css'
 import '../styles/settings.css'
@@ -66,6 +67,7 @@ interface DeleteTarget {
 export default function HomePage() {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const now = useDashboardNow()
 
   const [pets, setPets] = useState<PetDto[]>([])
   const [tasks, setTasks] = useState<CareTaskDto[]>([])
@@ -74,7 +76,6 @@ export default function HomePage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [now, setNow] = useState(Date.now)
   const [warnings, setWarnings] = useState<string[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -91,7 +92,6 @@ export default function HomePage() {
   const loadAll = useCallback(async () => {
     if (!tokenStore.get()) return
     setLoading(true)
-    setNow(Date.now())
     setError(null)
     const results = await Promise.allSettled([
       api.listPets(token),
@@ -120,16 +120,16 @@ export default function HomePage() {
 
   /* ---------- derived view-model (pure helpers from lib/dashboard) ---------- */
   const attention = useMemo(() => {
-    const overdue = tasks.filter((t) => classifyTask(t) === 'overdue').sort(taskComparator)
-    const today = tasks.filter((t) => classifyTask(t) === 'today').sort(taskComparator)
+    const overdue = tasks.filter((t) => classifyTask(t, now) === 'overdue').sort((a, b) => taskComparator(a, b, now))
+    const today = tasks.filter((t) => classifyTask(t, now) === 'today').sort((a, b) => taskComparator(a, b, now))
     const low = lowStockProducts(products)
-    const visit = nextVisit(appointments, 7)
+    const visit = nextVisit(appointments, 7, now)
     const missedVisits = appointments.filter((a) => a.status === 'SCHEDULED' && new Date(a.scheduledAt).getTime() < now)
       .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt))
     return { overdue, today, low, visit, missedVisits }
   }, [tasks, products, appointments, now])
 
-  const events = useMemo(() => buildUpcomingEvents(tasks, appointments).slice(0, 6), [tasks, appointments])
+  const events = useMemo(() => buildUpcomingEvents(tasks, appointments, now).slice(0, 6), [tasks, appointments, now])
 
   const attentionCount =
     attention.missedVisits.length + attention.overdue.length + attention.today.length + attention.low.length + (attention.visit ? 1 : 0)
@@ -244,9 +244,9 @@ export default function HomePage() {
           {notice && <p className="pc-settings__success" role="status">{notice}</p>}
           {/* ---------- 1. Greeting ---------- */}
           <header>
-            <p className="pc-dash__greeting-date">{todayLabel()}</p>
+            <p className="pc-dash__greeting-date">{todayLabel(new Date(now))}</p>
             <h1 className="pc-dash__greeting-title">
-              {greetingWord()}, {firstName}!
+              {greetingWord(new Date(now))}, {firstName}!
             </h1>
             <p className="pc-dash__greeting-sub">
               {warnings.length > 0
@@ -287,6 +287,7 @@ export default function HomePage() {
                           <TaskRow
                             key={t.id}
                             task={t}
+                             now={now}
                             dot="danger"
                             busy={busyTaskId === t.id}
                             onComplete={completeTask}
@@ -324,6 +325,7 @@ export default function HomePage() {
                           <TaskRow
                             key={t.id}
                             task={t}
+                             now={now}
                             dot="warning"
                             busy={busyTaskId === t.id}
                             onComplete={completeTask}
@@ -493,7 +495,7 @@ export default function HomePage() {
                               )}
                             </span>
                             <span className="pc-event__meta">
-                              {TASK_TYPE_LABELS[ev.task.type]} · {ev.task.petName} · {formatDueLabel(ev.task.dueAt)}
+                              {TASK_TYPE_LABELS[ev.task.type]} · {ev.task.petName} · {(classifyTask(ev.task, now) === 'overdue' ? 'Просрочено · ' : '') + formatDueLabel(ev.task.dueAt, now)}
                             </span>
                           </span>
                         </div>
@@ -614,12 +616,14 @@ function AttentionGroup({ label, children }: { label: string; children: ReactNod
 
 function TaskRow({
   task,
+  now,
   dot,
   busy,
   onComplete,
   onOpen,
 }: {
   task: CareTaskDto
+  now: number
   dot: 'danger' | 'warning'
   busy: boolean
   onComplete: (t: CareTaskDto) => Promise<void>
@@ -649,7 +653,7 @@ function TaskRow({
             aria-hidden="true"
             style={{ display: 'inline-block', marginRight: 6 }}
           />
-          {task.petName} · {formatDueLabel(task.dueAt)}
+          {task.petName} · {(dot === 'danger' ? 'Просрочено · ' : '') + formatDueLabel(task.dueAt, now)}
         </span>
       </button>
     </div>
