@@ -163,10 +163,11 @@ export default function ShoppingListPage() {
           maxLength={150}
           style={{
             flex: 1,
+            minWidth: 0,
             padding: '8px 10px',
             borderRadius: 6,
             border: '1px solid #ccc',
-            fontSize: 14,
+            fontSize: 'var(--font-size-md)',
           }}
         />
         <button type="submit" style={smallBtn} disabled={!quickName.trim()}>
