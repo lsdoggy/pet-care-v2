@@ -27,7 +27,7 @@ const modalStyle: React.CSSProperties = {
   width: 'min(440px, 92vw)',
   maxHeight: '88vh',
   overflowY: 'auto',
-  fontFamily: 'sans-serif',
+  fontFamily: 'inherit',
 }
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, marginBottom: 4, color: '#555' }

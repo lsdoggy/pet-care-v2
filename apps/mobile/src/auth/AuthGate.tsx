@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { StatusBar } from 'expo-status-bar';
 import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
@@ -102,7 +103,7 @@ export function AuthGate() {
               case 'AppointmentForm':
                 return <AppointmentFormScreen key={`appt-${top.appointment?.id ?? top.petId}`} petId={top.petId} petName={top.petName} appointment={top.appointment} />;
               case 'RecordForm':
-                return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} />;
+                return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} appointmentId={top.appointmentId} />;
               case 'Tasks':
                 return <TasksScreen key="tasks" />;
               case 'Settings':

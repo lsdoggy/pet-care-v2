@@ -1,5 +1,7 @@
 package com.petcare.backend.notification;
 
+import jakarta.persistence.EnumeratedValue;
+
 /**
  * Delivery state of a notification row (V6 CHECK constraint keeps these four values).
  * pending -> sent | failed is set by the sender; read is set when the user opens the push.
@@ -10,6 +12,7 @@ public enum ChannelStatus {
     FAILED("failed"),
     READ("read");
 
+    @EnumeratedValue
     private final String value;
 
     ChannelStatus(String value) {

@@ -75,6 +75,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
   const [address, setAddress] = useState(appointment?.address ?? '')
   const [cost, setCost] = useState(appointment?.cost != null ? String(appointment.cost) : '')
   const [currency, setCurrency] = useState(appointment?.currency ?? '')
+  const [reason, setReason] = useState(appointment?.reason ?? '')
   const [notes, setNotes] = useState(appointment?.notes ?? '')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -126,6 +127,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
       address: address.trim() || null,
       cost: costValue ?? null,
       currency: currency.trim() ? currency.trim().toUpperCase() : null,
+      reason: reason.trim(),
       notes: notes.trim() || null,
     }
 
@@ -201,6 +203,10 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
               <input style={inputStyle} value={currency} onChange={(e) => setCurrency(e.target.value)} maxLength={3} placeholder="USD" />
             </label>
           </div>
+          <label style={labelStyle}>
+            Причина визита
+            <textarea style={inputStyle} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} />
+          </label>
           <label style={labelStyle}>
             Заметки
             <textarea style={{ ...inputStyle, minHeight: 60 }} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />

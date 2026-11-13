@@ -20,4 +20,10 @@ public interface CareTaskRepository extends JpaRepository<CareTaskEntity, Long> 
      */
     List<CareTaskEntity> findByStatusAndReminderSentFalseAndDueAtBetweenOrderByDueAtAsc(
             CareTaskStatus status, Instant from, Instant to);
+
+    List<CareTaskEntity> findByStatusAndDayReminderSentFalseAndDueAtGreaterThanAndDueAtLessThanEqual(
+            CareTaskStatus status, Instant from, Instant to);
+
+    List<CareTaskEntity> findByStatusAndOverdueReminderSentFalseAndDueAtLessThanEqual(
+            CareTaskStatus status, Instant to);
 }

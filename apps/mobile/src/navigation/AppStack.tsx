@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { colors, spacing, typography, layout, radius } from '../theme/tokens';
 import { useSafeAreaInsets } from '../theme/useSafeAreaInsets';
 import type { VetAppointmentDto } from '../api/types';
@@ -15,7 +16,7 @@ export type Route =
   | { name: 'PetDetail'; petId: number; petName?: string }
   | { name: 'PetHistory'; petId: number; petName: string }
   | { name: 'AppointmentForm'; petId: number; petName?: string; appointment?: VetAppointmentDto }
-  | { name: 'RecordForm'; petId: number; petName?: string };
+  | { name: 'RecordForm'; petId: number; petName?: string; appointmentId?: number };
 
 /**
  * Tab Bar destinations: Home (pets), Tasks, Buy/Stock, Settings.

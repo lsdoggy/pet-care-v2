@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.petcare.backend.user.UserEntity;
+import com.petcare.backend.user.UserRepository;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -21,11 +22,13 @@ public class JwtService {
 
     private final SecretKey key;
     private final Duration expiration;
+    private final UserRepository users;
 
     public JwtService(@Value("${app.jwt.secret}") String secret,
-                      @Value("${app.jwt.expiration}") Duration expiration) {
+                      @Value("${app.jwt.expiration}") Duration expiration, UserRepository users) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
+        this.users = users;
     }
 
     public String generateToken(UserEntity user) {
@@ -33,6 +36,7 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getEmail())
                 .claim("uid", user.getId())
+                .claim("sv", user.getSessionVersion())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration.toMillis()))
                 .signWith(key)
@@ -45,6 +49,11 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return claims.getSubject();
+        Integer version = claims.get("sv", Integer.class);
+        return users.findByEmailIgnoreCase(claims.getSubject())
+                .filter(user -> !user.isDeactivated())
+                .filter(user -> user.getSessionVersion() == (version == null ? 0 : version))
+                .map(UserEntity::getEmail)
+                .orElseThrow(() -> new JwtException("Invalid session"));
     }
 }

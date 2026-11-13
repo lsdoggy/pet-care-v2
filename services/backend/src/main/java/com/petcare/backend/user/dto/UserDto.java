@@ -15,6 +15,10 @@ public record UserDto(
         boolean pushNotificationsEnabled,
         /** Sprint 6: profile email switch (Email On/Off, opt-in). */
         boolean emailNotificationsEnabled,
+        boolean hourReminderEnabled,
+        boolean dayReminderEnabled,
+        boolean overdueReminderEnabled,
+        boolean lowStockNotificationEnabled,
         Instant createdAt) {
 
     public static UserDto from(UserEntity entity) {
@@ -25,6 +29,10 @@ public record UserDto(
                 entity.getPhone(),
                 entity.isPushNotificationsEnabled(),
                 entity.isEmailNotificationsEnabled(),
+                entity.isHourReminderEnabled(),
+                entity.isDayReminderEnabled(),
+                entity.isOverdueReminderEnabled(),
+                entity.isLowStockNotificationEnabled(),
                 entity.getCreatedAt());
     }
 }

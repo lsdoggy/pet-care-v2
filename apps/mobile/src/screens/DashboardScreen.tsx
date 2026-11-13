@@ -11,20 +11,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type {
   CareTaskDto,
@@ -38,6 +26,7 @@ import { tokenStore } from '../auth/tokenStore';
 import { useNavigation, type TabName } from '../navigation/AppStack';
 import { ScreenHeader, headerActionStyles } from '../components/ScreenHeader';
 import { DashboardSkeleton } from '../components/DashboardSkeleton';
+import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
 import { DateField } from '../components/DateField';
 import { localDateValue } from '../components/DateField.types';
 import {
@@ -313,6 +302,9 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
                 </Text>
                 <View style={styles.eventBody}>
                   <Text style={styles.eventTitle}>{ev.title}</Text>
+                  <AddToGoogleCalendar title={`${ev.title}${ev.petName ? ` · ${ev.petName}` : ''}`} startsAt={ev.at}
+                    durationMinutes={ev.kind === 'visit' ? appointments.find((visit) => `visit-${visit.id}` === ev.key)?.durationMinutes : undefined}
+                    location={ev.kind === 'visit' ? appointments.find((visit) => `visit-${visit.id}` === ev.key)?.address : undefined} />
                   <Text style={styles.eventMeta}>
                     {ev.subtitle}
                     {ev.petName ? ` · ${ev.petName}` : ''} · {formatDateTime(ev.at)}

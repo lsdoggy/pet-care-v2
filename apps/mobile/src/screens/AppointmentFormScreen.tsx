@@ -1,15 +1,6 @@
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { AppointmentStatus, CreateAppointmentRequest, VetAppointmentDto } from '../api/types';
 import { APPOINTMENT_STATUS_LABELS } from '../api/types';
@@ -38,6 +29,7 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
   const [address, setAddress] = useState(appointment?.address ?? '');
   const [costStr, setCostStr] = useState(appointment?.cost != null ? String(appointment.cost) : '');
   const [currency, setCurrency] = useState(appointment?.currency ?? 'RUB');
+  const [reason, setReason] = useState(appointment?.reason ?? '');
   const [notes, setNotes] = useState(appointment?.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +72,7 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
         address: address.trim() || null,
         cost: costStr.trim() ? Number(costStr) : null,
         currency: costStr.trim() ? currency.trim().toUpperCase() : null,
+        reason: reason.trim(),
         notes: notes.trim() || null,
       };
 
@@ -147,6 +140,9 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
 
         <Text style={styles.label}>Адрес</Text>
         <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="Main st 1" maxLength={255} />
+
+        <Text style={styles.label}>Причина визита</Text>
+        <TextInput style={styles.input} value={reason} onChangeText={setReason} maxLength={2000} multiline />
 
         <Text style={styles.label}>Заметки</Text>
         <TextInput

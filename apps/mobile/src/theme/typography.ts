@@ -1,19 +1,20 @@
 /**
  * Design tokens — typography (mobile).
- * System font stack only (no binary font assets). Mirror of apps/web/src/styles/tokens.css.
+ * Locally bundled Roboto, shared with the web interface.
  */
 
-/** Platform system stacks (RN resolves these to the OS UI font). */
+/** Font faces loaded before rendering the application. */
 export const fontFamily = {
-  normal: 'System', // SF Pro / Roboto via platform default
-  bold: undefined, // use fontWeight instead — keeps system stack consistent
+  normal: 'Roboto_400Regular',
+  medium: 'Roboto_500Medium',
+  bold: 'Roboto_700Bold',
 } as const;
 
-/** Font scale in dp/pt. Body baseline: 15–16px per design direction. */
+/** Font scale in dp/pt. Body baseline: 16px. */
 export const fontSize = {
   xs: 12,
-  sm: 13,
-  base: 15,
+  sm: 14,
+  base: 16,
   md: 16,
   lg: 18,
   xl: 20,

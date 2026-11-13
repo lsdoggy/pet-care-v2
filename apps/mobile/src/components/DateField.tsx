@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Modal, Platform, Pressable, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, View } from 'react-native';
+import { Text } from './Typography';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors } from '../theme/tokens';
 import { localDateValue, type DateFieldProps } from './DateField.types';

@@ -8,5 +8,10 @@ public record NotificationSettingsRequest(
         Boolean pushEnabled,
 
         @NotNull(message = "emailEnabled must be true or false")
-        Boolean emailEnabled) {
+        Boolean emailEnabled,
+
+        Boolean hourReminderEnabled,
+        Boolean dayReminderEnabled,
+        Boolean overdueReminderEnabled,
+        Boolean lowStockNotificationEnabled) {
 }

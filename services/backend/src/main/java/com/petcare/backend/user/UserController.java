@@ -3,6 +3,7 @@ package com.petcare.backend.user;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,12 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    @PostMapping("/me/deactivate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void deactivate(Authentication authentication) {
+        userService.deactivate(authentication.getName());
     }
 
     @GetMapping("/me")

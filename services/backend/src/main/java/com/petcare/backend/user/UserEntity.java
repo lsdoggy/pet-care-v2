@@ -43,6 +43,25 @@ public class UserEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "recovery_token_hash", length = 64)
+    private String recoveryTokenHash;
+
+    @Column(name = "session_version", nullable = false)
+    private int sessionVersion;
+
+    public boolean isDeactivated() {
+        return recoveryTokenHash != null;
+    }
+
+    public int getSessionVersion() {
+        return sessionVersion;
+    }
+
+    public void deactivate(String tokenHash) {
+        recoveryTokenHash = tokenHash;
+        sessionVersion++;
+    }
+
     protected UserEntity() {
     }
 
@@ -88,6 +107,50 @@ public class UserEntity {
 
     public String getPhone() {
         return phone;
+    }
+
+    @Column(name = "hour_reminder_enabled", nullable = false)
+    private boolean hourReminderEnabled = true;
+
+    @Column(name = "day_reminder_enabled", nullable = false)
+    private boolean dayReminderEnabled;
+
+    public boolean isDayReminderEnabled() {
+        return dayReminderEnabled;
+    }
+
+    public void setDayReminderEnabled(boolean enabled) {
+        this.dayReminderEnabled = enabled;
+    }
+
+    @Column(name = "overdue_reminder_enabled", nullable = false)
+    private boolean overdueReminderEnabled;
+
+    public boolean isOverdueReminderEnabled() {
+        return overdueReminderEnabled;
+    }
+
+    public void setOverdueReminderEnabled(boolean enabled) {
+        this.overdueReminderEnabled = enabled;
+    }
+
+    @Column(name = "low_stock_notification_enabled", nullable = false)
+    private boolean lowStockNotificationEnabled;
+
+    public boolean isLowStockNotificationEnabled() {
+        return lowStockNotificationEnabled;
+    }
+
+    public void setLowStockNotificationEnabled(boolean enabled) {
+        this.lowStockNotificationEnabled = enabled;
+    }
+
+    public boolean isHourReminderEnabled() {
+        return hourReminderEnabled;
+    }
+
+    public void setHourReminderEnabled(boolean hourReminderEnabled) {
+        this.hourReminderEnabled = hourReminderEnabled;
     }
 
     public boolean isPushNotificationsEnabled() {

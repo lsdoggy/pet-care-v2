@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { api, ApiError } from '../api/client';
-import type { DeviceDto, NotificationDto, UserDto } from '../api/types';
+import type { DeviceDto, NotificationDto, PetDto, UserDto } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { colors } from '../theme/tokens';
 
@@ -18,9 +19,30 @@ interface SettingsScreenProps {
  *  - notification feed with unread badge, tap-to-mark-read.
  */
 export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenProps) {
+  const [confirmDeactivation, setConfirmDeactivation] = useState(false);
+  const [pets, setPets] = useState<PetDto[] | null>(null);
+  const [petsError, setPetsError] = useState(false);
+  const [petsAttempt, setPetsAttempt] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    async function loadPets() {
+      try {
+        const token = await tokenStore.get();
+        if (!token) throw new ApiError(401, 'Not authenticated');
+        const items = await api.listPets(token);
+        if (active) setPets(items);
+      } catch {
+        if (active) setPetsError(true);
+      }
+    }
+    void loadPets();
+    return () => { active = false; };
+  }, [user.id, petsAttempt]);
+
   const [devices, setDevices] = useState<DeviceDto[]>([]);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
-  const [savingKey, setSavingKey] = useState<'push' | 'email' | 'profile' | null>(null);
+  const [savingKey, setSavingKey] = useState<'push' | 'email' | 'hour' | 'day' | 'overdue' | 'lowStock' | 'profile' | 'deactivate' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [firstName, setFirstName] = useState(user.firstName ?? '');
   const [phone, setPhone] = useState(user.phone ?? '');
@@ -73,7 +95,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
   }, [load]);
 
   const toggle = useCallback(
-    async (key: 'push' | 'email', value: boolean) => {
+    async (key: 'push' | 'email' | 'hour' | 'day' | 'overdue' | 'lowStock', value: boolean) => {
       setSavingKey(key);
       setError(null);
       setSaved(null);
@@ -82,7 +104,12 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         if (!token) throw new ApiError(401, 'Not authenticated');
         const pushEnabled = key === 'push' ? value : user.pushNotificationsEnabled;
         const emailEnabled = key === 'email' ? value : user.emailNotificationsEnabled;
-        const updated = await api.updateNotificationSettings(pushEnabled, emailEnabled, token);
+        const updated = await api.updateNotificationSettings(pushEnabled, emailEnabled, token, {
+          hourReminderEnabled: key === 'hour' ? value : undefined,
+          dayReminderEnabled: key === 'day' ? value : undefined,
+          overdueReminderEnabled: key === 'overdue' ? value : undefined,
+          lowStockNotificationEnabled: key === 'lowStock' ? value : undefined,
+        });
         onUserChange(updated);
         setSaved('Настройки уведомлений сохранены');
       } catch {
@@ -93,6 +120,24 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
     },
     [user.pushNotificationsEnabled, user.emailNotificationsEnabled, onUserChange],
   );
+
+  const deactivateAccount = async () => {
+    if (savingKey) return;
+    setSavingKey('deactivate');
+    setError(null);
+    setSaved(null);
+    try {
+      const token = await tokenStore.get();
+      if (!token) throw new ApiError(401, 'Not authenticated');
+      await api.deactivateAccount(token);
+      onLogout();
+    } catch {
+      setError('Не удалось деактивировать аккаунт. Попробуйте позже.');
+    } finally {
+      setSavingKey(null);
+      setConfirmDeactivation(false);
+    }
+  };
 
   const markRead = useCallback(async (n: NotificationDto) => {
     if (n.channelStatus === 'read') return;
@@ -128,6 +173,23 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         </Pressable>
       </View>
 
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Питомцы</Text>
+        {petsError ? (
+          <>
+            <Text>Не удалось загрузить питомцев.</Text>
+            <Pressable accessibilityRole="button" style={styles.action} onPress={() => {
+              setPetsError(false);
+              setPetsAttempt((attempt) => attempt + 1);
+            }}>
+              <Text style={styles.actionText}>Повторить</Text>
+            </Pressable>
+          </>
+        ) : pets === null ? <ActivityIndicator accessibilityLabel="Загрузка питомцев" />
+          : pets.length === 0 ? <Text>У вас пока нет питомцев.</Text>
+          : pets.map((pet) => <Text key={pet.id}>{pet.name}</Text>)}
+      </View>
+
       {/* ---- Notification switches ---- */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Уведомления</Text>
@@ -156,7 +218,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         <View style={styles.row}>
           <View style={styles.rowLabel}>
             <Text style={styles.rowTitle}>Письма на почту</Text>
-            <Text style={styles.rowHint}>Важные события: лекарства и вакцинация</Text>
+            <Text style={styles.rowHint}>Лекарства, вакцинация и низкий остаток корма</Text>
           </View>
           {savingKey === 'email' ? (
             <ActivityIndicator color="#4f46e5" />
@@ -177,6 +239,49 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       {loadError && <View style={styles.card}>
         <Text style={styles.error} accessibilityRole="alert">Не удалось загрузить устройства и уведомления.</Text>
         <Pressable accessibilityRole="button" onPress={() => void load()} style={styles.action}><Text style={styles.actionText}>Повторить загрузку</Text></Pressable>
+        <View style={styles.divider} />
+        <View style={styles.row}>
+          <View style={styles.rowLabel}>
+            <Text style={styles.rowTitle}>Напоминания за час</Text>
+            <Text style={styles.rowHint}>Уведомления о предстоящих задачах ухода</Text>
+          </View>
+          <Switch
+            accessibilityLabel="Напоминания за час"
+            disabled={savingKey !== null}
+            value={user.hourReminderEnabled ?? true}
+            onValueChange={(value) => void toggle('hour', value)}
+          />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>Напоминания за день</Text>
+          <Switch
+            accessibilityLabel="Напоминания за день"
+            disabled={savingKey !== null}
+            value={user.dayReminderEnabled ?? false}
+            onValueChange={(value) => void toggle('day', value)}
+          />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>Просроченные задачи</Text>
+          <Switch
+            accessibilityLabel="Просроченные задачи"
+            disabled={savingKey !== null}
+            value={user.overdueReminderEnabled ?? false}
+            onValueChange={(value) => void toggle('overdue', value)}
+          />
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.row}>
+          <Text style={styles.rowTitle}>Низкий остаток корма</Text>
+          <Switch
+            accessibilityLabel="Низкий остаток корма"
+            disabled={savingKey !== null}
+            value={user.lowStockNotificationEnabled ?? false}
+            onValueChange={(value) => void toggle('lowStock', value)}
+          />
+        </View>
       </View>}
       {!loading && !loadError && <>
       <View style={styles.card}>
@@ -229,6 +334,22 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       </View>
       </>}
       <Pressable accessibilityRole="button" disabled={savingKey !== null} onPress={onLogout} style={styles.action}><Text style={styles.actionText}>Выйти из аккаунта</Text></Pressable>
+      {confirmDeactivation ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Деактивировать аккаунт?</Text>
+          <Text>Данные сохранятся. Ссылка для восстановления придёт на вашу почту.</Text>
+          <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => void deactivateAccount()}>
+            <Text style={styles.actionText}>{savingKey === 'deactivate' ? 'Деактивация…' : 'Подтвердить деактивацию'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => setConfirmDeactivation(false)}>
+            <Text style={styles.actionText}>Отмена</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => setConfirmDeactivation(true)}>
+          <Text style={styles.actionText}>Деактивировать аккаунт</Text>
+        </Pressable>
+      )}
     </ScrollView>
     </KeyboardAvoidingView>
   );

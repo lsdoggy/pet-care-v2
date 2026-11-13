@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { CareTaskDto } from '../api/types';
 import { formatDueAt, TASK_TYPE_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors } from '../theme/tokens';
+import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
 
 /**
  * Sprint 3 — "Tasks" tab: upcoming pending care tasks ordered by due_at ASC.
@@ -66,6 +68,7 @@ export function TasksScreen() {
             {item.petName} · {TASK_TYPE_LABELS[item.type]}
           </Text>
           <Text style={styles.due}>{formatDueAt(item.dueAt)}</Text>
+          <AddToGoogleCalendar title={`${item.title} · ${item.petName}`} startsAt={item.dueAt} />
           {item.recurrenceRule ? (
             <Text style={styles.recurrence}>🔁 Repeats: {item.recurrenceRule}</Text>
           ) : null}

@@ -5,7 +5,8 @@
  */
 
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from './Typography';
 import { colors, spacing, typography, layout, radius } from '../theme/tokens';
 import { ROUTE_TITLES, useNavigation, type Route } from '../navigation/AppStack';
 

@@ -52,6 +52,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   const response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
+  if (response.status === 204) return undefined as T;
+
   let body: unknown;
   try {
     body = await response.json();
@@ -73,6 +75,8 @@ export interface RegisterProfile {
 }
 
 export const api = {
+  deactivateAccount: (token: string) =>
+    request<void>('/users/me/deactivate', { method: 'POST' }, token),
   register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
@@ -178,14 +182,15 @@ export const api = {
     fileName: string,
     mimeType: string,
     token: string,
+    file?: File,
   ): Promise<VetRecordDto> => {
     const form = new FormData();
-    // RN fetch supports uploading from device URIs via this object shape.
-    form.append('file', {
-      uri: fileUri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+    if (file) {
+      form.append('file', file, fileName);
+    } else {
+      // Native React Native fetch resolves multipart attachments from device URIs.
+      form.append('file', { uri: fileUri, name: fileName, type: mimeType } as unknown as Blob);
+    }
 
     const response = await fetch(`${BASE_URL}/records/${id}/attachments`, {
       method: 'POST',
@@ -227,10 +232,10 @@ export const api = {
   markNotificationRead: (id: number, jwt: string) =>
     request<NotificationDto>(`/notifications/${id}/read`, { method: 'POST' }, jwt),
 
-  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, jwt: string) =>
+  updateNotificationSettings: (pushEnabled: boolean, emailEnabled: boolean, jwt: string, reminders?: Partial<Pick<UserDto, 'hourReminderEnabled' | 'dayReminderEnabled' | 'overdueReminderEnabled' | 'lowStockNotificationEnabled'>>) =>
     request<UserDto>(
       '/users/notification-settings',
-      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled }) },
+      { method: 'PATCH', body: JSON.stringify({ pushEnabled, emailEnabled, ...reminders }) },
       jwt,
     ),
   /* ---------- Food products & shopping list (Sprint 5) ---------- */

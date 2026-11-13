@@ -20,21 +20,7 @@ import com.petcare.backend.task.CareTaskType;
 import com.petcare.backend.user.UserEntity;
 import com.petcare.backend.user.UserRepository;
 
-/**
- * Sprint 6: care-task reminder scheduler (standard {@code @Scheduled}, no Quartz for MVP).
- *
- * <p>Every minute it scans pending tasks with {@code reminder_sent = false} whose due time
- * falls into [now, now + window] (default 60 min, configurable via
- * {@code app.notifications.reminder-window-minutes}) and for each of them:
- * <ol>
- *   <li>creates a row in {@code notifications} (push channel);</li>
- *   <li>sends the push through {@link NotificationService} -> Expo Push Service (FCM/APNs);</li>
- *   <li>sends an email too — only for "important" task types (MEDICATION/VACCINATION) and
- *       only when the user enabled the email switch;</li>
- *   <li>marks the task {@code reminder_sent = true} so it is never reminded twice.</li>
- * </ol>
- * A second job performs the minimal retry pass for undelivered notifications.
- */
+/** Sends enabled day, hour and overdue care-task reminders. */
 @Component
 public class ReminderScheduler {
 
@@ -70,31 +56,44 @@ public class ReminderScheduler {
         Instant to = now.plusSeconds(reminderWindowMinutes * 60L);
         List<CareTaskEntity> dueTasks = careTaskRepository
                 .findByStatusAndReminderSentFalseAndDueAtBetweenOrderByDueAtAsc(CareTaskStatus.PENDING, now, to);
-        if (dueTasks.isEmpty()) {
-            return;
-        }
-        log.info("Reminder scan: {} task(s) due within the next {} min", dueTasks.size(), reminderWindowMinutes);
         for (CareTaskEntity task : dueTasks) {
-            UserEntity owner = userRepository.findById(task.getOwnerId()).orElse(null);
-            if (owner == null) {
-                task.setReminderSent(true); // orphaned task — skip forever
-                continue;
-            }
-            String petName = petRepository.findById(task.getPetId())
-                    .map(PetEntity::getName).orElse("your pet");
-            String title = "Care reminder";
-            String body = "\"%s\" for %s is due %s".formatted(task.getTitle(), petName, formatDue(task.getDueAt(), now));
-            Map<String, Object> payload = Map.of(
-                    "careTaskId", task.getId(),
-                    "petId", task.getPetId(),
-                    "type", task.getType().name().toLowerCase(),
-                    "dueAt", task.getDueAt().toString());
+            userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isHourReminderEnabled).ifPresent(owner -> {
+                sendReminder(task, owner, "Care reminder", "is due " + formatDue(task.getDueAt(), now));
+                task.setReminderSent(true);
+            });
+        }
 
-            notificationService.push(owner, title, body, payload);
-            if (IMPORTANT_TYPES.contains(task.getType())) {
-                notificationService.email(owner, title, body, payload);
-            }
-            task.setReminderSent(true);
+        for (CareTaskEntity task : careTaskRepository
+                .findByStatusAndDayReminderSentFalseAndDueAtGreaterThanAndDueAtLessThanEqual(
+                        CareTaskStatus.PENDING, to, now.plusSeconds(86400))) {
+            userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isDayReminderEnabled).ifPresent(owner -> {
+                sendReminder(task, owner, "Care reminder", "is due " + formatDue(task.getDueAt(), now));
+                task.markDayReminderSent();
+            });
+        }
+
+        for (CareTaskEntity task : careTaskRepository
+                .findByStatusAndOverdueReminderSentFalseAndDueAtLessThanEqual(CareTaskStatus.PENDING, now)) {
+            userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isOverdueReminderEnabled).ifPresent(owner -> {
+                sendReminder(task, owner, "Overdue care task", "is overdue");
+                task.markOverdueReminderSent();
+            });
+        }
+    }
+
+    private void sendReminder(CareTaskEntity task, UserEntity owner, String title, String status) {
+        String petName = petRepository.findById(task.getPetId())
+                .map(PetEntity::getName).orElse("your pet");
+        String body = "\"%s\" for %s %s".formatted(task.getTitle(), petName, status);
+        Map<String, Object> payload = Map.of(
+                "careTaskId", task.getId(),
+                "petId", task.getPetId(),
+                "type", task.getType().name().toLowerCase(),
+                "dueAt", task.getDueAt().toString());
+
+        notificationService.push(owner, title, body, payload);
+        if (IMPORTANT_TYPES.contains(task.getType())) {
+            notificationService.email(owner, title, body, payload);
         }
     }
 

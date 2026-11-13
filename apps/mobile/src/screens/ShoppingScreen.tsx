@@ -1,15 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TextInput } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { FoodProductDto, ShoppingItemDto } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
@@ -189,6 +180,9 @@ export function ShoppingScreen() {
                 <Pressable
                   style={[styles.checkbox, busy && styles.checkboxBusy]}
                   onPress={() => void togglePurchased(item)}
+                  disabled={busy}
+                  accessibilityLabel={`Mark ${item.customName} purchased`}
+                  hitSlop={9}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: false, disabled: busy }}
                 >
@@ -201,7 +195,7 @@ export function ShoppingScreen() {
                     {item.productId != null ? ' · from catalog' : ''}
                   </Text>
                 </View>
-                <Pressable onPress={() => void removeItem(item)} hitSlop={10} style={styles.removeBtn}>
+                <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={`Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
                   <Text style={styles.removeText}>✕</Text>
                 </Pressable>
               </View>
@@ -219,8 +213,9 @@ export function ShoppingScreen() {
                     </View>
                     <View style={styles.rowTextWrap}>
                       <Text style={[styles.itemName, styles.itemNameDone]}>{item.customName}</Text>
+                      <Text style={styles.itemMeta}>× {item.quantity} {item.unit.toLowerCase()}</Text>
                     </View>
-                    <Pressable onPress={() => void removeItem(item)} hitSlop={10} style={styles.removeBtn}>
+                    <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={`Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
                       <Text style={styles.removeText}>✕</Text>
                     </Pressable>
                   </View>
@@ -305,6 +300,6 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, color: '#111827', fontWeight: '600' },
   itemNameDone: { textDecorationLine: 'line-through', color: '#6b7280' },
   itemMeta: { fontSize: 12, color: '#6b7280', marginTop: 2 },
-  removeBtn: { paddingHorizontal: 6 },
+  removeBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   removeText: { color: '#94a3b8', fontSize: 16 },
 });

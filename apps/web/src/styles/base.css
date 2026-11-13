@@ -27,7 +27,7 @@ html {
 body {
   min-height: 100vh;
   font-family: var(--font-family-base);
-  font-size: var(--font-size-base);      /* 15px base */
+  font-size: var(--font-size-base);      /* 16px base */
   line-height: var(--line-height-normal);
   color: var(--color-text-primary);
   background-color: var(--color-bg-page);
