@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
@@ -19,6 +20,7 @@ function stockPercent(p: FoodProductDto): number {
  * highlighted; the purchase restock itself happens via the Buy tab checklist.
  */
 export function StockScreen() {
+  const language = useLanguage();
   const [products, setProducts] = useState<FoodProductDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -90,13 +92,13 @@ export function StockScreen() {
   return (
     <View style={styles.container}>
       {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
-      <ScreenHeader title="Food stock" />
+      <ScreenHeader title={language === 'ru' ? 'Запасы корма' : 'Food stock'} />
       {error && <Text style={styles.error}>{error}</Text>}
       {notice && <Text style={styles.notice}>{notice}</Text>}
       <FlatList
         data={products ?? []}
         keyExtractor={(item) => `product-${item.id}`}
-        ListEmptyComponent={<Text style={styles.empty}>No products yet. Add them on the web app.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{language === 'ru' ? 'Товаров пока нет. Добавьте их на сайте.' : 'No products yet. Add them on the web app.'}</Text>}
         contentContainerStyle={{ paddingBottom: 16 }}
         renderItem={({ item }) => {
           const pct = stockPercent(item);
@@ -109,7 +111,7 @@ export function StockScreen() {
                   <Text style={styles.meta}>
                     {FOOD_CATEGORY_LABELS[item.category]}
                     {item.brand ? ` · ${item.brand}` : ''}
-                     · {item.stockQuantity === 0 ? 'Out of stock' : item.lowStock ? 'Low stock' : 'In stock'}
+                     · {item.stockQuantity === 0 ? (language === 'ru' ? 'Нет в наличии' : 'Out of stock') : item.lowStock ? (language === 'ru' ? 'Заканчивается' : 'Low stock') : (language === 'ru' ? 'В наличии' : 'In stock')}
                   </Text>
                 </View>
                 <Text style={[styles.qty, item.lowStock && styles.qtyLow]}>
@@ -131,14 +133,14 @@ export function StockScreen() {
               </Text>
 
               <View style={styles.actionsRow}>
-                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel="Decrease stock" disabled={busy || item.stockQuantity === 0} onPress={() => void adjustStock(item, -1)}>
+                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel={language === 'ru' ? 'Уменьшить запас' : 'Decrease stock'} disabled={busy || item.stockQuantity === 0} onPress={() => void adjustStock(item, -1)}>
                   <Text style={styles.stepBtnText}>−</Text>
                 </Pressable>
-                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel="Increase stock" disabled={busy} onPress={() => void adjustStock(item, 1)}>
+                <Pressable style={styles.stepBtn} accessibilityRole="button" accessibilityLabel={language === 'ru' ? 'Увеличить запас' : 'Increase stock'} disabled={busy} onPress={() => void adjustStock(item, 1)}>
                   <Text style={styles.stepBtnText}>+</Text>
                 </Pressable>
                 <Pressable style={styles.cartBtn} disabled={busy} onPress={() => void addToShoppingList(item)}>
-                  <Text style={styles.cartBtnText}>🛒 Add to list</Text>
+                  <Text style={styles.cartBtnText}>{language === 'ru' ? '🛒 В список покупок' : '🛒 Add to list'}</Text>
                 </Pressable>
               </View>
             </View>

@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { api } from '../api/client'
@@ -13,6 +14,7 @@ interface NotificationBellProps {
  * marks it read via POST /notifications/{id}/read.
  */
 export default function NotificationBell({ token }: NotificationBellProps) {
+  const { language } = useLanguage()
   const [open, setOpen] = useState(false)
   const [unread, setUnread] = useState(0)
   const [items, setItems] = useState<NotificationDto[]>([])
@@ -65,23 +67,25 @@ export default function NotificationBell({ token }: NotificationBellProps) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button type="button" onClick={() => void toggle()} aria-label="Notifications" style={bellBtn}>
+      <button type="button" onClick={() => void toggle()} aria-label={language === 'ru' ? 'Уведомления' : 'Notifications'} style={bellBtn}>
         🔔
         {unread > 0 && <span style={badgeStyle}>{unread > 9 ? '9+' : unread}</span>}
       </button>
 
       {open && (
         <div style={dropdownStyle}>
-          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Notifications</div>
-          {loading && <div style={hintStyle}>Loading…</div>}
-          {!loading && items.length === 0 && <div style={hintStyle}>Nothing yet. Reminders will appear here.</div>}
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{language === 'ru' ? 'Уведомления' : 'Notifications'}</div>
+          {loading && <div style={hintStyle}>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</div>}
+          {!loading && items.length === 0 && <div style={hintStyle}>{language === 'ru' ? 'Здесь будут появляться напоминания.' : 'Reminders will appear here.'}</div>}
           {items.map((n) => (
             <button
               key={n.id}
               type="button"
               onClick={() => void markRead(n)}
               style={itemStyle}
-              title={n.channelStatus === 'read' ? 'Read' : 'Mark as read'}
+              title={n.channelStatus === 'read'
+                ? (language === 'ru' ? 'Прочитано' : 'Read')
+                : (language === 'ru' ? 'Отметить как прочитанное' : 'Mark as read')}
             >
               <span style={{ color: n.channelStatus === 'read' ? '#cbd5e1' : '#4f46e5' }}>
                 {n.channelStatus === 'read' ? '○' : '●'}
@@ -92,7 +96,7 @@ export default function NotificationBell({ token }: NotificationBellProps) {
                 </span>
                 <span style={{ display: 'block', fontSize: 12, color: '#6b7280' }}>{n.body}</span>
                 <span style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                  {new Date(n.createdAt).toLocaleString()} · {n.type}
+                  {new Date(n.createdAt).toLocaleString(language)} · {n.type}
                 </span>
               </span>
             </button>

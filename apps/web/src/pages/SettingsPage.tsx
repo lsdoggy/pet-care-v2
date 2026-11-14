@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
@@ -9,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import '../styles/settings.css'
 
 export default function SettingsPage() {
+  const { language } = useLanguage()
   const { user, loading, setUser, logout } = useAuth()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,7 +42,7 @@ export default function SettingsPage() {
         phone: String(data.get('phone') ?? '').trim(),
       }, tokenStore.get() ?? '')
       setUser(updated)
-    }, 'Данные профиля сохранены')
+    }, (language === 'ru' ? 'Данные профиля сохранены' : 'Profile saved'))
   }
 
   async function save(action: () => Promise<void>, message: string) {
@@ -51,7 +53,7 @@ export default function SettingsPage() {
       await action()
       setSaved(message)
     } catch {
-      setError('Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.')
+      setError((language === 'ru' ? 'Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.' : 'Could not save changes. Check your connection and try again.'))
     } finally {
       setSaving(false)
     }
@@ -65,7 +67,7 @@ export default function SettingsPage() {
       await api.deactivateAccount(tokenStore.get() ?? '')
       logout()
     } catch {
-      setError('Не удалось деактивировать аккаунт. Попробуйте позже.')
+      setError((language === 'ru' ? 'Не удалось деактивировать аккаунт. Попробуйте позже.' : 'Could not deactivate the account. Try again later.'))
     } finally {
       setSaving(false)
       setConfirmDeactivation(false)
@@ -87,88 +89,88 @@ export default function SettingsPage() {
         },
       )
       setUser(updated)
-    }, 'Настройки уведомлений сохранены')
+    }, (language === 'ru' ? 'Настройки уведомлений сохранены' : 'Notification settings saved'))
   }
 
-  if (loading) return <p role="status">Загрузка профиля…</p>
+  if (loading) return <p role="status">{language === 'ru' ? 'Загрузка профиля…' : 'Loading profile…'}</p>
   if (!user) return <Navigate to="/login" replace />
 
   return (
     <div className="pc-settings">
       <header>
-        <h1>Профиль</h1>
-        <p className="pc-settings__hint">Ваши данные и напоминания об уходе за питомцами</p>
+        <h1>{language === 'ru' ? 'Профиль' : 'Profile'}</h1>
+        <p className="pc-settings__hint">{language === 'ru' ? 'Ваши данные и напоминания об уходе за питомцами' : 'Your information and pet care reminders'}</p>
       </header>
       {error && <p className="pc-settings__error" role="alert">{error}</p>}
       {saved && <p className="pc-settings__success" role="status">{saved}</p>}
       <section className="pc-settings__card" aria-labelledby="profile-data-title">
-        <h2 id="profile-data-title">Личные данные</h2>
+        <h2 id="profile-data-title">{language === 'ru' ? 'Личные данные' : 'Personal information'}</h2>
         <form onSubmit={(e) => void saveProfile(e)} className="pc-settings__form">
-          <label>Имя
-            <input name="firstName" autoComplete="given-name" defaultValue={user.firstName ?? ''} maxLength={80} placeholder="Как к вам обращаться" />
+          <label>{language === 'ru' ? 'Имя' : 'First name'}
+            <input name="firstName" autoComplete="given-name" defaultValue={user.firstName ?? ''} maxLength={80} placeholder={language === 'ru' ? 'Как к вам обращаться' : 'What should we call you?'} />
           </label>
-          <label>Телефон <span className="pc-settings__hint">(необязательно)</span>
+          <label>{language === 'ru' ? 'Телефон' : 'Phone'} <span className="pc-settings__hint">{language === 'ru' ? '(необязательно)' : '(optional)'}</span>
             <input name="phone" type="tel" autoComplete="tel" defaultValue={user.phone ?? ''} maxLength={20} pattern={String.raw`[+0-9 \(\)\-]{6,20}`} placeholder="+7 999 123-45-67" />
           </label>
-          <label>Электронная почта
+          <label>{language === 'ru' ? 'Электронная почта' : 'Email'}
             <input value={user.email} readOnly autoComplete="email" />
           </label>
-          <button className="pc-btn pc-btn--primary" disabled={saving} type="submit">{saving ? 'Сохранение…' : 'Сохранить изменения'}</button>
+          <button className="pc-btn pc-btn--primary" disabled={saving} type="submit">{saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить изменения' : 'Save changes')}</button>
         </form>
       </section>
       <section className="pc-settings__card" aria-labelledby="profile-pets-title">
-        <h2 id="profile-pets-title">Питомцы</h2>
+        <h2 id="profile-pets-title">{language === 'ru' ? 'Питомцы' : 'Pets'}</h2>
         {petsError ? (
           <div>
-            <p role="alert">Не удалось загрузить питомцев.</p>
+            <p role="alert">{language === 'ru' ? 'Не удалось загрузить питомцев.' : 'Could not load your pets.'}</p>
             <button className="pc-btn" type="button" onClick={() => {
               setPetsError(false)
               setPetsAttempt((attempt) => attempt + 1)
-            }}>Повторить</button>
+            }}>{language === 'ru' ? 'Повторить' : 'Retry'}</button>
           </div>
-        ) : pets === null ? <p role="status">Загрузка питомцев…</p>
-          : pets.length === 0 ? <p>У вас пока нет питомцев.</p>
+        ) : pets === null ? <p role="status">{language === 'ru' ? 'Загрузка питомцев…' : 'Loading pets…'}</p>
+          : pets.length === 0 ? <p>{language === 'ru' ? 'У вас пока нет питомцев.' : 'You don’t have any pets yet.'}</p>
           : <ul>{pets.map((pet) => <li key={pet.id}><Link to={`/pets/${pet.id}`}>{pet.name}</Link></li>)}</ul>}
       </section>
       <section className="pc-settings__card" aria-labelledby="profile-notifications-title" aria-busy={saving}>
-        <h2 id="profile-notifications-title">Уведомления</h2>
+        <h2 id="profile-notifications-title">{language === 'ru' ? 'Уведомления' : 'Notifications'}</h2>
         <label className="pc-settings__row">
-          <span><strong>Push-уведомления</strong><small>Напоминания на мобильных устройствах, подключённых через приложение.</small></span>
+          <span><strong>{language === 'ru' ? 'Push-уведомления' : 'Push notifications'}</strong><small>{language === 'ru' ? 'Напоминания на мобильных устройствах, подключённых через приложение.' : 'Reminders on mobile devices linked through the app.'}</small></span>
           <input type="checkbox" role="switch" checked={user.pushNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('push', e.target.checked)} />
         </label>
         <label className="pc-settings__row">
-          <span><strong>Письма на почту</strong><small>Напоминания о лекарствах, вакцинации и низком остатке корма.</small></span>
+          <span><strong>{language === 'ru' ? 'Письма на почту' : 'Email notifications'}</strong><small>{language === 'ru' ? 'Напоминания о лекарствах, вакцинации и низком остатке корма.' : 'Reminders for medications, vaccinations, and low food stock.'}</small></span>
           <input type="checkbox" role="switch" checked={user.emailNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('email', e.target.checked)} />
         </label>
         <label className="pc-settings__row">
-          <span><strong>Напоминания за час</strong><small>Уведомления о предстоящих задачах ухода.</small></span>
+          <span><strong>{language === 'ru' ? 'Напоминания за час' : 'One-hour reminders'}</strong><small>{language === 'ru' ? 'Уведомления о предстоящих задачах ухода.' : 'Notifications for upcoming care tasks.'}</small></span>
           <input type="checkbox" role="switch" checked={user.hourReminderEnabled ?? true} disabled={saving} onChange={(e) => void toggle('hour', e.target.checked)} />
         </label>
         <label className="pc-settings__row">
-          <strong>Напоминания за день</strong>
+          <strong>{language === 'ru' ? 'Напоминания за день' : 'One-day reminders'}</strong>
           <input type="checkbox" role="switch" checked={user.dayReminderEnabled ?? false} disabled={saving} onChange={(e) => void toggle('day', e.target.checked)} />
         </label>
         <label className="pc-settings__row">
-          <strong>Просроченные задачи</strong>
+          <strong>{language === 'ru' ? 'Просроченные задачи' : 'Overdue tasks'}</strong>
           <input type="checkbox" role="switch" checked={user.overdueReminderEnabled ?? false} disabled={saving} onChange={(e) => void toggle('overdue', e.target.checked)} />
         </label>
         <label className="pc-settings__row">
-          <strong>Низкий остаток корма</strong>
+          <strong>{language === 'ru' ? 'Низкий остаток корма' : 'Low food stock'}</strong>
           <input type="checkbox" role="switch" checked={user.lowStockNotificationEnabled ?? false} disabled={saving} onChange={(e) => void toggle('lowStock', e.target.checked)} />
         </label>
       </section>
       <section className="pc-settings__card" aria-labelledby="profile-session-title">
-        <h2 id="profile-session-title">Аккаунт</h2>
-        <p className="pc-settings__hint">Вы вошли как {user.email}</p>
-        <button className="pc-btn" disabled={saving} type="button" onClick={logout}>Выйти из аккаунта</button>
-        <button className="pc-btn pc-btn--danger" disabled={saving} type="button" onClick={() => setConfirmDeactivation(true)}>Деактивировать аккаунт</button>
+        <h2 id="profile-session-title">{language === 'ru' ? 'Аккаунт' : 'Account'}</h2>
+        <p className="pc-settings__hint">{language === 'ru' ? 'Вы вошли как' : 'Signed in as'} {user.email}</p>
+        <button className="pc-btn" disabled={saving} type="button" onClick={logout}>{language === 'ru' ? 'Выйти из аккаунта' : 'Sign out'}</button>
+        <button className="pc-btn pc-btn--danger" disabled={saving} type="button" onClick={() => setConfirmDeactivation(true)}>{language === 'ru' ? 'Деактивировать аккаунт' : 'Deactivate account'}</button>
       </section>
       {confirmDeactivation && (
         <ConfirmDialog
           titleId="deactivate-account-title"
-          title="Деактивировать аккаунт?"
-          description="Вы выйдете из аккаунта на всех устройствах. Данные сохранятся, а ссылка для восстановления придёт на вашу почту."
-          confirmLabel="Деактивировать"
+          title={language === 'ru' ? 'Деактивировать аккаунт?' : 'Deactivate account?'}
+          description={language === 'ru' ? 'Вы выйдете из аккаунта на всех устройствах. Данные сохранятся, а ссылка для восстановления придёт на вашу почту.' : 'You will be signed out on all devices. Your data will be kept, and you will receive a recovery link by email.'}
+          confirmLabel={language === 'ru' ? 'Деактивировать' : 'Deactivate'}
           busy={saving}
           onCancel={() => setConfirmDeactivation(false)}
           onConfirm={deactivateAccount}

@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { api, ApiError } from '../api/client'
@@ -46,6 +47,7 @@ function formatPurchasedAt(iso: string): string {
  * suggestions banner fed by GET /shopping-list/suggestions.
  */
 export default function ShoppingListPage() {
+  const { language } = useLanguage()
   const { user, loading } = useAuth()
   const [items, setItems] = useState<ShoppingItemDto[]>([])
   const [suggestions, setSuggestions] = useState<FoodProductDto[]>([])
@@ -129,26 +131,26 @@ export default function ShoppingListPage() {
     }
   }
 
-  if (loading) return <main style={pageStyle}>Loading…</main>
+  if (loading) return <main style={pageStyle}>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</main>
   if (!user) return <Navigate to="/login" replace />
 
   return (
     <main style={pageStyle}>
       <NavTabs />
-      <h1 style={{ fontSize: 26 }}>Shopping list</h1>
+      <h1 style={{ fontSize: 26 }}>{language === 'ru' ? 'Список покупок' : 'Shopping list'}</h1>
 
       {error && <p style={{ color: '#c0392b' }}>{error}</p>}
 
       {/* Low-stock suggestion banner (system offers, user confirms — MVP per sprint spec). */}
       {suggestions.length > 0 && (
         <div style={{ background: '#fff8e1', border: '1px solid #f6d365', borderRadius: 10, padding: 12, marginBottom: 16 }}>
-          <strong style={{ fontSize: 14 }}>Running low</strong>
+          <strong style={{ fontSize: 14 }}>{language === 'ru' ? 'Заканчивается' : 'Running low'}</strong>
           <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
             {suggestions.map((s) => (
               <li key={s.id} style={{ fontSize: 14, marginBottom: 4 }}>
                 {s.name} ({s.stockQuantity} {s.unit.toLowerCase()} left){' '}
                 <button style={smallBtn} onClick={() => addSuggestionToList(s)}>
-                  Add
+                  {language === 'ru' ? 'Добавить' : 'Add'}
                 </button>
               </li>
             ))}
@@ -161,7 +163,7 @@ export default function ShoppingListPage() {
         <input
           value={quickName}
           onChange={(e) => setQuickName(e.target.value)}
-          placeholder="Add item… e.g. Cat litter bags"
+          placeholder={language === 'ru' ? 'Добавить покупку, например наполнитель' : 'Add item… e.g. Cat litter bags'}
           maxLength={150}
           style={{
             flex: 1,
@@ -173,12 +175,12 @@ export default function ShoppingListPage() {
           }}
         />
         <button type="submit" style={smallBtn} disabled={!quickName.trim()}>
-          Add
+          {language === 'ru' ? 'Добавить' : 'Add'}
         </button>
       </form>
 
-      <h2 style={{ fontSize: 17, marginBottom: 8 }}>To buy ({openItems.length})</h2>
-      {openItems.length === 0 && !error && <p style={{ color: '#6b7280' }}>Nothing to buy. 🎉</p>}
+      <h2 style={{ fontSize: 17, marginBottom: 8 }}>{language === 'ru' ? 'Купить' : 'To buy'} ({openItems.length})</h2>
+      {openItems.length === 0 && !error && <p style={{ color: '#6b7280' }}>{language === 'ru' ? 'Покупок пока нет. 🎉' : 'Nothing to buy. 🎉'}</p>}
       {openItems.map((item) => (
         <div key={item.id} style={rowStyle}>
           <label style={{ width: 44, height: 44, flexShrink: 0, display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
@@ -198,7 +200,7 @@ export default function ShoppingListPage() {
               {item.productId != null && productNameById.has(item.productId) ? ' · from catalog' : ''}
             </span>
           </span>
-          <button style={smallBtn} onClick={() => removeItem(item)} aria-label="Remove item">
+          <button style={smallBtn} onClick={() => removeItem(item)} aria-label={language === 'ru' ? 'Удалить покупку' : 'Remove item'}>
             ✕
           </button>
         </div>
@@ -206,7 +208,7 @@ export default function ShoppingListPage() {
 
       {purchasedItems.length > 0 && (
         <>
-          <h2 style={{ fontSize: 17, margin: '20px 0 8px' }}>Purchased</h2>
+          <h2 style={{ fontSize: 17, margin: '20px 0 8px' }}>{language === 'ru' ? 'Куплено' : 'Purchased'}</h2>
           {purchasedItems.map((item) => (
             <div key={item.id} style={{ ...rowStyle, opacity: 0.7 }}>
               <input type="checkbox" checked readOnly aria-label={`${item.customName} purchased`} style={{ width: 18, height: 18 }} />
@@ -216,7 +218,7 @@ export default function ShoppingListPage() {
                   {item.purchasedAt ? formatPurchasedAt(item.purchasedAt) : ''}
                 </span>
               </span>
-              <button style={smallBtn} onClick={() => removeItem(item)} aria-label="Remove item">
+              <button style={smallBtn} onClick={() => removeItem(item)} aria-label={language === 'ru' ? 'Удалить покупку' : 'Remove item'}>
                 ✕
               </button>
             </div>

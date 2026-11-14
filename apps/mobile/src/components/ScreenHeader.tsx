@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 /**
  * ScreenHeader — shared top bar for tab screens (mobile).
  * Design Sprint 0, Step 5: part of the navigation shell.
@@ -43,12 +44,13 @@ export function ScreenHeader({ title, subtitle, actions }: Props) {
  */
 export function DetailHeader({ route }: { route: Route }) {
   const navigation = useNavigation();
+  const language = useLanguage();
   return (
     <View style={styles.bar} accessibilityRole="header">
       <PressableBack onBack={navigation.pop} />
       <View style={styles.textWrap}>
         <Text style={styles.title} numberOfLines={1}>
-          {ROUTE_TITLES[route.name]}
+          {ROUTE_TITLES[route.name][language]}
         </Text>
       </View>
       {/* Spacer keeps the title centered like the tab header layout. */}
@@ -58,13 +60,14 @@ export function DetailHeader({ route }: { route: Route }) {
 }
 
 function PressableBack({ onBack }: { onBack: () => void }) {
+  const language = useLanguage();
   return (
     <Pressable
       onPress={onBack}
       hitSlop={8}
       style={({ pressed }) => [styles.backHit, pressed && styles.backPressed]}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel={language === 'ru' ? 'Назад' : 'Go back'}
     >
       <Text style={styles.backChevron} importantForAccessibility="no">
         ‹

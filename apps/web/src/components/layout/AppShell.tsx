@@ -1,3 +1,5 @@
+import { LanguageSwitcher } from '../../i18n/LanguageSwitcher'
+import { useLanguage, type Language } from '../../i18n/language'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../auth/useAuth'
 import { BoxIcon, CartIcon, GearIcon, HomeIcon, PawIcon } from '../icons'
@@ -5,7 +7,7 @@ import '../../styles/appshell.css'
 
 interface NavItem {
   to: string
-  label: string
+  label: Record<Language, string>
   icon: typeof HomeIcon
 }
 
@@ -16,30 +18,32 @@ interface NavItem {
  * Pages render through <Outlet/>; existing routes/pages are untouched.
  */
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Главная', icon: HomeIcon },
-  { to: '/stock', label: 'Запасы', icon: BoxIcon },
-  { to: '/shopping', label: 'Купить', icon: CartIcon },
-  { to: '/settings', label: 'Профиль', icon: GearIcon },
+  { to: '/', label: { ru: 'Главная', en: 'Home' }, icon: HomeIcon },
+  { to: '/stock', label: { ru: 'Запасы', en: 'Stock' }, icon: BoxIcon },
+  { to: '/shopping', label: { ru: 'Купить', en: 'Shopping' }, icon: CartIcon },
+  { to: '/settings', label: { ru: 'Профиль', en: 'Profile' }, icon: GearIcon },
 ]
 
 export default function AppShell() {
+  const { language } = useLanguage()
+  const navigationLabel = language === 'ru' ? 'Основная навигация' : 'Main navigation'
   const { user } = useAuth()
 
   return (
     <div className="pc-shell">
       <a href="#pc-main" className="pc-skip-link sr-only">
-        Перейти к содержимому
+        {language === 'ru' ? 'Перейти к содержимому' : 'Skip to content'}
       </a>
 
       {/* ---------- Sidebar (desktop only) ---------- */}
-      <nav className="pc-sidebar" aria-label="Основная навигация">
+      <nav className="pc-sidebar" aria-label={navigationLabel}>
         <span className="pc-header__brand" style={{ padding: '0 var(--space-3) var(--space-4)' }}>
           <span className="pc-header__brand-icon">
             <PawIcon size={22} />
           </span>
           Pet Care
         </span>
-        <span className="pc-sidebar__title">Разделы</span>
+        <span className="pc-sidebar__title">{language === 'ru' ? 'Разделы' : 'Sections'}</span>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -50,7 +54,7 @@ export default function AppShell() {
             }
           >
             <item.icon size={18} />
-            {item.label}
+            {item.label[language]}
           </NavLink>
         ))}
       </nav>
@@ -65,6 +69,7 @@ export default function AppShell() {
             Pet Care
           </span>
           <span className="pc-header__spacer" />
+          <LanguageSwitcher />
           {user && (
             <span className="pc-header__user" title={user.email}>
               {user.email}
@@ -79,7 +84,7 @@ export default function AppShell() {
       </div>
 
       {/* ---------- Bottom navigation (mobile only) ---------- */}
-      <nav className="pc-bottom-nav" aria-label="Основная навигация">
+      <nav className="pc-bottom-nav" aria-label={navigationLabel}>
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -90,7 +95,7 @@ export default function AppShell() {
             }
           >
             <item.icon size={20} />
-            {item.label}
+            {item.label[language]}
           </NavLink>
         ))}
       </nav>
