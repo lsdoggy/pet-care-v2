@@ -212,7 +212,7 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
               disabled={saving}
               style={{ ...inputStyle, cursor: 'pointer', backgroundColor: '#4f46e5', color: '#fff', border: 'none' }}
             >
-              {saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : 'Save'}
+              {saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить' : 'Save')}
             </button>
           </div>
         </form>

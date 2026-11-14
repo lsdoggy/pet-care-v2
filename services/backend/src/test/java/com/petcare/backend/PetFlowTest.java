@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -177,8 +179,17 @@ class PetFlowTest {
         org.junit.jupiter.api.Assertions.assertTrue(photoUrl.startsWith("/files/uploads/pets/"),
                 "photoUrl should be a relative served path, was: " + photoUrl);
 
-        // The file is now downloadable through the static resource handler.
-        mockMvc.perform(get(photoUrl)).andExpect(status().isOk());
+        String otherToken = registerAndLogin(uniqueEmail());
+        for (String path : new String[]{photoUrl, photoUrl.replace("/uploads", "")}) {
+            mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mockMvc.perform(get(path).header("Authorization", "Bearer " + otherToken))
+                    .andExpect(status().isNotFound());
+            mockMvc.perform(get(path).header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(content().contentType(MediaType.IMAGE_PNG))
+                    .andExpect(content().bytes(photo.getBytes()));
+        }
 
         // Reject unsupported extension.
         MockMultipartFile bad = new MockMultipartFile(

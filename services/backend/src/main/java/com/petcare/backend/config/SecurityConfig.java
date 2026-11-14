@@ -32,9 +32,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
-                        // Uploaded files are served statically; pet photos are not sensitive by URL,
-                        // but keep UUID-based filenames unguessable. Protect if requirements change.
-                        .requestMatchers("/files/uploads/**", "/files/records/**").permitAll()
+                        .requestMatchers("/files/records/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/vetinfo").hasRole("VET_CLINIC")
                         .anyRequest().hasRole("USER"))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

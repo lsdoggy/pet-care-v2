@@ -74,13 +74,21 @@
 - **WHEN** файл пуст, превышает прикладной предел 5 МиБ или имеет неподдерживаемое расширение
 - **THEN** прикладная проверка возвращает HTTP 400 с message и пустым details; при превышении multipart-лимита контейнера возвращается HTTP 413.
 
-#### Scenario: Публичное чтение фото
-- **WHEN** известен URL существующей фотографии
-- **THEN** файл можно скачать без JWT, в том числе после мягкого удаления профиля.
+Система SHALL требовать JWT владельца для чтения текущего фото активного профиля по обоим путям: `/files/uploads/pets/{filename}` и `/files/pets/{filename}`.
+
+#### Scenario: Чтение фото владельцем
+- **WHEN** владелец запрашивает сохранённое фото с действительным JWT
+- **THEN** сервер возвращает изображение с HTTP 200 и `Cache-Control: no-store`.
+
+#### Scenario: Чтение фото без доступа
+- **WHEN** клиент запрашивает фото без действительного JWT
+- **THEN** сервер возвращает HTTP 401.
+- **WHEN** аутентифицированный клиент запрашивает чужое, отсутствующее или уже не привязанное к его активному профилю фото
+- **THEN** сервер возвращает HTTP 404.
 
 ## Implementation references
 
 - [PetController](../../../services/backend/src/main/java/com/petcare/backend/pet/PetController.java), [PetService](../../../services/backend/src/main/java/com/petcare/backend/pet/PetService.java), [PetSpecies](../../../services/backend/src/main/java/com/petcare/backend/pet/PetSpecies.java).
 - [CreatePetRequest](../../../services/backend/src/main/java/com/petcare/backend/pet/dto/CreatePetRequest.java), [UpdatePetRequest](../../../services/backend/src/main/java/com/petcare/backend/pet/dto/UpdatePetRequest.java), [PetDto](../../../services/backend/src/main/java/com/petcare/backend/pet/dto/PetDto.java).
-- [FileStorageService](../../../services/backend/src/main/java/com/petcare/backend/file/FileStorageService.java), [WebConfig](../../../services/backend/src/main/java/com/petcare/backend/config/WebConfig.java), [GlobalExceptionHandler](../../../services/backend/src/main/java/com/petcare/backend/error/GlobalExceptionHandler.java).
+- [FileStorageService](../../../services/backend/src/main/java/com/petcare/backend/file/FileStorageService.java), [PetPhotoController](../../../services/backend/src/main/java/com/petcare/backend/pet/PetPhotoController.java), [GlobalExceptionHandler](../../../services/backend/src/main/java/com/petcare/backend/error/GlobalExceptionHandler.java).
 - [PetFlowTest](../../../services/backend/src/test/java/com/petcare/backend/PetFlowTest.java), [Миграция профилей](../../../services/backend/src/main/resources/db/migration/V2__create_pets_table.sql).

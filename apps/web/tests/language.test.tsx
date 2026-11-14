@@ -7,6 +7,7 @@ import { notificationText } from '../src/i18n/notificationText'
 import type { NotificationDto } from '../src/api/types'
 import AppointmentFormModal from '../src/components/AppointmentFormModal'
 import ProductFormModal from '../src/components/ProductFormModal'
+import TaskFormModal from '../src/components/TaskFormModal'
 import { useLanguage } from '../src/i18n/language'
 import { localizeAuthError, validateEmail } from '../src/validation/auth'
 
@@ -86,5 +87,17 @@ it('localizes the new product dialog in both languages', () => {
   fireEvent.change(screen.getByRole('combobox', { name: 'Язык' }), { target: { value: 'en' } })
   expect(screen.getByRole('heading', { name: 'New product' })).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
+})
+
+it('localizes the save button in the care task form', () => {
+  render(
+    <LanguageProvider>
+      <LanguageSwitcher />
+      <TaskFormModal pets={[]} token="test-token" onClose={() => {}} onSaved={() => {}} />
+    </LanguageProvider>,
+  )
+  expect(screen.getByRole('button', { name: 'Сохранить' })).toBeTruthy()
+  fireEvent.change(screen.getByRole('combobox', { name: 'Язык' }), { target: { value: 'en' } })
   expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
 })

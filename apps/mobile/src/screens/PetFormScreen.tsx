@@ -1,8 +1,9 @@
+import { PetPhoto } from '../components/PetPhoto';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
 import * as ImagePicker from 'expo-image-picker';
-import { api, ApiError, resolveFileUrl } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { PetSpecies } from '../api/types';
 import { PET_SPECIES, SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
@@ -42,7 +43,7 @@ export function PetFormScreen({ petId }: Props) {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [pickedPhotoUri, setPickedPhotoUri] = useState<string | null>(null);
-  const [existingPhotoUri, setExistingPhotoUri] = useState<string | null>(null);
+  const [existingPhotoPath, setExistingPhotoPath] = useState<string | null>(null);
 
   const setField = <K extends keyof PetFormValues>(key: K, value: PetFormValues[K]) =>
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -61,7 +62,7 @@ export function PetFormScreen({ petId }: Props) {
           birthDate: pet.birthDate ?? '',
           weightKg: pet.weightKg != null ? String(pet.weightKg).replace('.', ',') : '',
         });
-        setExistingPhotoUri(resolveFileUrl(pet.photoUrl));
+        setExistingPhotoPath(pet.photoUrl);
       } catch (e) {
         setFieldErrors({ form: e instanceof Error ? e.message : 'Не удалось загрузить питомца' });
       } finally {
@@ -154,8 +155,6 @@ export function PetFormScreen({ petId }: Props) {
     );
   }
 
-  const previewUri = pickedPhotoUri ?? existingPhotoUri;
-
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -171,10 +170,15 @@ export function PetFormScreen({ petId }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Выбрать фото из галереи"
         >
-          {previewUri ? (
-            <Image source={{ uri: previewUri }} style={styles.photoImage} resizeMode="cover" />
+          {pickedPhotoUri ? (
+            <Image source={{ uri: pickedPhotoUri }} style={styles.photoImage} resizeMode="cover" />
           ) : (
-            <Text style={styles.photoHint}>Нажмите, чтобы выбрать фото из галереи</Text>
+            <PetPhoto
+              path={existingPhotoPath}
+              style={styles.photoImage}
+              resizeMode="cover"
+              fallback={<Text style={styles.photoHint}>Нажмите, чтобы выбрать фото из галереи</Text>}
+            />
           )}
         </Pressable>
         {shownError('photo' as keyof PetFormValues) || fieldErrors.photo ? (

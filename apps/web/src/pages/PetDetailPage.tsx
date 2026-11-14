@@ -1,3 +1,4 @@
+import { usePetPhoto } from '../lib/usePetPhoto'
 import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -49,6 +50,7 @@ export default function PetDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [tab, setTab] = useState<DetailTab>('profile')
 
+  const photo = usePetPhoto(pet?.photoUrl)
   const token = tokenStore.get() ?? ''
 
   const load = useCallback(() => {
@@ -113,7 +115,7 @@ export default function PetDetailPage() {
 
       <div className="pc-petdetail__header">
         <span className="pc-petdetail__avatar" aria-hidden="true">
-          {pet.photoUrl ? <img src={pet.photoUrl} alt="" /> : '🐾'}
+          {photo ? <img src={photo} alt="" /> : '🐾'}
         </span>
         <div className="pc-petdetail__ident">
           <h1 className="pc-petdetail__name">{pet.name}</h1>

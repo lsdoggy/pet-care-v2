@@ -1,3 +1,4 @@
+import { usePetPhoto } from '../lib/usePetPhoto'
 import { useLanguage } from '../i18n/language'
 import type { PetDto, CareTaskDto, VetAppointmentDto } from '../api/types'
 import { ENGLISH_SPECIES_LABELS, SPECIES_LABELS } from '../api/types'
@@ -8,8 +9,7 @@ import { speciesGlyph } from './icons'
  * Design Sprint 3 · Pets — карточка питомца в списке (требование 2).
  *
  * Presentational-компонент: фото/placeholder → имя → вид → порода → возраст →
- * вес → следующая задача. Никаких сетевых вызовов — данные приходят из HomePage
- * (существующие эндпоинты listPets / listUpcomingTasks / listAppointments).
+ * вес → следующая задача. Данные питомца приходят из HomePage.
  */
 
 interface Props {
@@ -22,6 +22,7 @@ interface Props {
 export default function PetCard({ pet, tasks, appointments, onOpen }: Props) {
   const { language } = useLanguage()
   const speciesLabels = language === 'ru' ? SPECIES_LABELS : ENGLISH_SPECIES_LABELS
+  const photo = usePetPhoto(pet.photoUrl)
   const next = findNextPetAction(pet.id, tasks, appointments)
 
   const facts: Array<{ label: string; value: string }> = [
@@ -40,10 +41,10 @@ export default function PetCard({ pet, tasks, appointments, onOpen }: Props) {
   return (
     <button type="button" className="pc-petcard" onClick={() => onOpen(pet)} aria-label={ariaLabel}>
       <span
-        className={`pc-petcard__avatar${pet.photoUrl ? '' : ' pc-petcard__avatar--initials'}`}
+        className={`pc-petcard__avatar${photo ? '' : ' pc-petcard__avatar--initials'}`}
         aria-hidden="true"
       >
-        {pet.photoUrl ? <img src={pet.photoUrl} alt="" /> : petInitials(pet.name) || speciesGlyph(pet.species)}
+        {photo ? <img src={photo} alt="" /> : petInitials(pet.name) || speciesGlyph(pet.species)}
       </span>
 
       <span className="pc-petcard__body">

@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,6 +95,16 @@ public class PetService {
         PetEntity pet = loadOwnedPet(id, email);
         pet.setPhotoUrl(fileStorageService.storePetPhoto(data, originalFilename, size));
         return PetDto.from(pet);
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadPhoto(String filename, String email) {
+        Long ownerId = resolveUser(email).getId();
+        if (!petRepository.existsByOwnerIdAndDeletedFalseAndPhotoUrlIn(ownerId,
+                List.of("/files/uploads/pets/" + filename, "/files/pets/" + filename))) {
+            throw new AccessDeniedForResourceException("Photo not found");
+        }
+        return fileStorageService.loadPetPhoto(filename);
     }
 
     private PetEntity loadOwnedPet(Long id, String email) {
