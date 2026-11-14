@@ -54,7 +54,7 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of(
                 HttpMethod.GET.name(), HttpMethod.POST.name(),
                 HttpMethod.PATCH.name(), HttpMethod.DELETE.name(), HttpMethod.OPTIONS.name()));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         source.registerCorsConfiguration("/files/**", config);

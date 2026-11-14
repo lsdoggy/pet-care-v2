@@ -1,6 +1,5 @@
 package com.petcare.backend.vet;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -11,13 +10,13 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.petcare.backend.error.InvalidFileException;
 import com.petcare.backend.vet.dto.AppointmentDto;
 import com.petcare.backend.vet.dto.CreateAppointmentRequest;
 import com.petcare.backend.vet.dto.CreateRecordRequest;
@@ -92,8 +91,9 @@ public class VetController {
     @PostMapping("/records")
     @ResponseStatus(HttpStatus.CREATED)
     RecordDto createRecord(@Valid @RequestBody CreateRecordRequest request,
+                           @RequestHeader(value = "Idempotency-Key", required = false) String key,
                            Authentication authentication) {
-        return vetService.createRecord(request, authentication.getName());
+        return vetService.createRecord(request, authentication.getName(), key);
     }
 
     @PatchMapping("/records/{id}")
@@ -114,16 +114,9 @@ public class VetController {
     @PostMapping("/records/{id}/attachments")
     RecordDto addAttachment(@PathVariable Long id,
                             @RequestParam("file") MultipartFile file,
+                            @RequestHeader(value = "Idempotency-Key", required = false) String key,
                             Authentication authentication) {
-        if (file.isEmpty()) {
-            throw new InvalidFileException("Uploaded file is empty");
-        }
-        try (var in = file.getInputStream()) {
-            return vetService.addRecordAttachment(id, in, file.getOriginalFilename(),
-                    file.getSize(), authentication.getName());
-        } catch (IOException e) {
-            throw new InvalidFileException("Failed to read uploaded file: " + e.getMessage());
-        }
+        return vetService.addRecordAttachment(id, file, authentication.getName(), key);
     }
 
     /* ---------- Merged per-pet chronology ---------- */

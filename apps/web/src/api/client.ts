@@ -128,12 +128,12 @@ export const api = {
   },
 
   /** Generic multipart upload helper (Sprint 4: record attachments). */
-  uploadFile: async <T,>(path: string, file: File, token: string): Promise<T> => {
+  uploadFile: async <T,>(path: string, file: File, token: string, key?: string): Promise<T> => {
     const form = new FormData()
     form.append('file', file)
     const response = await fetch(`${BASE_URL}${path}`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }, // no Content-Type: browser sets multipart boundary
+      headers: { Authorization: `Bearer ${token}`, ...(key && { 'Idempotency-Key': key }) }, // no Content-Type: browser sets multipart boundary
       body: form,
     })
     if (!response.ok) {
@@ -189,8 +189,12 @@ export const api = {
   getRecord: (id: number, token: string) =>
     request<VetRecordDto>(`/records/${id}`, { method: 'GET' }, token),
 
-  createRecord: (body: CreateRecordRequest, token: string) =>
-    request<VetRecordDto>('/records', { method: 'POST', body: JSON.stringify(body) }, token),
+  createRecord: (body: CreateRecordRequest, token: string, key?: string) =>
+    request<VetRecordDto>('/records', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: key ? { 'Idempotency-Key': key } : undefined,
+    }, token),
 
   updateRecord: (id: number, body: Partial<CreateRecordRequest>, token: string) =>
     request<VetRecordDto>(`/records/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
@@ -198,8 +202,8 @@ export const api = {
   deleteRecord: (id: number, token: string) => request<void>(`/records/${id}`, { method: 'DELETE' }, token),
 
   /** Attaches a PDF/image to an existing record; returns the updated record with new attachments[]. */
-  uploadRecordAttachment: (id: number, file: File, token: string) =>
-    api.uploadFile<VetRecordDto>(`/records/${id}/attachments`, file, token),
+  uploadRecordAttachment: (id: number, file: File, token: string, key?: string) =>
+    api.uploadFile<VetRecordDto>(`/records/${id}/attachments`, file, token, key),
 
   /** Merged chronology (appointments + records) for one pet, newest event first. */
   getPetHistory: (petId: number, token: string) =>
@@ -260,4 +264,10 @@ export const api = {
   /** Low-stock products without an open list entry — suggestion banner source. */
   listShoppingSuggestions: (token: string) =>
     request<FoodProductDto[]>('/shopping-list/suggestions', { method: 'GET' }, token),
+}
+
+/** Generates an opaque retry key on native and HTTP web runtimes. */
+export function newIdempotencyKey(): string {
+  return globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
 }

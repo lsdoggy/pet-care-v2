@@ -1,5 +1,7 @@
 package com.petcare.backend;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -13,6 +15,10 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +28,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -326,6 +333,106 @@ class VetFlowTest {
         mockMvc.perform(get("/api/v1/records/" + recordId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.appointmentId").doesNotExist());
+    }
+
+    @Test
+    void keyedRecordCreationReplaysAndIsScopedToOwner() throws Exception {
+        String alice = registerAndLogin(uniqueEmail());
+        long alicePet = createPet(alice, "Alice pet");
+        String bob = registerAndLogin(uniqueEmail());
+        long bobPet = createPet(bob, "Bob pet");
+        String key = "record-retry";
+
+        String created = raceAndReplay(() -> keyedRecord(alice, alicePet, key, "Original"), 201);
+        long id = JSON.readTree(created).get("id").asLong();
+        mockMvc.perform(patch("/api/v1/records/" + id)
+                        .header("Authorization", "Bearer " + alice)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"diagnosisText\":\"Updated\"}"))
+                .andExpect(status().isOk());
+        assertEquals(JSON.readTree(created),
+                JSON.readTree(response(keyedRecord(alice, alicePet, key, "Original"), 201)));
+        mockMvc.perform(keyedRecord(alice, alicePet, key, "Different"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Idempotency-Key was already used with different content"));
+        mockMvc.perform(keyedRecord(alice, alicePet, "invalid key", "Original"))
+                .andExpect(status().isBadRequest());
+
+        String other = response(keyedRecord(bob, bobPet, key, "Original"), 201);
+        assertNotEquals(id, JSON.readTree(other).get("id").asLong());
+        mockMvc.perform(get("/api/v1/records").header("Authorization", "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void keyedAttachmentReplaysAndDetectsChangedFileOrTarget() throws Exception {
+        String alice = registerAndLogin(uniqueEmail());
+        long alicePet = createPet(alice, "Alice pet");
+        String key = "attachment-retry";
+        long id = JSON.readTree(response(keyedRecord(alice, alicePet, key, "Diagnosis"), 201)).get("id").asLong();
+        long anotherRecord = createRecord(alice, alicePet, LocalDate.now(), null);
+
+        String attached = raceAndReplay(() -> keyedAttachment(alice, id, key, "test.pdf", (byte) 1), 200);
+        assertEquals(1, JSON.readTree(attached).get("attachments").size());
+        mockMvc.perform(keyedAttachment(alice, id, key, "test.pdf", (byte) 2))
+                .andExpect(status().isConflict());
+        mockMvc.perform(keyedAttachment(alice, id, key, "renamed.pdf", (byte) 1))
+                .andExpect(status().isConflict());
+        mockMvc.perform(keyedAttachment(alice, anotherRecord, key, "test.pdf", (byte) 1))
+                .andExpect(status().isConflict());
+
+        response(keyedAttachment(alice, id, "new-file", "test.pdf", (byte) 1), 200);
+        assertEquals(JSON.readTree(attached),
+                JSON.readTree(response(keyedAttachment(alice, id, key, "test.pdf", (byte) 1), 200)));
+        mockMvc.perform(get("/api/v1/records/" + id).header("Authorization", "Bearer " + alice))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attachments.length()").value(2));
+
+        String bob = registerAndLogin(uniqueEmail());
+        long bobRecord = createRecord(bob, createPet(bob, "Bob pet"), LocalDate.now(), null);
+        mockMvc.perform(keyedAttachment(bob, id, key, "test.pdf", (byte) 1))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(keyedAttachment(bob, bobRecord, key, "test.pdf", (byte) 1))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.attachments.length()").value(1));
+    }
+
+    private RequestBuilder keyedRecord(String token, long petId, String key, String diagnosis) throws Exception {
+        return post("/api/v1/records")
+                .header("Authorization", "Bearer " + token)
+                .header("Idempotency-Key", key)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(JSON.writeValueAsString(Map.of(
+                        "petId", petId, "visitDate", LocalDate.now().toString(), "diagnosisText", diagnosis)));
+    }
+
+    private RequestBuilder keyedAttachment(String token, long id, String key, String name, byte content) {
+        return multipart("/api/v1/records/" + id + "/attachments")
+                .file(new MockMultipartFile("file", name, "application/pdf", new byte[] {content}))
+                .header("Authorization", "Bearer " + token)
+                .header("Idempotency-Key", key);
+    }
+
+    private String raceAndReplay(Callable<RequestBuilder> request, int expectedStatus) throws Exception {
+        var start = new CyclicBarrier(2);
+        Callable<String> submit = () -> {
+            RequestBuilder prepared = request.call();
+            start.await(10, TimeUnit.SECONDS);
+            return response(prepared, expectedStatus);
+        };
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var first = executor.submit(submit);
+            var second = executor.submit(submit);
+            String original = first.get(20, TimeUnit.SECONDS);
+            assertEquals(JSON.readTree(original), JSON.readTree(second.get(20, TimeUnit.SECONDS)));
+            return original;
+        }
+    }
+
+    private String response(RequestBuilder request, int expectedStatus) throws Exception {
+        return mockMvc.perform(request).andExpect(status().is(expectedStatus))
+                .andReturn().getResponse().getContentAsString();
     }
 
     @Test

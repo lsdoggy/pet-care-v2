@@ -229,6 +229,7 @@ curl -s -X POST http://localhost:8080/api/v1/tasks \
 чужие ресурсы возвращают 404 (без утечки существования).
 
 ### Приём записи от ветклиники
+[Руководство для интеграторов 1С](docs/clinic-1c-integration.md) содержит поля запроса, пример отправки и порядок сверки после ошибок.
 
 `POST /api/v1/vetinfo` принимает JSON по HTTPS с заголовками
 `Authorization: Bearer <токен клиники>` и `Content-Type: application/json`.

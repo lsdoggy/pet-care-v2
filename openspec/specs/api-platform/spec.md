@@ -28,7 +28,7 @@ Backend SHALL отдавать файлы из настроенного `app.upl
 - **THEN** аутентификация не требуется для его получения.
 
 ### Requirement: Локальные CORS origins
-Текущая конфигурация SHALL разрешать CORS для `http://localhost:5173` и `http://localhost:8081` на `/api/**` и `/files/**`, с методами GET, POST, PATCH, DELETE, OPTIONS и заголовками Authorization, Content-Type.
+Текущая конфигурация SHALL разрешать CORS для `http://localhost:5173` и `http://localhost:8081` на `/api/**` и `/files/**`, с методами GET, POST, PATCH, DELETE, OPTIONS и заголовками Authorization, Content-Type и Idempotency-Key.
 
 #### Scenario: Разрешённый origin
 - **WHEN** браузер выполняет допустимый CORS-запрос из `http://localhost:5173`

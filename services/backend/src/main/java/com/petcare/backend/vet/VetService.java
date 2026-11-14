@@ -1,8 +1,9 @@
 package com.petcare.backend.vet;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -11,9 +12,13 @@ import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.petcare.backend.error.AccessDeniedForResourceException;
 import com.petcare.backend.error.AppointmentNotFoundException;
+import com.petcare.backend.error.InvalidFileException;
 import com.petcare.backend.error.PetNotFoundException;
 import com.petcare.backend.error.RecordNotFoundException;
 import com.petcare.backend.file.FileStorageService;
@@ -43,17 +48,20 @@ public class VetService {
     private final PetRepository petRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final VetRecordIdempotency idempotency;
 
     public VetService(VetAppointmentRepository appointmentRepository,
                       VetRecordRepository recordRepository,
                       PetRepository petRepository,
                       UserRepository userRepository,
-                      FileStorageService fileStorageService) {
+                      FileStorageService fileStorageService,
+                      VetRecordIdempotency idempotency) {
         this.appointmentRepository = appointmentRepository;
         this.recordRepository = recordRepository;
         this.petRepository = petRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
+        this.idempotency = idempotency;
     }
 
     /* ---------- Appointments ---------- */
@@ -158,12 +166,22 @@ public class VetService {
 
     @Transactional(readOnly = true)
     public RecordDto getRecord(Long id, String email) {
-        return toRecordDto(loadOwnedRecord(id, email));
+        return toRecordDto(loadOwnedRecord(id, resolveUser(email).getId()));
     }
 
     @Transactional
-    public RecordDto createRecord(CreateRecordRequest request, String email) {
+    public RecordDto createRecord(CreateRecordRequest request, String email, String key) {
         UserEntity user = resolveUser(email);
+        if (key == null) {
+            return insertRecord(request, user, email);
+        }
+        String fingerprint = idempotency.fingerprint(request, null);
+        idempotency.lockOwner(user.getId());
+        return idempotency.execute(user.getId(), VetRecordIdempotency.Operation.CREATE, key, fingerprint,
+                () -> insertRecord(request, user, email));
+    }
+
+    private RecordDto insertRecord(CreateRecordRequest request, UserEntity user, String email) {
         PetEntity pet = loadOwnedPet(request.petId(), user.getId());
         Long appointmentId = request.appointmentId();
         if (appointmentId != null) {
@@ -189,7 +207,9 @@ public class VetService {
     /** PATCH semantics: null fields keep their current values. Attachments are managed via upload/delete. */
     @Transactional
     public RecordDto updateRecord(Long id, UpdateRecordRequest request, String email) {
-        VetRecordEntity record = loadOwnedRecord(id, email);
+        Long ownerId = resolveUser(email).getId();
+        idempotency.lockOwner(ownerId);
+        VetRecordEntity record = loadOwnedRecord(id, ownerId);
         if (request.visitDate() != null) {
             record.setVisitDate(request.visitDate());
         }
@@ -208,7 +228,9 @@ public class VetService {
     /** Deletes the record row and best-effort removes its attachment files from disk. */
     @Transactional
     public void deleteRecord(Long id, String email) {
-        VetRecordEntity record = loadOwnedRecord(id, email);
+        Long ownerId = resolveUser(email).getId();
+        idempotency.lockOwner(ownerId);
+        VetRecordEntity record = loadOwnedRecord(id, ownerId);
         for (AttachmentDto attachment : RecordDto.parseAttachments(record.getAttachmentsJson())) {
             fileStorageService.deleteRecordAttachment(attachment.url());
         }
@@ -217,11 +239,43 @@ public class VetService {
 
     /** Stores a PDF/image under ./uploads/records/ and appends it to attachments_jsonb. */
     @Transactional
-    public RecordDto addRecordAttachment(Long recordId, InputStream data, String originalFilename,
-                                         long size, String email) {
-        VetRecordEntity record = loadOwnedRecord(recordId, email);
-        FileStorageService.StoredAttachment stored =
-                fileStorageService.storeRecordAttachment(data, originalFilename, size);
+    public RecordDto addRecordAttachment(Long recordId, MultipartFile file, String email, String key) {
+        UserEntity user = resolveUser(email);
+        if (file.isEmpty()) {
+            throw new InvalidFileException("Uploaded file is empty");
+        }
+        String fingerprint = null;
+        if (key != null) {
+            try (var content = file.getInputStream()) {
+                fingerprint = idempotency.fingerprint(Arrays.asList(recordId, file.getOriginalFilename()), content);
+            } catch (IOException e) {
+                throw new InvalidFileException("Failed to read uploaded file");
+            }
+        }
+
+        idempotency.lockOwner(user.getId());
+        if (key == null) {
+            return storeAttachment(loadOwnedRecord(recordId, user.getId()), file);
+        }
+        return idempotency.execute(user.getId(), VetRecordIdempotency.Operation.ATTACH, key, fingerprint,
+                () -> storeAttachment(loadOwnedRecord(recordId, user.getId()), file));
+    }
+
+    private RecordDto storeAttachment(VetRecordEntity record, MultipartFile file) {
+        FileStorageService.StoredAttachment stored;
+        try (var content = file.getInputStream()) {
+            stored = fileStorageService.storeRecordAttachment(content, file.getOriginalFilename(), file.getSize());
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        fileStorageService.deleteRecordAttachment(stored.url());
+                    }
+                }
+            });
+        } catch (IOException e) {
+            throw new InvalidFileException("Failed to read uploaded file");
+        }
         List<AttachmentDto> attachments =
                 new ArrayList<>(RecordDto.parseAttachments(record.getAttachmentsJson()));
         attachments.add(new AttachmentDto(stored.url(), stored.name(), stored.type(), stored.size()));
@@ -276,11 +330,10 @@ public class VetService {
         return appointment;
     }
 
-    private VetRecordEntity loadOwnedRecord(Long id, String email) {
-        UserEntity user = resolveUser(email);
+    private VetRecordEntity loadOwnedRecord(Long id, Long ownerId) {
         VetRecordEntity record = recordRepository.findById(id)
                 .orElseThrow(() -> new RecordNotFoundException(id));
-        if (!record.getOwnerId().equals(user.getId())) {
+        if (!record.getOwnerId().equals(ownerId)) {
             throw new AccessDeniedForResourceException("Veterinary record not found: " + id);
         }
         return record;

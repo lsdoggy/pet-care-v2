@@ -1,10 +1,10 @@
 import { useLanguage } from '../i18n/language';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, newIdempotencyKey } from '../api/client';
 import type { CreateRecordRequest } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
@@ -27,9 +27,11 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
   const [prescriptions, setPrescriptions] = useState('');
   const [savedRecordId, setSavedRecordId] = useState<number>();
   const [saving, setSaving] = useState(false);
+  const createKeys = useRef(new Map<string, string>());
+  const submitting = useRef(false);
 
   // Picked attachment kept locally; uploaded AFTER the record is created (record id required).
-  const [picked, setPicked] = useState<{ uri: string; name: string; mimeType: string; file?: File } | null>(null);
+  const [picked, setPicked] = useState<{ uri: string; name: string; mimeType: string; key: string; file?: File } | null>(null);
   const pickPhoto = async (source: 'camera' | 'gallery') => {
     if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
       Alert.alert((language === 'ru' ? 'Нет доступа к камере' : 'Camera access denied'), (language === 'ru' ? 'Разрешите доступ к камере в настройках устройства.' : 'Allow camera access in device settings.'));
@@ -46,6 +48,7 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
     const asset = result.assets[0];
     const ext = (asset.fileName?.split('.').pop() ?? 'jpg').toLowerCase();
     setPicked({
+      key: newIdempotencyKey(),
       uri: asset.uri,
       name: asset.fileName ?? `photo-${Date.now()}.${ext}`,
       mimeType: asset.mimeType ?? 'image/jpeg',
@@ -62,7 +65,7 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
       Alert.alert((language === 'ru' ? 'Проверьте файл' : 'Check the file'), (language === 'ru' ? 'Можно прикрепить непустой файл размером до 10 МБ.' : 'Choose a non-empty file up to 10 MB.'));
       return;
     }
-    setPicked({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', file: asset.file });
+    setPicked({ key: newIdempotencyKey(), uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', file: asset.file });
   };
 
   const openPicker = (pick: () => Promise<void>) => {
@@ -82,10 +85,12 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
   };
 
   const onSubmit = async () => {
+    if (submitting.current) return;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate) || visitDate > localDateValue(new Date())) {
       Alert.alert((language === 'ru' ? 'Проверьте дату' : 'Check the date'), (language === 'ru' ? 'Выберите дату не позднее сегодняшнего дня' : 'Choose a date on or before today.'));
       return;
     }
+    submitting.current = true;
     setSaving(true);
     try {
       const token = await tokenStore.get();
@@ -100,16 +105,20 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
         prescriptionsText: prescriptions.trim() || null,
       };
 
-      const recordId = savedRecordId ?? (await api.createRecord(body, token)).id;
+      const payload = JSON.stringify(body);
+      const key = createKeys.current.get(payload) ?? newIdempotencyKey();
+      createKeys.current.set(payload, key);
+      const recordId = savedRecordId ?? (await api.createRecord(body, token, key)).id;
       setSavedRecordId(recordId);
 
       if (picked) {
-        await api.uploadRecordAttachment(recordId, picked.uri, picked.name, picked.mimeType, token, picked.file);
+        await api.uploadRecordAttachment(recordId, picked.uri, picked.name, picked.mimeType, token, picked.file, picked.key);
       }
       navigation.pop();
     } catch {
       Alert.alert((language === 'ru' ? 'Не удалось сохранить запись' : 'Save failed'), language === 'ru' ? 'Попробуйте сохранить запись ещё раз.' : 'Try saving the record again.');
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };

@@ -138,6 +138,12 @@ public class GlobalExceptionHandler {
                         List.of(new FieldError(field, ex.getMessage()))));
     }
 
+    @ExceptionHandler(IdempotencyException.class)
+    ResponseEntity<ApiError> handleIdempotency(IdempotencyException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(ApiError.of(ex.getStatus(), ex.getMessage(), List.of()));
+    }
+
     @ExceptionHandler(InvalidFileException.class)
     ResponseEntity<ApiError> handleInvalidFile(InvalidFileException ex) {
         return ResponseEntity.badRequest()

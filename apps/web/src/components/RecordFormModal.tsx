@@ -1,7 +1,7 @@
 import { useLanguage } from '../i18n/language'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { api } from '../api/client'
+import { api, newIdempotencyKey } from '../api/client'
 import type { CreateRecordRequest, VetAppointmentDto, VetRecordDto } from '../api/types'
 
 interface Props {
@@ -68,7 +68,9 @@ export default function RecordFormModal({ petId, token, appointments, existingRe
   const [diagnosis, setDiagnosis] = useState('')
   const [recommendations, setRecommendations] = useState('')
   const [prescriptions, setPrescriptions] = useState('')
-  const [files, setFiles] = useState<File[]>([])
+  const [files, setFiles] = useState<{ file: File; key: string }[]>([])
+  const createKeys = useRef(new Map<string, string>())
+  const submitting = useRef(false)
   const [savedRecord, setSavedRecord] = useState<VetRecordDto | null>(null)
   const [error, setError] = useState<{ ru: string; en: string } | null>(null)
   const [saving, setSaving] = useState(false)
@@ -86,13 +88,14 @@ export default function RecordFormModal({ petId, token, appointments, existingRe
     const accepted = selected.filter((file) =>
       /\.(pdf|jpe?g|png|webp)$/i.test(file.name) && file.size > 0 && file.size <= 10 * 1024 * 1024
     )
-    setFiles((pending) => [...pending, ...accepted])
+    const additions = accepted.map((file) => ({ file, key: newIdempotencyKey() }))
+    setFiles((pending) => [...pending, ...additions])
     setError(accepted.length === selected.length ? null : { ru: 'Можно прикрепить непустые фото и PDF размером до 10 МБ.', en: 'Choose a non-empty photo or PDF up to 10 MB.' })
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (saving) return
+    if (submitting.current) return
     setError(null)
 
     if (!visitDate) {
@@ -104,6 +107,7 @@ export default function RecordFormModal({ petId, token, appointments, existingRe
       return
     }
 
+    submitting.current = true
     setSaving(true)
     try {
       const body: CreateRecordRequest = {
@@ -114,18 +118,22 @@ export default function RecordFormModal({ petId, token, appointments, existingRe
         recommendationsText: recommendations.trim() || null,
         prescriptionsText: prescriptions.trim() || null,
       }
-      let saved = savedRecord ?? await api.createRecord(body, token)
+      const payload = JSON.stringify(body)
+      const key = createKeys.current.get(payload) ?? newIdempotencyKey()
+      createKeys.current.set(payload, key)
+      let saved = savedRecord ?? await api.createRecord(body, token, key)
       setSavedRecord(saved)
       // Upload attachments sequentially — the backend appends them into attachments_jsonb.
-      for (const file of files) {
-        saved = await api.uploadRecordAttachment(saved.id, file, token)
+      for (const { file, key } of files) {
+        saved = await api.uploadRecordAttachment(saved.id, file, token, key)
         setSavedRecord(saved)
-        setFiles((pending) => pending.filter((item) => item !== file))
+        setFiles((pending) => pending.filter((item) => item.key !== key))
       }
       onSaved(saved)
     } catch {
       setError({ ru: 'Не удалось сохранить медицинскую запись или загрузить вложения.', en: 'Could not save the record or upload its attachments.' })
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -189,10 +197,10 @@ export default function RecordFormModal({ petId, token, appointments, existingRe
             </label>
             {files.length > 0 && (
               <ul>
-                {files.map((file, index) => (
-                  <li key={index}>
+                {files.map(({ file, key }) => (
+                  <li key={key}>
                     {file.name}{' '}
-                    <button type="button" onClick={() => setFiles((pending) => pending.filter((_, i) => i !== index))}>
+                    <button type="button" onClick={() => setFiles((pending) => pending.filter((item) => item.key !== key))}>
                       {language === 'ru' ? 'Удалить' : 'Delete'}
                     </button>
                   </li>

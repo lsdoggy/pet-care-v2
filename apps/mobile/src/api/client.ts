@@ -166,8 +166,12 @@ export const api = {
   deleteAppointment: (id: number, token: string) =>
     request<void>(`/appointments/${id}`, { method: 'DELETE' }, token),
 
-  createRecord: (body: CreateRecordRequest, token: string) =>
-    request<VetRecordDto>('/records', { method: 'POST', body: JSON.stringify(body) }, token),
+  createRecord: (body: CreateRecordRequest, token: string, key?: string) =>
+    request<VetRecordDto>('/records', {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: key ? { 'Idempotency-Key': key } : undefined,
+    }, token),
 
   deleteRecord: (id: number, token: string) => request<void>(`/records/${id}`, { method: 'DELETE' }, token),
 
@@ -183,6 +187,7 @@ export const api = {
     mimeType: string,
     token: string,
     file?: File,
+    key?: string,
   ): Promise<VetRecordDto> => {
     const form = new FormData();
     if (file) {
@@ -194,7 +199,7 @@ export const api = {
 
     const response = await fetch(`${BASE_URL}/records/${id}/attachments`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, ...(key && { 'Idempotency-Key': key }) },
       body: form,
     });
 
@@ -272,3 +277,9 @@ export const api = {
   listShoppingSuggestions: (token: string) =>
     request<FoodProductDto[]>('/shopping-list/suggestions', { method: 'GET' }, token),
 };
+
+/** Generates an opaque retry key on native and HTTP web runtimes. */
+export function newIdempotencyKey(): string {
+  return globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
