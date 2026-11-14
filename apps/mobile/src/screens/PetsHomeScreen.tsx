@@ -1,7 +1,8 @@
+import { PetPhoto } from '../components/PetPhoto';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
-import { api, ApiError, resolveFileUrl } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { CareTaskDto, PetDto, UserDto } from '../api/types';
 import { SPECIES_LABELS, TASK_TYPE_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
@@ -66,7 +67,7 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
   }, [tasks]);
 
   const renderItem = ({ item }: { item: PetDto }) => {
-    const photo = resolveFileUrl(item.photoUrl);
+    const photo = item.photoUrl;
     const next = nextTaskByPet.get(item.id);
     return (
       <Pressable
@@ -77,8 +78,7 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
       >
         {photo ? (
           <View style={styles.photoWrap}>
-            {/* Image kept simple to avoid native module beyond expo-image-picker */}
-            <PetPhoto uri={photo} />
+            <PetPhoto path={photo} style={styles.photo} resizeMode="cover" />
           </View>
         ) : (
           <View style={[styles.photoWrap, styles.photoPlaceholder]}>
@@ -161,10 +161,6 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
       </Pressable>
     </View>
   );
-}
-
-function PetPhoto({ uri }: { uri: string }) {
-  return <Image source={{ uri }} style={styles.photo} resizeMode="cover" />;
 }
 
 const styles = StyleSheet.create({

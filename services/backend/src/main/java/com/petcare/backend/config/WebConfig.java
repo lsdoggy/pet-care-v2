@@ -7,26 +7,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Serves uploaded files (./uploads/...) over HTTP at /files/uploads/...
- * Example: ./uploads/pets/abc.jpg  ->  GET /files/uploads/pets/abc.jpg
- */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    private final Path uploadRoot;
+    private final Path recordsDir;
 
     public WebConfig(@Value("${app.upload.dir:uploads}") String uploadDir) {
-        this.uploadRoot = Path.of(uploadDir).toAbsolutePath().normalize();
+        this.recordsDir = Path.of(uploadDir).toAbsolutePath().normalize().resolve("records");
     }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Pet photos: ./uploads/pets/x.jpg -> /files/uploads/pets/x.jpg (kept for backward compat)
-        registry.addResourceHandler("/files/uploads/**")
-                .addResourceLocations(uploadRoot.toUri().toString());
-        // Sprint 4: record attachments live in ./uploads/records/ but are served at /files/records/**
         registry.addResourceHandler("/files/records/**")
-                .addResourceLocations(uploadRoot.resolve("records").toUri().toString());
+                .addResourceLocations(recordsDir.toUri().toString());
     }
 }

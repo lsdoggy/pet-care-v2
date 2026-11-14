@@ -30,9 +30,17 @@ export interface RegisterProfile {
 
 const BASE_URL = '/api/v1'
 
-/** Resolves a backend-relative photo URL (e.g. /files/uploads/pets/x.jpg) for the browser. */
-export function resolveFileUrl(photoUrl: string | null): string | null {
-  return photoUrl
+export async function fetchPetPhoto(path: string, token: string, signal: AbortSignal): Promise<Blob> {
+  if (!/^\/files\/(?:uploads\/)?pets\/[\w.-]+$/.test(path)) {
+    throw new Error('Invalid pet photo path')
+  }
+  const response = await fetch(path, {
+    headers: { Authorization: `Bearer ${token}` },
+    redirect: 'error',
+    signal,
+  })
+  if (!response.ok) throw new ApiError(response.status, 'Could not load pet photo')
+  return response.blob()
 }
 
 export class ApiError extends Error {

@@ -1,3 +1,4 @@
+import { PetPhoto } from '../components/PetPhoto';
 import { useLanguage } from '../i18n/language';
 /**
  * DashboardScreen — главный экран мобильного приложения (Design Sprint 2).
@@ -14,9 +15,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { validateQuickPurchase } from '../lib/quickPurchase';
 import { useDashboardNow } from '../lib/useDashboardNow';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
-import { api, ApiError, resolveFileUrl } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type {
   CareTaskDto,
   FoodProductDto,
@@ -261,7 +262,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
         {/* Мои питомцы */}
         <Section title="Мои питомцы" actionLabel="Все" onAction={() => onTabChange('Home')}>
           {pets.map((pet) => {
-            const photo = resolveFileUrl(pet.photoUrl);
+            const photo = pet.photoUrl;
             return (
               <Pressable
                 key={pet.id}
@@ -271,7 +272,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
                 accessibilityLabel={`Профиль питомца ${pet.name}`}
               >
                 {photo ? (
-                  <Image source={{ uri: photo }} style={styles.petPhoto} resizeMode="cover" />
+                  <PetPhoto path={photo} style={styles.petPhoto} resizeMode="cover" />
                 ) : (
                   <View style={styles.petPhotoPlaceholder}>
                     <Text style={styles.petPhotoEmoji} importantForAccessibility="no">

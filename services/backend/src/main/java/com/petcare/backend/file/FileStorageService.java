@@ -3,6 +3,7 @@ package com.petcare.backend.file;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
@@ -12,13 +13,15 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
+import com.petcare.backend.error.AccessDeniedForResourceException;
 import com.petcare.backend.error.InvalidFileException;
 
 /**
- * Stores uploaded files under {app.upload.dir}/ and returns relative URLs served
- * by the Static Resource Handlers (WebConfig) at /files/uploads/... and /files/records/...
+ * Stores uploaded files under {app.upload.dir}/ and returns relative URLs.
  */
 @Service
 public class FileStorageService {
@@ -38,7 +41,7 @@ public class FileStorageService {
     }
 
     /**
-     * Saves image data and returns the public relative URL, e.g.
+     * Saves image data and returns the protected relative URL, e.g.
      * "/files/uploads/pets/3f2a...-ab12.jpg".
      */
     public String storePetPhoto(InputStream data, String originalFilename, long size) {
@@ -66,6 +69,17 @@ public class FileStorageService {
         } catch (IOException e) {
             throw new InvalidFileException("Failed to store file: " + e.getMessage());
         }
+    }
+
+    public Resource loadPetPhoto(String filename) {
+        Path petsDir = rootDir.resolve("pets");
+        Path target = petsDir.resolve(filename).normalize();
+        if (!petsDir.equals(target.getParent()) || !filename.equals(target.getFileName().toString())
+                || !ALLOWED_IMAGE_EXTENSIONS.contains(extractExtension(filename))
+                || !Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
+            throw new AccessDeniedForResourceException("Photo not found");
+        }
+        return new FileSystemResource(target);
     }
 
     /**

@@ -10,4 +10,6 @@ public interface PetRepository extends JpaRepository<PetEntity, Long> {
     List<PetEntity> findByOwnerIdAndDeletedFalseOrderByCreatedAtAsc(Long ownerId);
 
     Optional<PetEntity> findByIdAndDeletedFalse(Long id);
+
+    boolean existsByOwnerIdAndDeletedFalseAndPhotoUrlIn(Long ownerId, List<String> photoUrls);
 }

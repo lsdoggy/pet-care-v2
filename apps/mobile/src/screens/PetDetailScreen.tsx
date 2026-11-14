@@ -1,8 +1,9 @@
+import { PetPhoto } from '../components/PetPhoto';
 import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
-import { api, ApiError, resolveFileUrl } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { PetDto } from '../api/types';
 import { ENGLISH_SPECIES_LABELS, SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
@@ -92,7 +93,7 @@ export function PetDetailScreen({ petId }: Props) {
     );
   }
 
-  const photo = resolveFileUrl(pet.photoUrl);
+  const photo = pet.photoUrl;
 
   return (
     <ScrollView style={styles.flex} contentContainerStyle={styles.container}>
@@ -100,7 +101,7 @@ export function PetDetailScreen({ petId }: Props) {
 
       <View style={styles.photoWrap}>
         {photo ? (
-          <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
+          <PetPhoto path={photo} style={styles.photo} resizeMode="cover" />
         ) : (
           <View style={styles.photoPlaceholder}>
             <Text style={styles.placeholderText}>{petInitials(pet.name) || '🐾'}</Text>

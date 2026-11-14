@@ -1,3 +1,4 @@
+import { usePetPhoto } from '../lib/usePetPhoto'
 import { useLanguage } from '../i18n/language'
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -58,6 +59,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
   const [touched, setTouched] = useState<Partial<Record<PetFieldName, boolean>>>({})
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const photoPreview = usePetPhoto(photoFile ?? pet?.photoUrl)
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -121,10 +123,8 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
         {/* Фото / placeholder */}
         <div className="pc-photo-preview">
           <span className="pc-photo-preview__avatar" aria-hidden="true">
-            {photoFile ? (
-              <img src={URL.createObjectURL(photoFile)} alt="" />
-            ) : pet?.photoUrl ? (
-              <img src={pet.photoUrl} alt="" />
+            {photoPreview ? (
+              <img src={photoPreview} alt="" />
             ) : (
               petInitials(values.name)
             )}
