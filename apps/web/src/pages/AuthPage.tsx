@@ -123,7 +123,8 @@ export default function AuthPage({ mode }: Props) {
         } else if (err.status === 401) {
           message = 'Неверная почта или пароль. Проверьте данные и попробуйте ещё раз.'
         } else if (Object.keys(mapped).length === 0) {
-          message = apiErrorMessageForStatus(err.status) ?? translateApiMessage(err.message)
+          message = apiErrorMessageForStatus(err.status)
+            ?? translateApiMessage(isLogin ? 'Request failed' : err.message)
         }
         setFormError(message)
       } else {
