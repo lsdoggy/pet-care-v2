@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { Text } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { CareTaskDto } from '../api/types';
-import { formatDueAt, TASK_TYPE_LABELS } from '../api/types';
+import { formatDueAt, TASK_TYPE_LABELS, ENGLISH_TASK_TYPE_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { colors } from '../theme/tokens';
@@ -18,7 +18,7 @@ import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
 export function TasksScreen() {
   const language = useLanguage();
   const [tasks, setTasks] = useState<CareTaskDto[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<'ru' | 'en', string> | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
@@ -27,8 +27,8 @@ export function TasksScreen() {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Not authenticated');
       setTasks(await api.listUpcomingTasks(token));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load tasks');
+    } catch {
+      setError({ ru: 'Не удалось загрузить задачи.', en: 'Failed to load tasks' });
     }
   }, []);
 
@@ -51,8 +51,8 @@ export function TasksScreen() {
         if (result.status === 'PENDING') {
           setError(null); // success — new occurrence already in the reloaded list
         }
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to complete task');
+      } catch {
+        setError({ ru: 'Не удалось завершить задачу.', en: 'Failed to complete task' });
       } finally {
         setBusyId(null);
       }
@@ -67,12 +67,12 @@ export function TasksScreen() {
         <View style={styles.infoWrap}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.meta}>
-            {item.petName} · {TASK_TYPE_LABELS[item.type]}
+            {item.petName} · {(language === 'ru' ? TASK_TYPE_LABELS : ENGLISH_TASK_TYPE_LABELS)[item.type]}
           </Text>
-          <Text style={styles.due}>{formatDueAt(item.dueAt)}</Text>
+          <Text style={styles.due}>{formatDueAt(item.dueAt, language)}</Text>
           <AddToGoogleCalendar title={`${item.title} · ${item.petName}`} startsAt={item.dueAt} />
           {item.recurrenceRule ? (
-            <Text style={styles.recurrence}>🔁 Repeats: {item.recurrenceRule}</Text>
+            <Text style={styles.recurrence}>🔁 {language === 'ru' ? 'Повторение:' : 'Repeats:'} {item.recurrenceRule}</Text>
           ) : null}
         </View>
         <Pressable
@@ -80,7 +80,7 @@ export function TasksScreen() {
           onPress={() => handleComplete(item)}
           disabled={busy}
           accessibilityRole="button"
-          accessibilityLabel={`Complete task ${item.title}`}
+          accessibilityLabel={language === 'ru' ? `Завершить задачу «${item.title}»` : `Complete task ${item.title}`}
         >
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.completeBtnText}>✓</Text>}
         </Pressable>
@@ -99,7 +99,7 @@ export function TasksScreen() {
         }
       />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={styles.error}>{error[language]}</Text> : null}
 
       {tasks === null ? (
         <View style={styles.center}>

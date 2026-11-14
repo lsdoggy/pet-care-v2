@@ -1,7 +1,8 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api/client'
 import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/types'
-import { APPOINTMENT_STATUS_LABELS, formatDueAt } from '../api/types'
+import { APPOINTMENT_STATUS_LABELS, ENGLISH_APPOINTMENT_STATUS_LABELS, formatDueAt } from '../api/types'
 import AppointmentFormModal from './AppointmentFormModal'
 import RecordFormModal from './RecordFormModal'
 
@@ -34,10 +35,11 @@ function formatFileSize(bytes: number): string {
  * for one pet plus forms to add/edit them.
  */
 export default function HealthHistoryTab({ petId, token }: Props) {
+  const { language } = useLanguage()
   const [events, setEvents] = useState<HistoryEventDto[]>([])
   const [appointments, setAppointments] = useState<VetAppointmentDto[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ ru: string; en: string } | null>(null)
   const [showApptForm, setShowApptForm] = useState(false)
   const [editingAppt, setEditingAppt] = useState<VetAppointmentDto | null>(null)
   const [recordAppointmentId, setRecordAppointmentId] = useState<number>()
@@ -51,29 +53,29 @@ export default function HealthHistoryTab({ petId, token }: Props) {
         setAppointments(appts.filter((a) => a.petId === petId))
         setError(null)
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load history'))
+      .catch(() => setError({ ru: 'Не удалось загрузить историю.', en: 'Failed to load history' }))
       .finally(() => setLoading(false))
   }, [petId, token])
 
   useEffect(reload, [reload])
 
   async function handleDeleteAppointment(id: number) {
-    if (!window.confirm('Delete this appointment? Linked records will be kept.')) return
+    if (!window.confirm(language === 'ru' ? 'Удалить визит? Связанные записи сохранятся.' : 'Delete this appointment? Linked records will be kept.')) return
     try {
       await api.deleteAppointment(id, token)
       reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete appointment')
+    } catch {
+      setError({ ru: 'Не удалось удалить визит.', en: 'Failed to delete appointment' })
     }
   }
 
   async function handleDeleteRecord(id: number) {
-    if (!window.confirm('Delete this record and its attachments?')) return
+    if (!window.confirm(language === 'ru' ? 'Удалить запись и её вложения?' : 'Delete this record and its attachments?')) return
     try {
       await api.deleteRecord(id, token)
       reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete record')
+    } catch {
+      setError({ ru: 'Не удалось удалить запись.', en: 'Failed to delete record' })
     }
   }
 
@@ -81,8 +83,8 @@ export default function HealthHistoryTab({ petId, token }: Props) {
     try {
       await api.updateAppointment(appt.id, { status }, token)
       reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status')
+    } catch {
+      setError({ ru: 'Не удалось изменить статус визита.', en: 'Failed to update status' })
     }
   }
 
@@ -112,22 +114,22 @@ export default function HealthHistoryTab({ petId, token }: Props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <strong>🩺 {appt.clinicName}</strong>
           <span style={{ color: statusColors[appt.status], fontSize: 13, fontWeight: 600 }}>
-            {APPOINTMENT_STATUS_LABELS[appt.status]}
+            {(language === 'ru' ? APPOINTMENT_STATUS_LABELS : ENGLISH_APPOINTMENT_STATUS_LABELS)[appt.status]}
           </span>
         </div>
         <p style={{ margin: '6px 0 0', color: '#475569', fontSize: 14 }}>
-          {formatDueAt(appt.scheduledAt)} · {appt.durationMinutes} min
+          {formatDueAt(appt.scheduledAt, language)} · {appt.durationMinutes} {language === 'ru' ? 'мин' : 'min'}
           {appt.doctorName ? ` · ${appt.doctorName}` : ''}
           {appt.cost != null ? ` · ${appt.cost.toFixed(2)} ${appt.currency ?? ''}` : ''}
         </p>
         {appt.address && <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 13 }}>{appt.address}</p>}
-        {appt.reason && <p><strong>Причина визита:</strong> {appt.reason}</p>}
+        {appt.reason && <p><strong>{language === 'ru' ? 'Причина визита:' : 'Reason for visit:'}</strong> {appt.reason}</p>}
         {appt.notes && <p style={{ margin: '4px 0 0', fontSize: 14 }}>{appt.notes}</p>}
         {events.flatMap(({ record }) => record?.appointmentId === appt.id ? [record] : []).map((record) => (
           <div key={record.id}>
-            {record.diagnosisText && <p><strong>Диагноз:</strong> {record.diagnosisText}</p>}
-            {record.recommendationsText && <p><strong>Рекомендации:</strong> {record.recommendationsText}</p>}
-            {record.prescriptionsText && <p><strong>Препараты:</strong> {record.prescriptionsText}</p>}
+            {record.diagnosisText && <p><strong>{language === 'ru' ? 'Диагноз:' : 'Diagnosis:'}</strong> {record.diagnosisText}</p>}
+            {record.recommendationsText && <p><strong>{language === 'ru' ? 'Рекомендации:' : 'Recommendations:'}</strong> {record.recommendationsText}</p>}
+            {record.prescriptionsText && <p><strong>{language === 'ru' ? 'Препараты:' : 'Prescriptions:'}</strong> {record.prescriptionsText}</p>}
             {renderAttachments(record)}
           </div>
         ))}
@@ -137,24 +139,24 @@ export default function HealthHistoryTab({ petId, token }: Props) {
               setRecordAppointmentId(appt.id)
               setShowRecordForm(true)
             }}>
-              Добавить запись о визите
+              {language === 'ru' ? 'Добавить запись о визите' : 'Add a visit record'}
             </button>
           )}
           {appt.status === 'SCHEDULED' && (
             <>
               <button onClick={() => handleSetStatus(appt, 'COMPLETED')} style={{ border: 'none', background: 'none', color: '#16a34a', cursor: 'pointer', padding: 0, fontSize: 13 }}>
-                Mark completed
+                {language === 'ru' ? 'Завершить' : 'Mark completed'}
               </button>
               <button onClick={() => handleSetStatus(appt, 'CANCELLED')} style={{ border: 'none', background: 'none', color: '#9ca3af', cursor: 'pointer', padding: 0, fontSize: 13 }}>
-                Cancel
+                {language === 'ru' ? 'Отменить визит' : 'Cancel'}
               </button>
             </>
           )}
           <button onClick={() => setEditingAppt(appt)} style={{ border: 'none', background: 'none', color: '#4f46e5', cursor: 'pointer', padding: 0, fontSize: 13 }}>
-            Edit
+            {language === 'ru' ? 'Изменить' : 'Edit'}
           </button>
           <button onClick={() => handleDeleteAppointment(appt.id)} style={{ border: 'none', background: 'none', color: '#c0392b', cursor: 'pointer', padding: 0, fontSize: 13 }}>
-            Delete
+            {language === 'ru' ? 'Удалить' : 'Delete'}
           </button>
         </div>
       </div>
@@ -164,30 +166,30 @@ export default function HealthHistoryTab({ petId, token }: Props) {
   function renderRecord(record: VetRecordDto) {
     return (
       <div style={cardStyle}>
-        <strong>📋 Medical record</strong>
+        <strong>{language === 'ru' ? '📋 Медицинская запись' : '📋 Medical record'}</strong>
         <p style={{ margin: '6px 0 0', color: '#475569', fontSize: 14 }}>
           {record.visitDate}
           {record.appointmentId != null ? ' · linked to appointment #' + record.appointmentId : ''}
         </p>
         {record.diagnosisText && (
           <p style={{ margin: '6px 0 0', fontSize: 14 }}>
-            <strong>Diagnosis:</strong> {record.diagnosisText}
+            <strong>{language === 'ru' ? 'Диагноз:' : 'Diagnosis:'}</strong> {record.diagnosisText}
           </p>
         )}
         {record.recommendationsText && (
           <p style={{ margin: '4px 0 0', fontSize: 14 }}>
-            <strong>Recommendations:</strong> {record.recommendationsText}
+            <strong>{language === 'ru' ? 'Рекомендации:' : 'Recommendations:'}</strong> {record.recommendationsText}
           </p>
         )}
         {record.prescriptionsText && (
           <p style={{ margin: '4px 0 0', fontSize: 14 }}>
-            <strong>Prescriptions:</strong> {record.prescriptionsText}
+            <strong>{language === 'ru' ? 'Препараты:' : 'Prescriptions:'}</strong> {record.prescriptionsText}
           </p>
         )}
         {renderAttachments(record)}
         <div style={{ marginTop: 10 }}>
           <button onClick={() => handleDeleteRecord(record.id)} style={{ border: 'none', background: 'none', color: '#c0392b', cursor: 'pointer', padding: 0, fontSize: 13 }}>
-            Delete
+            {language === 'ru' ? 'Удалить' : 'Delete'}
           </button>
         </div>
       </div>
@@ -201,20 +203,20 @@ export default function HealthHistoryTab({ petId, token }: Props) {
           onClick={() => setShowApptForm(true)}
           style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: '#4f46e5', color: '#fff', cursor: 'pointer' }}
         >
-          + Appointment
+          {language === 'ru' ? '+ Визит' : '+ Appointment'}
         </button>
         <button
           onClick={() => setShowRecordForm(true)}
           style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #4f46e5', backgroundColor: '#fff', color: '#4f46e5', cursor: 'pointer' }}
         >
-          + Record
+          {language === 'ru' ? '+ Запись' : '+ Record'}
         </button>
       </div>
 
-      {error && <p style={{ color: '#c0392b' }}>{error}</p>}
-      {loading && <p>Loading…</p>}
+      {error && <p style={{ color: '#c0392b' }} role="alert">{error[language]}</p>}
+      {loading && <p>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</p>}
       {!loading && events.length === 0 && (
-        <p style={{ color: '#64748b' }}>No health events yet. Add an appointment or a medical record above.</p>
+        <p style={{ color: '#64748b' }}>{language === 'ru' ? 'Визитов и записей пока нет. Добавьте визит или медицинскую запись.' : 'No health events yet. Add an appointment or a medical record above.'}</p>
       )}
 
       {/* Timeline */}

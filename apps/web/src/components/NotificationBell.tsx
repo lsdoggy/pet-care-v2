@@ -1,3 +1,4 @@
+import { notificationText } from '../i18n/notificationText'
 import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -77,30 +78,33 @@ export default function NotificationBell({ token }: NotificationBellProps) {
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{language === 'ru' ? 'Уведомления' : 'Notifications'}</div>
           {loading && <div style={hintStyle}>{language === 'ru' ? 'Загрузка…' : 'Loading…'}</div>}
           {!loading && items.length === 0 && <div style={hintStyle}>{language === 'ru' ? 'Здесь будут появляться напоминания.' : 'Reminders will appear here.'}</div>}
-          {items.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => void markRead(n)}
-              style={itemStyle}
-              title={n.channelStatus === 'read'
-                ? (language === 'ru' ? 'Прочитано' : 'Read')
-                : (language === 'ru' ? 'Отметить как прочитанное' : 'Mark as read')}
-            >
-              <span style={{ color: n.channelStatus === 'read' ? '#cbd5e1' : '#4f46e5' }}>
-                {n.channelStatus === 'read' ? '○' : '●'}
-              </span>
-              <span style={{ flex: 1 }}>
-                <span style={{ display: 'block', fontWeight: 600, fontSize: 13, color: n.channelStatus === 'read' ? '#9ca3af' : '#111827' }}>
-                  {n.title}
+          {items.map((n) => {
+            const { title, body } = notificationText(n, language)
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() => void markRead(n)}
+                style={itemStyle}
+                title={n.channelStatus === 'read'
+                  ? (language === 'ru' ? 'Прочитано' : 'Read')
+                  : (language === 'ru' ? 'Отметить как прочитанное' : 'Mark as read')}
+              >
+                <span style={{ color: n.channelStatus === 'read' ? '#cbd5e1' : '#4f46e5' }}>
+                  {n.channelStatus === 'read' ? '○' : '●'}
                 </span>
-                <span style={{ display: 'block', fontSize: 12, color: '#6b7280' }}>{n.body}</span>
-                <span style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                  {new Date(n.createdAt).toLocaleString(language)} · {n.type}
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: 'block', fontWeight: 600, fontSize: 13, color: n.channelStatus === 'read' ? '#9ca3af' : '#111827' }}>
+                    {title}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 12, color: '#6b7280' }}>{body}</span>
+                  <span style={{ display: 'block', fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                    {new Date(n.createdAt).toLocaleString(language)} · {n.type}
+                  </span>
                 </span>
-              </span>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

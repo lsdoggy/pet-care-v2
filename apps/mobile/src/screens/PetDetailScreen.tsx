@@ -1,9 +1,10 @@
+import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { PetDto } from '../api/types';
-import { SPECIES_LABELS } from '../api/types';
+import { ENGLISH_SPECIES_LABELS, SPECIES_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
 import {
@@ -26,6 +27,7 @@ interface Props {
  * Вызовы API не меняются: GET /pets/{id}, DELETE /pets/{id}.
  */
 export function PetDetailScreen({ petId }: Props) {
+  const language = useLanguage();
   const navigation = useNavigation();
   const [pet, setPet] = useState<PetDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +49,10 @@ export function PetDetailScreen({ petId }: Props) {
   }, [load]);
 
   const confirmDelete = () => {
-    Alert.alert('Удалить питомца?', `Удалить «${pet?.name ?? ''}» безвозвратно?`, [
-      { text: 'Отмена', style: 'cancel' },
+    Alert.alert((language === 'ru' ? 'Удалить питомца?' : 'Delete pet?'), language === 'ru' ? `Удалить «${pet?.name ?? ''}» безвозвратно?` : `Permanently delete “${pet?.name ?? ''}”?`, [
+      { text: (language === 'ru' ? 'Отмена' : 'Cancel'), style: 'cancel' },
       {
-        text: 'Удалить',
+        text: (language === 'ru' ? 'Удалить' : 'Delete'),
         style: 'destructive',
         onPress: async () => {
           if (deleting) return;
@@ -62,7 +64,7 @@ export function PetDetailScreen({ petId }: Props) {
             // Home re-mounts and reloads when we pop back (keyed stack children).
             navigation.pop();
           } catch (e) {
-            Alert.alert('Не удалось удалить', e instanceof Error ? e.message : 'Неизвестная ошибка');
+            Alert.alert((language === 'ru' ? 'Не удалось удалить' : 'Could not delete pet'), e instanceof Error ? e.message : (language === 'ru' ? 'Неизвестная ошибка' : 'Unknown error'));
           } finally {
             setDeleting(false);
           }
@@ -76,7 +78,7 @@ export function PetDetailScreen({ petId }: Props) {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable style={styles.backBtn} onPress={navigation.pop}>
-          <Text style={styles.backText}>Назад</Text>
+          <Text style={styles.backText}>{language === 'ru' ? (language === 'ru' ? 'Назад' : 'Back') : 'Back'}</Text>
         </Pressable>
       </View>
     );
@@ -107,28 +109,28 @@ export function PetDetailScreen({ petId }: Props) {
       </View>
 
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Вид</Text>
-        <Text style={styles.fieldValue}>{SPECIES_LABELS[pet.species]}</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Вид' : 'Species') : 'Species'}</Text>
+        <Text style={styles.fieldValue}>{(language === 'ru' ? SPECIES_LABELS : ENGLISH_SPECIES_LABELS)[pet.species]}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Порода</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Порода' : 'Breed') : 'Breed'}</Text>
         <Text style={styles.fieldValue}>{formatPetBreed(pet.breed)}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Дата рождения</Text>
-        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.birthDate)}</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Дата рождения' : 'Birth date') : 'Birth date'}</Text>
+        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.birthDate, language)}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Возраст</Text>
-        <Text style={styles.fieldValue}>{formatPetAge(pet.birthDate)}</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Возраст' : 'Age') : 'Age'}</Text>
+        <Text style={styles.fieldValue}>{formatPetAge(pet.birthDate, undefined, language)}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Вес</Text>
-        <Text style={styles.fieldValue}>{formatPetWeight(pet.weightKg)}</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Вес' : 'Weight') : 'Weight'}</Text>
+        <Text style={styles.fieldValue}>{formatPetWeight(pet.weightKg, language)}</Text>
       </View>
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>Добавлен</Text>
-        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.createdAt.slice(0, 10))}</Text>
+        <Text style={styles.fieldLabel}>{language === 'ru' ? (language === 'ru' ? 'Добавлен' : 'Added') : 'Added'}</Text>
+        <Text style={styles.fieldValue}>{formatBirthDateRu(pet.createdAt.slice(0, 10), language)}</Text>
       </View>
 
       <Pressable
@@ -136,7 +138,7 @@ export function PetDetailScreen({ petId }: Props) {
         onPress={() => navigation.push({ name: 'PetHistory', petId: pet.id, petName: pet.name })}
         accessibilityRole="button"
       >
-        <Text style={styles.historyText}>🩺 История здоровья</Text>
+        <Text style={styles.historyText}>{language === 'ru' ? (language === 'ru' ? '🩺 История здоровья' : '🩺 Health history') : '🩺 Health history'}</Text>
       </Pressable>
 
       <Pressable
@@ -144,7 +146,7 @@ export function PetDetailScreen({ petId }: Props) {
         onPress={() => navigation.push({ name: 'PetForm', petId: pet.id })}
         accessibilityRole="button"
       >
-        <Text style={styles.editText}>Редактировать</Text>
+        <Text style={styles.editText}>{language === 'ru' ? (language === 'ru' ? 'Редактировать' : 'Edit') : 'Edit'}</Text>
       </Pressable>
 
       <Pressable
@@ -152,13 +154,13 @@ export function PetDetailScreen({ petId }: Props) {
         onPress={confirmDelete}
         disabled={deleting}
         accessibilityRole="button"
-        accessibilityLabel={`Удалить питомца ${pet.name}`}
+        accessibilityLabel={language === 'ru' ? `Удалить питомца ${pet.name}` : `Delete ${pet.name}`}
       >
-        <Text style={styles.deleteText}>{deleting ? 'Удаляем…' : 'Удалить'}</Text>
+        <Text style={styles.deleteText}>{deleting ? (language === 'ru' ? 'Удаляем…' : 'Deleting…') : (language === 'ru' ? 'Удалить' : 'Delete')}</Text>
       </Pressable>
 
       <Pressable style={styles.back} onPress={navigation.pop}>
-        <Text style={styles.backLink}>← К списку</Text>
+        <Text style={styles.backLink}>{language === 'ru' ? (language === 'ru' ? '← К списку' : '← Back to pets') : '← Back to pets'}</Text>
       </Pressable>
     </ScrollView>
   );

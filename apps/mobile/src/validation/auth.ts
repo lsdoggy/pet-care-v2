@@ -1,3 +1,5 @@
+import type { Language } from '../i18n/language';
+
 /**
  * Design Sprint 1 · Auth validation (shared logic, UI-agnostic).
  *
@@ -8,7 +10,7 @@
  *   firstName — @Size(max=80)
  *   phone     — ^\+?[0-9 \-()]{6,20}$ (optional)
  *
- * Тексты ошибок — на русском (требование дизайн-спринта).
+ * Сообщения локализуются при отображении, включая уже показанные ошибки.
  */
 
 export type AuthFieldName =
@@ -163,4 +165,33 @@ export function normalizeFieldName(raw: string): AuthFieldName | null {
     default:
       return null;
   }
+}
+
+const ENGLISH_AUTH_ERRORS: Readonly<Record<string, string>> = {
+  'Укажите электронную почту.': 'Enter your email address.',
+  'Адрес электронной почты слишком длинный.': 'The email address is too long.',
+  'Укажите корректный адрес, например name@example.com.': 'Enter a valid email address, such as name@example.com.',
+  'Введите пароль.': 'Enter your password.',
+  'Придумайте пароль.': 'Choose a password.',
+  'Повторите пароль.': 'Repeat your password.',
+  'Пароли не совпадают.': 'The passwords do not match.',
+  'Укажите имя.': 'Enter your first name.',
+  'Имя не должно превышать 80 символов.': 'Your first name must be 80 characters or fewer.',
+  'Укажите корректный номер, например +7 900 123-45-67.': 'Enter a valid phone number.',
+  'Неверная почта или пароль. Проверьте данные и попробуйте ещё раз.': 'Incorrect email address or password. Try again.',
+  'Проверьте правильность заполнения полей.': 'Check the information you entered.',
+  'Запрос не выполнен. Попробуйте ещё раз.': 'The request failed. Try again.',
+  'Укажите корректный адрес электронной почты.': 'Enter a valid email address.',
+  'Укажите корректный номер телефона.': 'Enter a valid phone number.',
+  'Доступ запрещён. Проверьте учётные данные.': 'Access denied. Check your credentials.',
+  'Эта почта уже зарегистрирована. Попробуйте войти.': 'This email is already registered. Try signing in.',
+  'Сервер недоступен. Проверьте подключение к сети и попробуйте ещё раз.': 'The server is unavailable. Check your connection and try again.',
+  'Не удалось связаться с сервером. Проверьте подключение к сети и EXPO_PUBLIC_API_URL.': 'Could not reach the server. Check your connection and try again.',
+  [`Пароль должен содержать не менее ${PASSWORD_MIN_LENGTH} символов.`]: `Your password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+  [`Пароль не должен превышать ${PASSWORD_MAX_LENGTH} символов.`]: `Your password must be ${PASSWORD_MAX_LENGTH} characters or fewer.`,
+  [`Пароль должен содержать от ${PASSWORD_MIN_LENGTH} до ${PASSWORD_MAX_LENGTH} символов.`]: `Your password must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters.`,
+};
+
+export function localizeAuthError(message: string, language: Language): string {
+  return language === 'en' && Object.prototype.hasOwnProperty.call(ENGLISH_AUTH_ERRORS, message) ? ENGLISH_AUTH_ERRORS[message] : message;
 }

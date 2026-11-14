@@ -2,6 +2,8 @@ import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import HomePage from '../src/pages/HomePage'
+import { LanguageProvider } from '../src/i18n/LanguageProvider'
+import { LanguageSwitcher } from '../src/i18n/LanguageSwitcher'
 
 vi.mock('../src/auth/tokenStore', () => ({ tokenStore: { get: () => 'token' } }))
 // Stable identity matters: auth normally provides one user snapshot.
@@ -85,4 +87,25 @@ it('successful custom purchase closes even if dashboard refresh fails; no second
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.getByRole('alert').textContent).toContain('Не удалось загрузить питомцев')
   expect(fetchMock.mock.calls.filter(([, opts]) => opts.method === 'POST')).toHaveLength(1)
+})
+
+it('translates a partial dashboard failure without fetching again', async () => {
+  const fetchMock = vi.fn(async (url: string) => ({
+    ok: !url.endsWith('/tasks/upcoming'),
+    status: url.endsWith('/tasks/upcoming') ? 503 : 200,
+    json: async () => url.endsWith('/tasks/upcoming') ? { message: 'Unavailable' } : [],
+  }))
+  vi.stubGlobal('fetch', fetchMock)
+  localStorage.removeItem('petcare.language')
+  try {
+    render(<LanguageProvider><MemoryRouter><LanguageSwitcher /><HomePage /></MemoryRouter></LanguageProvider>)
+    expect(await screen.findByText(/Не удалось загрузить: задачи/)).toBeTruthy()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Язык' }), { target: { value: 'en' } })
+    expect(screen.getByText(/Could not load: tasks/)).toBeTruthy()
+    expect(screen.getByText('Could not load all events. Reload to try again.')).toBeTruthy()
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+  } finally {
+    cleanup()
+    localStorage.removeItem('petcare.language')
+  }
 })

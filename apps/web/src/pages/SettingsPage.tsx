@@ -1,4 +1,4 @@
-import { useLanguage } from '../i18n/language'
+import { useLanguage, type Language } from '../i18n/language'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
@@ -13,8 +13,8 @@ export default function SettingsPage() {
   const { language } = useLanguage()
   const { user, loading, setUser, logout } = useAuth()
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState<string | null>(null)
+  const [error, setError] = useState<Record<Language, string> | null>(null)
+  const [saved, setSaved] = useState<Record<Language, string> | null>(null)
 
   const [confirmDeactivation, setConfirmDeactivation] = useState(false)
   const [pets, setPets] = useState<PetDto[] | null>(null)
@@ -42,10 +42,10 @@ export default function SettingsPage() {
         phone: String(data.get('phone') ?? '').trim(),
       }, tokenStore.get() ?? '')
       setUser(updated)
-    }, (language === 'ru' ? 'Данные профиля сохранены' : 'Profile saved'))
+    }, { ru: 'Данные профиля сохранены', en: 'Profile saved' })
   }
 
-  async function save(action: () => Promise<void>, message: string) {
+  async function save(action: () => Promise<void>, message: Record<Language, string>) {
     setSaving(true)
     setError(null)
     setSaved(null)
@@ -53,7 +53,7 @@ export default function SettingsPage() {
       await action()
       setSaved(message)
     } catch {
-      setError((language === 'ru' ? 'Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.' : 'Could not save changes. Check your connection and try again.'))
+      setError({ ru: 'Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.', en: 'Could not save changes. Check your connection and try again.' })
     } finally {
       setSaving(false)
     }
@@ -67,7 +67,7 @@ export default function SettingsPage() {
       await api.deactivateAccount(tokenStore.get() ?? '')
       logout()
     } catch {
-      setError((language === 'ru' ? 'Не удалось деактивировать аккаунт. Попробуйте позже.' : 'Could not deactivate the account. Try again later.'))
+      setError({ ru: 'Не удалось деактивировать аккаунт. Попробуйте позже.', en: 'Could not deactivate the account. Try again later.' })
     } finally {
       setSaving(false)
       setConfirmDeactivation(false)
@@ -89,7 +89,7 @@ export default function SettingsPage() {
         },
       )
       setUser(updated)
-    }, (language === 'ru' ? 'Настройки уведомлений сохранены' : 'Notification settings saved'))
+    }, { ru: 'Настройки уведомлений сохранены', en: 'Notification settings saved' })
   }
 
   if (loading) return <p role="status">{language === 'ru' ? 'Загрузка профиля…' : 'Loading profile…'}</p>
@@ -101,8 +101,8 @@ export default function SettingsPage() {
         <h1>{language === 'ru' ? 'Профиль' : 'Profile'}</h1>
         <p className="pc-settings__hint">{language === 'ru' ? 'Ваши данные и напоминания об уходе за питомцами' : 'Your information and pet care reminders'}</p>
       </header>
-      {error && <p className="pc-settings__error" role="alert">{error}</p>}
-      {saved && <p className="pc-settings__success" role="status">{saved}</p>}
+      {error && <p className="pc-settings__error" role="alert">{error[language]}</p>}
+      {saved && <p className="pc-settings__success" role="status">{saved[language]}</p>}
       <section className="pc-settings__card" aria-labelledby="profile-data-title">
         <h2 id="profile-data-title">{language === 'ru' ? 'Личные данные' : 'Personal information'}</h2>
         <form onSubmit={(e) => void saveProfile(e)} className="pc-settings__form">

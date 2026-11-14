@@ -1,3 +1,4 @@
+import { localizeAuthError } from '../validation/auth'
 import { useLanguage } from '../i18n/language'
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
 import { useState } from 'react'
@@ -156,7 +157,7 @@ export default function AuthPage({ mode }: Props) {
           {formError && (
             <div className="auth-banner" role="alert" id="auth-form-alert">
               <AlertIcon size={18} />
-              <span>{formError}</span>
+              <span>{localizeAuthError(formError, language)}</span>
             </div>
           )}
 
@@ -182,7 +183,7 @@ export default function AuthPage({ mode }: Props) {
               />
               {fieldErrors.firstName && (
                 <p className="auth-error" id="firstName-error">
-                  {fieldErrors.firstName}
+                  {localizeAuthError(fieldErrors.firstName, language)}
                 </p>
               )}
             </div>
@@ -209,7 +210,7 @@ export default function AuthPage({ mode }: Props) {
             />
             {fieldErrors.email && (
               <p className="auth-error" id="email-error">
-                {fieldErrors.email}
+                {localizeAuthError(fieldErrors.email, language)}
               </p>
             )}
           </div>
@@ -237,7 +238,7 @@ export default function AuthPage({ mode }: Props) {
               />
               {fieldErrors.phone ? (
                 <p className="auth-error" id="phone-error">
-                  {fieldErrors.phone}
+                  {localizeAuthError(fieldErrors.phone, language)}
                 </p>
               ) : (
                 <p className="auth-hint" id="phone-hint">
@@ -279,7 +280,7 @@ export default function AuthPage({ mode }: Props) {
             </div>
             {fieldErrors.password && (
               <p className="auth-error" id="password-error">
-                {fieldErrors.password}
+                {localizeAuthError(fieldErrors.password, language)}
               </p>
             )}
           </div>
@@ -317,7 +318,7 @@ export default function AuthPage({ mode }: Props) {
               </div>
               {fieldErrors.confirmPassword && (
                 <p className="auth-error" id="confirmPassword-error">
-                  {fieldErrors.confirmPassword}
+                  {localizeAuthError(fieldErrors.confirmPassword, language)}
                 </p>
               )}
             </div>

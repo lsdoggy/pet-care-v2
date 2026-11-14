@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
@@ -11,7 +12,14 @@ interface Props {
 }
 
 /** Creates a custom shopping-list item, never a product or stock mutation. */
+const englishErrors: Readonly<Record<string, string>> = {
+  'Название должно содержать от 1 до 150 символов': 'The name must be between 1 and 150 characters.',
+  'Количество должно быть целым числом от 1 до 999': 'Enter a whole number between 1 and 999.',
+  'Не удалось добавить покупку': 'Could not add the purchase.',
+}
+
 export default function QuickAddPurchaseModal({ token, onClose, onSaved }: Props) {
+  const { language } = useLanguage()
   const [name, setName] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [error, setError] = useState<string | null>(null)
@@ -48,14 +56,16 @@ export default function QuickAddPurchaseModal({ token, onClose, onSaved }: Props
 
   return (
     <Modal labelledBy="quick-purchase-title" onClose={handleClose}>
-      <h2 id="quick-purchase-title">Добавить покупку</h2>
-      <p>Покупка сразу появится в списке покупок. Единица: шт.</p>
+      <h2 id="quick-purchase-title">{language === 'ru' ? 'Добавить покупку' : 'Add a purchase'}</h2>
+      <p>{language === 'ru' ? 'Покупка сразу появится в списке покупок. Единица: шт.' : 'The item will appear in the shopping list. Quantity is in pieces.'}</p>
       <form onSubmit={handleSubmit}>
-        <label>Название *<input data-autofocus value={name} disabled={saving} onChange={(e) => setName(e.target.value)} /></label>
-        <label>Количество (шт.)<input inputMode="decimal" value={quantity} disabled={saving} onChange={(e) => setQuantity(e.target.value)} /></label>
-        {error && <p role="alert">{error}</p>}
-        <button type="button" disabled={saving} onClick={handleClose}>Отмена</button>
-        <button type="submit" disabled={saving}>{saving ? 'Сохранение…' : 'Добавить'}</button>
+        <label>{language === 'ru' ? 'Название *' : 'Name *'}<input data-autofocus value={name} disabled={saving} onChange={(e) => setName(e.target.value)} /></label>
+        <label>{language === 'ru' ? 'Количество (шт.)' : 'Quantity (pcs)'}<input inputMode="decimal" value={quantity} disabled={saving} onChange={(e) => setQuantity(e.target.value)} /></label>
+        {error && <p role="alert">{
+          language === 'ru' ? error : Object.prototype.hasOwnProperty.call(englishErrors, error) ? englishErrors[error] : error
+        }</p>}
+        <button type="button" disabled={saving} onClick={handleClose}>{language === 'ru' ? 'Отмена' : 'Cancel'}</button>
+        <button type="submit" disabled={saving}>{saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Добавить' : 'Add')}</button>
       </form>
     </Modal>
   )

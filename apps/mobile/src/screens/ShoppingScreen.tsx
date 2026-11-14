@@ -1,3 +1,4 @@
+import { STOCK_UNIT_LABELS } from '../api/types';
 import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -19,7 +20,7 @@ export function ShoppingScreen() {
   const navigation = useNavigation();
   const [items, setItems] = useState<ShoppingItemDto[] | null>(null);
   const [suggestions, setSuggestions] = useState<FoodProductDto[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<'ru' | 'en', string> | null>(null);
   const [quickName, setQuickName] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
 
@@ -31,8 +32,8 @@ export function ShoppingScreen() {
       const [list, sugg] = await Promise.all([api.listShoppingItems(token), api.listShoppingSuggestions(token)]);
       setItems(list);
       setSuggestions(sugg);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load shopping list');
+    } catch {
+      setError({ ru: 'Не удалось загрузить покупки.', en: 'Failed to load shopping list' });
     }
   }, []);
 
@@ -49,8 +50,8 @@ export function ShoppingScreen() {
       await api.createShoppingItem({ customName: name }, token);
       setQuickName('');
       await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add item');
+    } catch {
+      setError({ ru: 'Не удалось добавить покупку.', en: 'Failed to add item' });
     }
   }, [quickName, load]);
 
@@ -69,8 +70,8 @@ export function ShoppingScreen() {
           token,
         );
         await load();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to update item');
+      } catch {
+        setError({ ru: 'Не удалось обновить покупку.', en: 'Failed to update item' });
       } finally {
         setBusyId(null);
       }
@@ -85,8 +86,8 @@ export function ShoppingScreen() {
         if (!token) throw new ApiError(401, 'Not authenticated');
         await api.deleteShoppingItem(item.id, token);
         setItems((prev) => (prev ? prev.filter((x) => x.id !== item.id) : prev));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to remove item');
+      } catch {
+        setError({ ru: 'Не удалось удалить покупку.', en: 'Failed to remove item' });
       }
     },
     [],
@@ -99,8 +100,8 @@ export function ShoppingScreen() {
         if (!token) throw new ApiError(401, 'Not authenticated');
         await api.createShoppingItem({ productId: product.id }, token);
         await load();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to add suggestion');
+      } catch {
+        setError({ ru: 'Не удалось добавить предложенный товар.', en: 'Failed to add suggestion' });
       }
     },
     [load],
@@ -132,9 +133,9 @@ export function ShoppingScreen() {
               onPress={() => navigation.push({ name: 'Stock' })}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Open food stock"
+              accessibilityLabel={language === 'ru' ? 'Открыть запасы корма' : 'Open food stock'}
             >
-              <Text style={styles.stockLink}>Stock 📦</Text>
+              <Text style={styles.stockLink}>{language === 'ru' ? 'Запасы 📦' : 'Stock 📦'}</Text>
             </Pressable>
           }
         />
@@ -156,15 +157,15 @@ export function ShoppingScreen() {
           </Pressable>
         </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        {error && <Text style={styles.error}>{error[language]}</Text>}
 
         {suggestions.length > 0 && (
           <View style={styles.suggestionBox}>
-            <Text style={styles.suggestionTitle}>Running low — tap to add:</Text>
+            <Text style={styles.suggestionTitle}>{language === 'ru' ? 'Заканчивается — нажмите, чтобы добавить:' : 'Running low — tap to add:'}</Text>
             {suggestions.map((s) => (
               <Pressable key={s.id} style={styles.suggestionRow} onPress={() => void addSuggestion(s)}>
                 <Text style={styles.suggestionText}>
-                  + {s.name} ({s.stockQuantity} {s.unit.toLowerCase()} left)
+                  + {s.name} ({s.stockQuantity} {STOCK_UNIT_LABELS[language][s.unit]} {language === 'ru' ? 'осталось' : 'left'})
                 </Text>
               </Pressable>
             ))}
@@ -174,7 +175,7 @@ export function ShoppingScreen() {
         <FlatList
           data={open}
           keyExtractor={(item) => `open-${item.id}`}
-          ListEmptyComponent={<Text style={styles.empty}>Nothing to buy 🎉</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{language === 'ru' ? 'Покупок пока нет 🎉' : 'Nothing to buy 🎉'}</Text>}
           renderItem={({ item }) => {
             const busy = busyId === item.id;
             return (
@@ -183,7 +184,7 @@ export function ShoppingScreen() {
                   style={[styles.checkbox, busy && styles.checkboxBusy]}
                   onPress={() => void togglePurchased(item)}
                   disabled={busy}
-                  accessibilityLabel={`Mark ${item.customName} purchased`}
+                  accessibilityLabel={language === 'ru' ? `Отметить «${item.customName}» купленным` : `Mark ${item.customName} purchased`}
                   hitSlop={9}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: false, disabled: busy }}
@@ -193,17 +194,17 @@ export function ShoppingScreen() {
                 <View style={styles.rowTextWrap}>
                   <Text style={styles.itemName}>{item.customName}</Text>
                   <Text style={styles.itemMeta}>
-                    × {item.quantity} {item.unit.toLowerCase()}
-                    {item.productId != null ? ' · from catalog' : ''}
+                    × {item.quantity} {STOCK_UNIT_LABELS[language][item.unit]}
+                    {item.productId != null ? (language === 'ru' ? ' · из каталога' : ' · from catalog') : ''}
                   </Text>
                 </View>
-                <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={`Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
+                <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={language === 'ru' ? `Удалить «${item.customName}»` : `Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
                   <Text style={styles.removeText}>✕</Text>
                 </Pressable>
               </View>
             );
           }}
-          ListHeaderComponent={<Text style={styles.sectionTitle}>To buy ({open.length})</Text>}
+          ListHeaderComponent={<Text style={styles.sectionTitle}>{language === 'ru' ? 'Купить' : 'To buy'} ({open.length})</Text>}
           ListFooterComponent={
             purchased.length > 0 ? (
               <View>
@@ -215,9 +216,9 @@ export function ShoppingScreen() {
                     </View>
                     <View style={styles.rowTextWrap}>
                       <Text style={[styles.itemName, styles.itemNameDone]}>{item.customName}</Text>
-                      <Text style={styles.itemMeta}>× {item.quantity} {item.unit.toLowerCase()}</Text>
+                      <Text style={styles.itemMeta}>× {item.quantity} {STOCK_UNIT_LABELS[language][item.unit]}</Text>
                     </View>
-                    <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={`Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
+                    <Pressable onPress={() => void removeItem(item)} accessibilityRole="button" accessibilityLabel={language === 'ru' ? `Удалить «${item.customName}»` : `Remove ${item.customName}`} disabled={busyId === item.id} style={styles.removeBtn}>
                       <Text style={styles.removeText}>✕</Text>
                     </Pressable>
                   </View>

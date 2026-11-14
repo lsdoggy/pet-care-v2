@@ -1,3 +1,4 @@
+import { localizeAuthError } from '../validation/auth';
 import { useLanguage } from '../i18n/language';
 /**
  * Design Sprint 1 · Auth screen (mobile).
@@ -319,7 +320,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
 
           {formError !== null && (
             <View style={styles.errorBanner} accessibilityLiveRegion="polite">
-              <Text style={styles.errorBannerText}>{formError}</Text>
+              <Text style={styles.errorBannerText}>{localizeAuthError(formError, language)}</Text>
             </View>
           )}
 
@@ -385,7 +386,7 @@ function Field({ label, optional, error, children, trailing }: FieldProps) {
       </View>
       {error ? (
         <Text style={styles.fieldError} accessibilityLiveRegion="polite">
-          {error}
+          {localizeAuthError(error, language)}
         </Text>
       ) : null}
     </View>

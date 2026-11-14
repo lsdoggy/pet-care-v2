@@ -1,9 +1,10 @@
+import { STOCK_UNIT_LABELS } from '../api/types'
 import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { api, ApiError } from '../api/client'
+import { api } from '../api/client'
 import type { CreateFoodProductRequest, FoodProductDto } from '../api/types'
-import { FOOD_CATEGORY_LABELS } from '../api/types'
+import { FOOD_CATEGORY_LABELS, ENGLISH_FOOD_CATEGORY_LABELS } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
 import NavTabs from '../components/NavTabs'
@@ -80,8 +81,8 @@ export default function StockPage() {
         setProducts(list)
         setError(null)
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load products'))
-  }, [])
+      .catch(() => setError(language === 'ru' ? 'Не удалось загрузить товары' : 'Failed to load products'))
+  }, [language])
 
   useEffect(() => {
     if (user) load()
@@ -104,7 +105,7 @@ export default function StockPage() {
       setEditing(null)
       load()
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Failed to save product')
+      setError(language === 'ru' ? 'Не удалось сохранить товар' : 'Failed to save product')
     } finally {
       setSubmitting(false)
     }
@@ -118,9 +119,9 @@ export default function StockPage() {
       const updated = await api.updateFoodProduct(p.id, { stockQuantity: next }, token)
       setProducts((prev) => prev.map((x) => (x.id === p.id ? updated : x)))
       // Backend suggestion logic: dropping stock to/below the reorder threshold means it's time to buy.
-      if (updated.lowStock) flash(`"${updated.name}" is low on stock — add it to the shopping list.`)
+      if (updated.lowStock) flash(language === 'ru' ? `«${updated.name}» заканчивается. Добавьте товар в список покупок.` : `"${updated.name}" is low on stock — add it to the shopping list.`)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update stock')
+      setError(language === 'ru' ? 'Не удалось обновить остаток' : 'Failed to update stock')
     }
   }
 
@@ -128,9 +129,9 @@ export default function StockPage() {
     const token = tokenStore.get() ?? ''
     try {
       await api.createShoppingItem({ productId: p.id }, token)
-      flash(`"${p.name}" added to the shopping list.`)
+      flash(language === 'ru' ? `Товар «${p.name}» добавлен в список покупок.` : `"${p.name}" added to the shopping list.`)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to add to shopping list')
+      setError(language === 'ru' ? 'Не удалось добавить в список покупок' : 'Failed to add to shopping list')
     }
   }
 
@@ -141,7 +142,7 @@ export default function StockPage() {
       await api.deleteFoodProduct(p.id, token)
       setProducts((prev) => prev.filter((x) => x.id !== p.id))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to delete product')
+      setError(language === 'ru' ? 'Не удалось удалить товар' : 'Failed to delete product')
     }
   }
 
@@ -175,7 +176,7 @@ export default function StockPage() {
                 <div>
                   <strong style={{ fontSize: 16 }}>{p.name}</strong>
                   <span style={{ color: '#6b7280', marginLeft: 8, fontSize: 13 }}>
-                    {FOOD_CATEGORY_LABELS[p.category]}
+                    {(language === 'ru' ? FOOD_CATEGORY_LABELS : ENGLISH_FOOD_CATEGORY_LABELS)[p.category]}
                     {p.brand ? ` · ${p.brand}` : ''}
                   </span>
                   <span
@@ -196,7 +197,7 @@ export default function StockPage() {
                     −
                   </button>
                   <span style={{ minWidth: 70, textAlign: 'center', fontSize: 14 }}>
-                    {p.stockQuantity} {p.unit.toLowerCase()}
+                    {p.stockQuantity} {STOCK_UNIT_LABELS[language][p.unit]}
                   </span>
                   <button style={smallBtn} onClick={() => adjustStock(p, 1)} aria-label={language === 'ru' ? 'Увеличить запас' : 'Increase stock'}>
                     +
@@ -208,7 +209,7 @@ export default function StockPage() {
               <div
                 style={{ height: 8, background: '#edf2f7', borderRadius: 4, marginTop: 10, overflow: 'hidden' }}
                 role="progressbar"
-                aria-label={`Stock level for ${p.name}`}
+                aria-label={language === 'ru' ? `Уровень запаса «${p.name}»` : `Stock level for ${p.name}`}
                 aria-valuenow={pct}
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -225,7 +226,7 @@ export default function StockPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 12, color: '#6b7280' }}>
                 <span>
-                  Reorder at ≤ {p.reorderThreshold} {p.unit.toLowerCase()}
+                  {language === 'ru' ? 'Порог пополнения' : 'Reorder at'} ≤ {p.reorderThreshold} {STOCK_UNIT_LABELS[language][p.unit]}
                   {days ? ` · ${days}` : ''}
                 </span>
                 <span>{pct}%</span>

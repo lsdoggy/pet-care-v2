@@ -147,7 +147,8 @@ public class FoodProductService {
                 .ifPresent(owner -> {
                     String title = "Мало корма";
                     String body = "Остаток «%s» достиг порога закупки.".formatted(product.getName());
-                    Map<String, Object> payload = Map.of("foodProductId", product.getId(), "type", "low_stock");
+                    Map<String, Object> payload = Map.of(
+                            "foodProductId", product.getId(), "type", "low_stock", "productName", product.getName());
                     notificationService.push(owner, title, body, payload);
                     notificationService.email(owner, title, body, payload);
                 });

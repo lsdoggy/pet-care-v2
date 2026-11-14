@@ -58,7 +58,7 @@ public class ReminderScheduler {
                 .findByStatusAndReminderSentFalseAndDueAtBetweenOrderByDueAtAsc(CareTaskStatus.PENDING, now, to);
         for (CareTaskEntity task : dueTasks) {
             userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isHourReminderEnabled).ifPresent(owner -> {
-                sendReminder(task, owner, "Care reminder", "is due " + formatDue(task.getDueAt(), now));
+                sendReminder(task, owner, false, formatDue(task.getDueAt(), now));
                 task.setReminderSent(true);
             });
         }
@@ -67,7 +67,7 @@ public class ReminderScheduler {
                 .findByStatusAndDayReminderSentFalseAndDueAtGreaterThanAndDueAtLessThanEqual(
                         CareTaskStatus.PENDING, to, now.plusSeconds(86400))) {
             userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isDayReminderEnabled).ifPresent(owner -> {
-                sendReminder(task, owner, "Care reminder", "is due " + formatDue(task.getDueAt(), now));
+                sendReminder(task, owner, false, formatDue(task.getDueAt(), now));
                 task.markDayReminderSent();
             });
         }
@@ -75,18 +75,22 @@ public class ReminderScheduler {
         for (CareTaskEntity task : careTaskRepository
                 .findByStatusAndOverdueReminderSentFalseAndDueAtLessThanEqual(CareTaskStatus.PENDING, now)) {
             userRepository.findById(task.getOwnerId()).filter(owner -> !owner.isDeactivated()).filter(UserEntity::isOverdueReminderEnabled).ifPresent(owner -> {
-                sendReminder(task, owner, "Overdue care task", "is overdue");
+                sendReminder(task, owner, true, "просрочена");
                 task.markOverdueReminderSent();
             });
         }
     }
 
-    private void sendReminder(CareTaskEntity task, UserEntity owner, String title, String status) {
+    private void sendReminder(CareTaskEntity task, UserEntity owner, boolean overdue, String status) {
         String petName = petRepository.findById(task.getPetId())
-                .map(PetEntity::getName).orElse("your pet");
-        String body = "\"%s\" for %s %s".formatted(task.getTitle(), petName, status);
+                .map(PetEntity::getName).orElse("Питомец");
+        String title = overdue ? "Задача просрочена" : "Напоминание об уходе";
+        String body = "Задача «%s» (%s) %s".formatted(task.getTitle(), petName, status);
         Map<String, Object> payload = Map.of(
                 "careTaskId", task.getId(),
+                "taskTitle", task.getTitle(),
+                "petName", petName,
+                "overdue", overdue,
                 "petId", task.getPetId(),
                 "type", task.getType().name().toLowerCase(),
                 "dueAt", task.getDueAt().toString());
@@ -110,12 +114,12 @@ public class ReminderScheduler {
     private static String formatDue(Instant dueAt, Instant now) {
         long minutes = java.time.Duration.between(now, dueAt).toMinutes();
         if (minutes <= 0) {
-            return "now";
+            return "запланирована на сейчас";
         }
         if (minutes < 60) {
-            return "in " + minutes + " min";
+            return "запланирована через " + minutes + " мин.";
         }
         long hours = minutes / 60;
-        return "in " + hours + " h";
+        return "запланирована через " + hours + " ч.";
     }
 }

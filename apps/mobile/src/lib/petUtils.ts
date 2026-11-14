@@ -1,3 +1,4 @@
+import type { Language } from '../i18n/language';
 /**
  * Design Sprint 3 · Pets utilities (validation + formatting, UI-agnostic).
  *
@@ -167,7 +168,7 @@ function pluralMonths(n: number): string {
 }
 
 /** Возраст по дате рождения: «3 года», «8 месяцев», «меньше месяца», «—». */
-export function formatPetAge(birthDate: string | null | undefined, now: Date = new Date()): string {
+export function formatPetAge(birthDate: string | null | undefined, now: Date = new Date(), language: Language = 'ru'): string {
   if (!birthDate) return EMPTY_VALUE_PLACEHOLDER;
   const birth = new Date(`${birthDate}T00:00:00`);
   if (Number.isNaN(birth.getTime()) || birth > now) return EMPTY_VALUE_PLACEHOLDER;
@@ -178,6 +179,13 @@ export function formatPetAge(birthDate: string | null | undefined, now: Date = n
   if (months < 0) {
     years -= 1;
     months += 12;
+  }
+
+  if (language === 'en') {
+    const yearLabel = `${years} ${years === 1 ? 'year' : 'years'}`;
+    const monthLabel = `${months} ${months === 1 ? 'month' : 'months'}`;
+    if (years > 0) return years === 1 && months > 0 ? `${yearLabel} ${monthLabel}` : yearLabel;
+    return months > 0 ? monthLabel : 'under one month';
   }
 
   if (years > 0) {
@@ -191,12 +199,12 @@ export function formatPetAge(birthDate: string | null | undefined, now: Date = n
 }
 
 /** Вес: «4,5 кг»; null/undefined → «—». */
-export function formatPetWeight(weightKg: number | null | undefined): string {
+export function formatPetWeight(weightKg: number | null | undefined, language: Language = 'ru'): string {
   if (weightKg === null || weightKg === undefined || !Number.isFinite(weightKg)) {
     return EMPTY_VALUE_PLACEHOLDER;
   }
   const rounded = Math.round(weightKg * 100) / 100;
-  return `${String(rounded).replace('.', ',')} кг`;
+  return language === 'ru' ? `${String(rounded).replace('.', ',')} кг` : `${rounded} kg`;
 }
 
 /** Порода или «—». */
@@ -206,11 +214,11 @@ export function formatPetBreed(breed: string | null | undefined): string {
 }
 
 /** Дата рождения в формате «дд.мм.yyyy» или «—». */
-export function formatBirthDateRu(birthDate: string | null | undefined): string {
+export function formatBirthDateRu(birthDate: string | null | undefined, language: Language = 'ru'): string {
   if (!birthDate) return EMPTY_VALUE_PLACEHOLDER;
   const [y, m, d] = birthDate.split('-');
   if (!y || !m || !d) return EMPTY_VALUE_PLACEHOLDER;
-  return `${d}.${m}.${y}`;
+  return language === 'ru' ? `${d}.${m}.${y}` : `${m}/${d}/${y}`;
 }
 
 /** Инициалы для placeholder-аватара (до 2 букв). */

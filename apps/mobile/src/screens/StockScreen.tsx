@@ -1,10 +1,11 @@
+import { STOCK_UNIT_LABELS } from '../api/types';
 import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { FoodProductDto } from '../api/types';
-import { FOOD_CATEGORY_LABELS } from '../api/types';
+import { FOOD_CATEGORY_LABELS, ENGLISH_FOOD_CATEGORY_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { ScreenHeader } from '../components/ScreenHeader';
 
@@ -32,10 +33,10 @@ export function StockScreen() {
       const token = await tokenStore.get();
       if (!token) throw new ApiError(401, 'Not authenticated');
       setProducts(await api.listFoodProducts(token));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load stock');
+    } catch {
+      setError(language === 'ru' ? 'Не удалось загрузить запасы' : 'Failed to load stock');
     }
-  }, []);
+  }, [language]);
 
   useEffect(() => {
     void load();
@@ -57,14 +58,14 @@ export function StockScreen() {
         if (!token) throw new ApiError(401, 'Not authenticated');
         const updated = await api.updateFoodProduct(product.id, { stockQuantity: next }, token);
         setProducts((prev) => (prev ? prev.map((x) => (x.id === updated.id ? updated : x)) : prev));
-        if (updated.lowStock) flash(`"${updated.name}" is low — add it in the Buy tab.`);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to update stock');
+        if (updated.lowStock) flash(language === 'ru' ? `«${updated.name}» заканчивается. Добавьте товар в список покупок.` : `"${updated.name}" is low — add it in the Buy tab.`);
+      } catch {
+        setError(language === 'ru' ? 'Не удалось обновить остаток' : 'Failed to update stock');
       } finally {
         setBusyId(null);
       }
     },
-    [flash],
+    [flash, language],
   );
 
   const addToShoppingList = useCallback(
@@ -73,12 +74,12 @@ export function StockScreen() {
         const token = await tokenStore.get();
         if (!token) throw new ApiError(401, 'Not authenticated');
         await api.createShoppingItem({ productId: product.id }, token);
-        flash(`"${product.name}" added to the shopping list.`);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to add to shopping list');
+        flash(language === 'ru' ? `Товар «${product.name}» добавлен в список покупок.` : `"${product.name}" added to the shopping list.`);
+      } catch {
+        setError(language === 'ru' ? 'Не удалось добавить в список покупок' : 'Failed to add to shopping list');
       }
     },
-    [flash],
+    [flash, language],
   );
 
   if (products === null && !error) {
@@ -109,18 +110,18 @@ export function StockScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{item.name}</Text>
                   <Text style={styles.meta}>
-                    {FOOD_CATEGORY_LABELS[item.category]}
+                    {(language === 'ru' ? FOOD_CATEGORY_LABELS : ENGLISH_FOOD_CATEGORY_LABELS)[item.category]}
                     {item.brand ? ` · ${item.brand}` : ''}
                      · {item.stockQuantity === 0 ? (language === 'ru' ? 'Нет в наличии' : 'Out of stock') : item.lowStock ? (language === 'ru' ? 'Заканчивается' : 'Low stock') : (language === 'ru' ? 'В наличии' : 'In stock')}
                   </Text>
                 </View>
                 <Text style={[styles.qty, item.lowStock && styles.qtyLow]}>
-                  {item.stockQuantity} {item.unit.toLowerCase()}
+                  {item.stockQuantity} {STOCK_UNIT_LABELS[language][item.unit]}
                 </Text>
               </View>
 
               {/* Stock progress bar */}
-              <View style={styles.barTrack} accessibilityRole="progressbar" accessibilityLabel={`Stock level for ${item.name}`} accessibilityValue={{ min: 0, max: 100, now: pct }}>
+              <View style={styles.barTrack} accessibilityRole="progressbar" accessibilityLabel={language === 'ru' ? `Уровень запаса «${item.name}»` : `Stock level for ${item.name}`} accessibilityValue={{ min: 0, max: 100, now: pct }}>
                 <View
                   style={[
                     styles.barFill,
@@ -129,7 +130,7 @@ export function StockScreen() {
                 />
               </View>
               <Text style={styles.hint}>
-                Reorder at ≤ {item.reorderThreshold} {item.unit.toLowerCase()} · {pct}%
+                {language === 'ru' ? 'Порог пополнения' : 'Reorder at'} ≤ {item.reorderThreshold} {STOCK_UNIT_LABELS[language][item.unit]} · {pct}%
               </Text>
 
               <View style={styles.actionsRow}>
