@@ -8,8 +8,8 @@ export function LanguageSwitcher() {
       value={language}
       onChange={(event) => setLanguage(event.target.value === 'en' ? 'en' : 'ru')}
     >
-      <option lang="ru" value="ru">Русский</option>
-      <option lang="en" value="en">English</option>
+      <option lang="ru" value="ru">ru</option>
+      <option lang="en" value="en">en</option>
     </select>
   )
 }

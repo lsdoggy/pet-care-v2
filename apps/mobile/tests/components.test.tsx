@@ -2,6 +2,8 @@ import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { create, act, type ReactTestRenderer } from 'react-test-renderer';
 import { QuickPurchaseModal, DashboardScreen } from '../src/screens/DashboardScreen';
 import { AppState, changeAppState, listeners } from './nativeMock';
+import { AddToGoogleCalendar } from '../src/components/AddToGoogleCalendar';
+import { LanguageContext } from '../src/i18n/language';
 import { api } from '../src/api/client';
 vi.mock('../src/api/client', () => ({ api: { createShoppingItem: vi.fn(), createFoodProduct: vi.fn(), listPets: vi.fn(), listTasks: vi.fn(), listAppointments: vi.fn(), listFoodProducts: vi.fn() }, ApiError: Error, resolveFileUrl: () => null }));
 vi.mock('../src/auth/tokenStore', () => ({ tokenStore: { get: vi.fn(async () => 'token') } }));
@@ -21,6 +23,21 @@ async function mountModal(onClose = vi.fn(), onCreated = vi.fn()) {
 }
 beforeEach(() => { vi.clearAllMocks(); AppState.currentState = 'active'; });
 afterEach(async () => { if (tree) await act(async () => tree.unmount()); vi.useRealTimers(); });
+it.each([
+  ['ru', 'Добавить в Google Calendar'],
+  ['en', 'Add to Google Calendar'],
+] as const)('localizes the calendar action in %s', async (language, label) => {
+  await act(async () => {
+    tree = create(
+      <LanguageContext.Provider value={language}>
+        <AddToGoogleCalendar title="Visit" startsAt="2026-11-14T09:00:00Z" />
+      </LanguageContext.Provider>,
+    );
+  });
+  expect(input(`${label}: Visit`)).toBeDefined();
+  expect(renderedText()).toContain(label);
+});
+
 describe('quick custom purchase API interaction', () => {
   it('trim/default PCS, closes/resets, never creates a product; refresh independent', async () => {
     const callbacks = await mountModal();

@@ -1,3 +1,5 @@
+import { notificationText } from '../i18n/notificationText';
+import { useLanguage, type Language } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
@@ -19,6 +21,7 @@ interface SettingsScreenProps {
  *  - notification feed with unread badge, tap-to-mark-read.
  */
 export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenProps) {
+  const language = useLanguage();
   const [confirmDeactivation, setConfirmDeactivation] = useState(false);
   const [pets, setPets] = useState<PetDto[] | null>(null);
   const [petsError, setPetsError] = useState(false);
@@ -43,10 +46,10 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
   const [devices, setDevices] = useState<DeviceDto[]>([]);
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [savingKey, setSavingKey] = useState<'push' | 'email' | 'hour' | 'day' | 'overdue' | 'lowStock' | 'profile' | 'deactivate' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Record<Language, string> | null>(null);
   const [firstName, setFirstName] = useState(user.firstName ?? '');
   const [phone, setPhone] = useState(user.phone ?? '');
-  const [saved, setSaved] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Record<Language, string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -54,7 +57,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
     if (savingKey) return;
     setSaved(null);
     if (phone.trim() && !/^\+?[0-9 ()-]{6,20}$/.test(phone.trim())) {
-      setError('Проверьте телефон: допустимы цифры, пробелы, скобки, дефисы и + в начале.');
+      setError({ ru: 'Проверьте телефон: допустимы цифры, пробелы, скобки, дефисы и + в начале.', en: 'Use digits, spaces, parentheses, or hyphens, with an optional leading +.' });
       return;
     }
     setSavingKey('profile');
@@ -66,9 +69,9 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       onUserChange(updated);
       setFirstName(updated.firstName ?? '');
       setPhone(updated.phone ?? '');
-      setSaved('Данные профиля сохранены');
+      setSaved({ ru: 'Данные профиля сохранены', en: 'Profile saved' });
     } catch {
-      setError('Не удалось сохранить профиль. Проверьте соединение и попробуйте ещё раз.');
+      setError({ ru: 'Не удалось сохранить профиль. Проверьте соединение и попробуйте ещё раз.', en: 'Could not save your profile. Check your connection and try again.' });
     } finally {
       setSavingKey(null);
     }
@@ -111,9 +114,9 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
           lowStockNotificationEnabled: key === 'lowStock' ? value : undefined,
         });
         onUserChange(updated);
-        setSaved('Настройки уведомлений сохранены');
+        setSaved({ ru: 'Настройки уведомлений сохранены', en: 'Notification settings saved' });
       } catch {
-        setError('Не удалось сохранить настройки. Попробуйте ещё раз.');
+        setError({ ru: 'Не удалось сохранить настройки. Попробуйте ещё раз.', en: 'Could not save settings. Try again.' });
       } finally {
         setSavingKey(null);
       }
@@ -132,7 +135,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       await api.deactivateAccount(token);
       onLogout();
     } catch {
-      setError('Не удалось деактивировать аккаунт. Попробуйте позже.');
+      setError({ ru: 'Не удалось деактивировать аккаунт. Попробуйте позже.', en: 'Could not deactivate the account. Try again later.' });
     } finally {
       setSavingKey(null);
       setConfirmDeactivation(false);
@@ -147,7 +150,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       const updated = await api.markNotificationRead(n.id, token);
       setNotifications((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
     } catch (e) {
-      setError('Не удалось отметить уведомление прочитанным. Попробуйте ещё раз.');
+      setError({ ru: 'Не удалось отметить уведомление прочитанным. Попробуйте ещё раз.', en: 'Could not mark the notification as read. Try again.' });
     }
   }, []);
 
@@ -156,54 +159,54 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Профиль</Text>
+      <Text style={styles.title}>{language === 'ru' ? 'Профиль' : 'Profile'}</Text>
       <Text style={styles.email}>{user.email}</Text>
 
-      {error && <Text style={styles.error} accessibilityRole="alert">{error}</Text>}
-      {saved && <Text style={styles.badgeOn} accessibilityLiveRegion="polite">{saved}</Text>}
+      {error && <Text style={styles.error} accessibilityRole="alert">{error[language]}</Text>}
+      {saved && <Text style={styles.badgeOn} accessibilityLiveRegion="polite">{saved[language]}</Text>}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Личные данные</Text>
-        <Text style={styles.rowTitle}>Имя</Text>
-        <TextInput accessibilityLabel="Имя" style={styles.input} value={firstName} onChangeText={setFirstName} maxLength={80} autoComplete="given-name" editable={!savingKey} placeholder="Как к вам обращаться" />
-        <Text style={styles.rowTitle}>Телефон (необязательно)</Text>
-        <TextInput accessibilityLabel="Телефон" style={styles.input} value={phone} onChangeText={setPhone} maxLength={20} autoComplete="tel" keyboardType="phone-pad" editable={!savingKey} placeholder="+7 999 123-45-67" />
+        <Text style={styles.sectionTitle}>{language === 'ru' ? 'Личные данные' : 'Personal information'}</Text>
+        <Text style={styles.rowTitle}>{language === 'ru' ? 'Имя' : 'First name'}</Text>
+        <TextInput accessibilityLabel={language === 'ru' ? 'Имя' : 'First name'} style={styles.input} value={firstName} onChangeText={setFirstName} maxLength={80} autoComplete="given-name" editable={!savingKey} placeholder={language === 'ru' ? 'Как к вам обращаться' : 'What should we call you?'} />
+        <Text style={styles.rowTitle}>{language === 'ru' ? 'Телефон (необязательно)' : 'Phone (optional)'}</Text>
+        <TextInput accessibilityLabel={language === 'ru' ? 'Телефон' : 'Phone'} style={styles.input} value={phone} onChangeText={setPhone} maxLength={20} autoComplete="tel" keyboardType="phone-pad" editable={!savingKey} placeholder="+7 999 123-45-67" />
         <Pressable accessibilityRole="button" disabled={savingKey !== null} onPress={() => void saveProfile()} style={styles.action}>
-          <Text style={styles.actionText}>{savingKey === 'profile' ? 'Сохранение…' : 'Сохранить изменения'}</Text>
+          <Text style={styles.actionText}>{savingKey === 'profile' ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить изменения' : 'Save changes')}</Text>
         </Pressable>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Питомцы</Text>
+        <Text style={styles.sectionTitle}>{language === 'ru' ? 'Питомцы' : 'Pets'}</Text>
         {petsError ? (
           <>
-            <Text>Не удалось загрузить питомцев.</Text>
+            <Text>{language === 'ru' ? 'Не удалось загрузить питомцев.' : 'Could not load pets.'}</Text>
             <Pressable accessibilityRole="button" style={styles.action} onPress={() => {
               setPetsError(false);
               setPetsAttempt((attempt) => attempt + 1);
             }}>
-              <Text style={styles.actionText}>Повторить</Text>
+              <Text style={styles.actionText}>{language === 'ru' ? 'Повторить' : 'Retry'}</Text>
             </Pressable>
           </>
-        ) : pets === null ? <ActivityIndicator accessibilityLabel="Загрузка питомцев" />
-          : pets.length === 0 ? <Text>У вас пока нет питомцев.</Text>
+        ) : pets === null ? <ActivityIndicator accessibilityLabel={language === 'ru' ? 'Загрузка питомцев' : 'Loading pets'} />
+          : pets.length === 0 ? <Text>{language === 'ru' ? 'У вас пока нет питомцев.' : 'You don’t have any pets yet.'}</Text>
           : pets.map((pet) => <Text key={pet.id}>{pet.name}</Text>)}
       </View>
 
       {/* ---- Notification switches ---- */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Уведомления</Text>
+        <Text style={styles.sectionTitle}>{language === 'ru' ? 'Уведомления' : 'Notifications'}</Text>
 
         <View style={styles.row}>
           <View style={styles.rowLabel}>
-            <Text style={styles.rowTitle}>Push-уведомления</Text>
-            <Text style={styles.rowHint}>Напоминания на подключённых мобильных устройствах</Text>
+            <Text style={styles.rowTitle}>{language === 'ru' ? 'Push-уведомления' : 'Push notifications'}</Text>
+            <Text style={styles.rowHint}>{language === 'ru' ? 'Напоминания на подключённых мобильных устройствах' : 'Reminders on linked mobile devices'}</Text>
           </View>
           {savingKey === 'push' ? (
             <ActivityIndicator color="#4f46e5" />
           ) : (
             <Switch
-              accessibilityLabel="Push-уведомления"
+              accessibilityLabel={language === 'ru' ? 'Push-уведомления' : 'Push notifications'}
               disabled={savingKey !== null}
               value={user.pushNotificationsEnabled}
               onValueChange={(v) => void toggle('push', v)}
@@ -217,14 +220,14 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
 
         <View style={styles.row}>
           <View style={styles.rowLabel}>
-            <Text style={styles.rowTitle}>Письма на почту</Text>
-            <Text style={styles.rowHint}>Лекарства, вакцинация и низкий остаток корма</Text>
+            <Text style={styles.rowTitle}>{language === 'ru' ? 'Письма на почту' : 'Email notifications'}</Text>
+            <Text style={styles.rowHint}>{language === 'ru' ? 'Лекарства, вакцинация и низкий остаток корма' : 'Medications, vaccinations, and low food stock'}</Text>
           </View>
           {savingKey === 'email' ? (
             <ActivityIndicator color="#4f46e5" />
           ) : (
             <Switch
-              accessibilityLabel="Письма на почту"
+              accessibilityLabel={language === 'ru' ? 'Письма на почту' : 'Email notifications'}
               disabled={savingKey !== null}
               value={user.emailNotificationsEnabled}
               onValueChange={(v) => void toggle('email', v)}
@@ -235,18 +238,18 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         </View>
       </View>
 
-      {loading && <ActivityIndicator color={colors.primary} accessibilityLabel="Загрузка устройств и уведомлений" />}
+      {loading && <ActivityIndicator color={colors.primary} accessibilityLabel={language === 'ru' ? 'Загрузка устройств и уведомлений' : 'Loading devices and notifications'} />}
       {loadError && <View style={styles.card}>
-        <Text style={styles.error} accessibilityRole="alert">Не удалось загрузить устройства и уведомления.</Text>
-        <Pressable accessibilityRole="button" onPress={() => void load()} style={styles.action}><Text style={styles.actionText}>Повторить загрузку</Text></Pressable>
+        <Text style={styles.error} accessibilityRole="alert">{language === 'ru' ? 'Не удалось загрузить устройства и уведомления.' : 'Could not load devices and notifications.'}</Text>
+        <Pressable accessibilityRole="button" onPress={() => void load()} style={styles.action}><Text style={styles.actionText}>{language === 'ru' ? 'Повторить загрузку' : 'Reload'}</Text></Pressable>
         <View style={styles.divider} />
         <View style={styles.row}>
           <View style={styles.rowLabel}>
-            <Text style={styles.rowTitle}>Напоминания за час</Text>
-            <Text style={styles.rowHint}>Уведомления о предстоящих задачах ухода</Text>
+            <Text style={styles.rowTitle}>{language === 'ru' ? 'Напоминания за час' : 'One-hour reminders'}</Text>
+            <Text style={styles.rowHint}>{language === 'ru' ? 'Уведомления о предстоящих задачах ухода' : 'Notifications for upcoming care tasks'}</Text>
           </View>
           <Switch
-            accessibilityLabel="Напоминания за час"
+            accessibilityLabel={language === 'ru' ? 'Напоминания за час' : 'One-hour reminders'}
             disabled={savingKey !== null}
             value={user.hourReminderEnabled ?? true}
             onValueChange={(value) => void toggle('hour', value)}
@@ -254,9 +257,9 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         </View>
         <View style={styles.divider} />
         <View style={styles.row}>
-          <Text style={styles.rowTitle}>Напоминания за день</Text>
+          <Text style={styles.rowTitle}>{language === 'ru' ? 'Напоминания за день' : 'One-day reminders'}</Text>
           <Switch
-            accessibilityLabel="Напоминания за день"
+            accessibilityLabel={language === 'ru' ? 'Напоминания за день' : 'One-day reminders'}
             disabled={savingKey !== null}
             value={user.dayReminderEnabled ?? false}
             onValueChange={(value) => void toggle('day', value)}
@@ -264,9 +267,9 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         </View>
         <View style={styles.divider} />
         <View style={styles.row}>
-          <Text style={styles.rowTitle}>Просроченные задачи</Text>
+          <Text style={styles.rowTitle}>{language === 'ru' ? 'Просроченные задачи' : 'Overdue tasks'}</Text>
           <Switch
-            accessibilityLabel="Просроченные задачи"
+            accessibilityLabel={language === 'ru' ? 'Просроченные задачи' : 'Overdue tasks'}
             disabled={savingKey !== null}
             value={user.overdueReminderEnabled ?? false}
             onValueChange={(value) => void toggle('overdue', value)}
@@ -274,9 +277,9 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
         </View>
         <View style={styles.divider} />
         <View style={styles.row}>
-          <Text style={styles.rowTitle}>Низкий остаток корма</Text>
+          <Text style={styles.rowTitle}>{language === 'ru' ? 'Низкий остаток корма' : 'Low food stock'}</Text>
           <Switch
-            accessibilityLabel="Низкий остаток корма"
+            accessibilityLabel={language === 'ru' ? 'Низкий остаток корма' : 'Low food stock'}
             disabled={savingKey !== null}
             value={user.lowStockNotificationEnabled ?? false}
             onValueChange={(value) => void toggle('lowStock', value)}
@@ -285,10 +288,10 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       </View>}
       {!loading && !loadError && <>
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Подключённые устройства</Text>
+        <Text style={styles.sectionTitle}>{language === 'ru' ? 'Подключённые устройства' : 'Linked devices'}</Text>
         {devices.length === 0 ? (
           <Text style={styles.empty}>
-            Устройств пока нет. Откройте приложение на телефоне и разрешите уведомления, чтобы получать напоминания.
+            {language === 'ru' ? 'Устройств пока нет. Откройте приложение на телефоне и разрешите уведомления, чтобы получать напоминания.' : 'No linked devices yet. Open the app on your phone and allow notifications to receive reminders.'}
           </Text>
         ) : (
           devices.map((d) => (
@@ -301,7 +304,7 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
                 <Text style={styles.rowHint}>{d.tokenPreview}</Text>
               </View>
               <Text style={d.pushEnabled ? styles.badgeOn : styles.badgeOff}>
-                {d.pushEnabled ? 'Включены' : 'Выключены'}
+                {d.pushEnabled ? (language === 'ru' ? 'Включены' : 'Enabled') : (language === 'ru' ? 'Выключены' : 'Disabled')}
               </Text>
             </View>
           ))
@@ -311,43 +314,46 @@ export function SettingsScreen({ user, onUserChange, onLogout }: SettingsScreenP
       {/* ---- Notification feed ---- */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>
-          История уведомлений{unread > 0 ? ` · новых: ${unread}` : ''}
+          {language === 'ru' ? 'История уведомлений' : 'Notification history'}{unread > 0 ? ` · ${language === 'ru' ? 'новых' : 'unread'}: ${unread}` : ''}
         </Text>
         {notifications.length === 0 ? (
-          <Text style={styles.empty}>Здесь появятся напоминания об уходе.</Text>
+          <Text style={styles.empty}>{language === 'ru' ? 'Здесь появятся напоминания об уходе.' : 'Care reminders will appear here.'}</Text>
         ) : (
-          notifications.map((n) => (
-            <Pressable key={n.id} accessibilityRole="button" accessibilityLabel={`${n.title}. ${n.channelStatus === 'read' ? 'Прочитано' : 'Отметить прочитанным'}`} onPress={() => void markRead(n)} style={styles.notifRow}>
-              <Text style={styles.notifDot}>{n.channelStatus === 'read' ? '・' : '●'}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowTitle, n.channelStatus === 'read' && styles.readText]}>
-                  {n.title}
-                </Text>
-                <Text style={styles.rowHint}>{n.body}</Text>
-                <Text style={styles.rowHint}>
-                  {new Date(n.createdAt).toLocaleString('ru-RU')} · {n.type === 'email' ? 'Почта' : 'Push'} · {{ pending: 'Ожидает отправки', sent: 'Отправлено', failed: 'Ошибка доставки', read: 'Прочитано' }[n.channelStatus]}
-                </Text>
-              </View>
-            </Pressable>
-          ))
+          notifications.map((n) => {
+            const { title, body } = notificationText(n, language);
+            return (
+              <Pressable key={n.id} accessibilityRole="button" accessibilityLabel={`${title}. ${n.channelStatus === 'read' ? (language === 'ru' ? 'Прочитано' : 'Read') : (language === 'ru' ? 'Отметить прочитанным' : 'Mark as read')}`} onPress={() => void markRead(n)} style={styles.notifRow}>
+                <Text style={styles.notifDot}>{n.channelStatus === 'read' ? '・' : '●'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowTitle, n.channelStatus === 'read' && styles.readText]}>
+                    {title}
+                  </Text>
+                  <Text style={styles.rowHint}>{body}</Text>
+                  <Text style={styles.rowHint}>
+                    {new Date(n.createdAt).toLocaleString(language)} · {n.type === 'email' ? (language === 'ru' ? 'Почта' : 'Email') : 'Push'} · {(language === 'ru' ? { pending: 'Ожидает отправки', sent: 'Отправлено', failed: 'Ошибка доставки', read: 'Прочитано' } : { pending: 'Pending', sent: 'Sent', failed: 'Delivery failed', read: 'Read' })[n.channelStatus]}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })
         )}
       </View>
       </>}
-      <Pressable accessibilityRole="button" disabled={savingKey !== null} onPress={onLogout} style={styles.action}><Text style={styles.actionText}>Выйти из аккаунта</Text></Pressable>
+      <Pressable accessibilityRole="button" disabled={savingKey !== null} onPress={onLogout} style={styles.action}><Text style={styles.actionText}>{language === 'ru' ? 'Выйти из аккаунта' : 'Sign out'}</Text></Pressable>
       {confirmDeactivation ? (
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Деактивировать аккаунт?</Text>
-          <Text>Данные сохранятся. Ссылка для восстановления придёт на вашу почту.</Text>
+          <Text style={styles.sectionTitle}>{language === 'ru' ? 'Деактивировать аккаунт?' : 'Deactivate account?'}</Text>
+          <Text>{language === 'ru' ? 'Данные сохранятся. Ссылка для восстановления придёт на вашу почту.' : 'Your data will be kept. You will receive a recovery link by email.'}</Text>
           <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => void deactivateAccount()}>
-            <Text style={styles.actionText}>{savingKey === 'deactivate' ? 'Деактивация…' : 'Подтвердить деактивацию'}</Text>
+            <Text style={styles.actionText}>{savingKey === 'deactivate' ? (language === 'ru' ? 'Деактивация…' : 'Deactivating…') : (language === 'ru' ? 'Подтвердить деактивацию' : 'Confirm deactivation')}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => setConfirmDeactivation(false)}>
-            <Text style={styles.actionText}>Отмена</Text>
+            <Text style={styles.actionText}>{language === 'ru' ? 'Отмена' : 'Cancel'}</Text>
           </Pressable>
         </View>
       ) : (
         <Pressable accessibilityRole="button" disabled={savingKey !== null} style={styles.action} onPress={() => setConfirmDeactivation(true)}>
-          <Text style={styles.actionText}>Деактивировать аккаунт</Text>
+          <Text style={styles.actionText}>{language === 'ru' ? 'Деактивировать аккаунт' : 'Deactivate account'}</Text>
         </Pressable>
       )}
     </ScrollView>

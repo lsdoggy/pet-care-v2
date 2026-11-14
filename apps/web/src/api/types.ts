@@ -88,6 +88,17 @@ export const SPECIES_LABELS: Record<PetSpecies, string> = {
   OTHER: 'Другое',
 }
 
+export const ENGLISH_SPECIES_LABELS: Record<PetSpecies, string> = {
+  DOG: 'Dog',
+  CAT: 'Cat',
+  BIRD: 'Bird',
+  HAMSTER: 'Hamster',
+  RABBIT: 'Rabbit',
+  TURTLE: 'Turtle',
+  FISH: 'Fish',
+  OTHER: 'Other',
+}
+
 export interface PetDto {
   id: number
   ownerId: number
@@ -144,6 +155,16 @@ export const TASK_TYPE_LABELS: Record<CareTaskType, string> = {
   OTHER: 'Другое',
 }
 
+export const ENGLISH_TASK_TYPE_LABELS: Record<CareTaskType, string> = {
+  VACCINATION: 'Vaccination',
+  VET: 'Vet visit',
+  FOOD: 'Feeding',
+  GROOMING: 'Grooming',
+  MEDICATION: 'Medication',
+  WALK: 'Walk',
+  OTHER: 'Other',
+}
+
 export type CareTaskStatus = 'PENDING' | 'DONE'
 
 export interface CareTaskDto {
@@ -181,8 +202,8 @@ export const RECURRENCE_UNITS = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'] as cons
 export type RecurrenceUnit = (typeof RECURRENCE_UNITS)[number]
 
 /** Formats a UTC ISO instant in the user's local timezone. */
-export function formatDueAt(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+export function formatDueAt(iso: string, locale?: string): string {
+  return new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 /* ---------- Veterinary appointments & records (Sprint 4) ---------- */
@@ -195,6 +216,12 @@ export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   SCHEDULED: 'Запланирован',
   COMPLETED: 'Завершён',
   CANCELLED: 'Отменён',
+}
+
+export const ENGLISH_APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'Scheduled',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
 }
 
 export interface VetAppointmentDto {
@@ -294,7 +321,20 @@ export const FOOD_CATEGORY_LABELS: Record<FoodCategory, string> = {
   LITTER: 'Наполнитель',
 }
 
+export const ENGLISH_FOOD_CATEGORY_LABELS: Record<FoodCategory, string> = {
+  DRY: 'Dry food',
+  WET: 'Wet food',
+  TREAT: 'Treats',
+  SUPPLEMENT: 'Supplement',
+  LITTER: 'Litter',
+}
+
 export type StockUnit = 'PCS' | 'KG' | 'G'
+
+export const STOCK_UNIT_LABELS = {
+  ru: { PCS: 'шт.', KG: 'кг', G: 'г' },
+  en: { PCS: 'pcs', KG: 'kg', G: 'g' },
+}
 
 export const STOCK_UNITS: StockUnit[] = ['PCS', 'KG', 'G']
 

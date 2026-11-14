@@ -1,7 +1,9 @@
+import { STOCK_UNIT_LABELS } from '../api/types'
+import { useLanguage } from '../i18n/language'
 import { useId, useState } from 'react'
 import Modal from './Modal'
 import type { CreateFoodProductRequest, FoodCategory, FoodProductDto, StockUnit } from '../api/types'
-import { FOOD_CATEGORIES, FOOD_CATEGORY_LABELS, STOCK_UNITS } from '../api/types'
+import { FOOD_CATEGORIES, FOOD_CATEGORY_LABELS, ENGLISH_FOOD_CATEGORY_LABELS, STOCK_UNITS } from '../api/types'
 
 interface Props {
   /** When set, the modal is in EDIT mode and prefills with this product. */
@@ -34,6 +36,7 @@ function toIntOrNull(value: string): number | null {
  * Validation mirrors backend @Valid constraints; server errors are shown inline by the page.
  */
 export default function ProductFormModal({ initial, submitting, onSubmit, onClose }: Props) {
+  const { language } = useLanguage()
   const titleId = useId()
   const [name, setName] = useState(initial?.name ?? '')
   const [brand, setBrand] = useState(initial?.brand ?? '')
@@ -68,33 +71,33 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
 
   return (
     <Modal labelledBy={titleId} onClose={onClose}>
-      <h2 id={titleId} className="pc-modal__title">{initial ? 'Edit product' : 'New product'}</h2>
+      <h2 id={titleId} className="pc-modal__title">{initial ? (language === 'ru' ? 'Редактировать товар' : 'Edit product') : 'New product'}</h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <label style={labelStyle}>Name *</label>
+          <label style={labelStyle}>{language === 'ru' ? 'Название *' : 'Name *'}</label>
           <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} maxLength={150} />
         </div>
         <div>
-          <label style={labelStyle}>Brand</label>
+          <label style={labelStyle}>{language === 'ru' ? 'Бренд' : 'Brand'}</label>
           <input style={inputStyle} value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={150} />
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Category</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Категория' : 'Category'}</label>
             <select style={inputStyle} value={category} onChange={(e) => setCategory(e.target.value as FoodCategory)}>
               {FOOD_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
-                  {FOOD_CATEGORY_LABELS[c]}
+                  {(language === 'ru' ? FOOD_CATEGORY_LABELS : ENGLISH_FOOD_CATEGORY_LABELS)[c]}
                 </option>
               ))}
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Unit</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Единица измерения' : 'Unit'}</label>
             <select style={inputStyle} value={unit} onChange={(e) => setUnit(e.target.value as StockUnit)}>
               {STOCK_UNITS.map((u) => (
                 <option key={u} value={u}>
-                  {u}
+                  {STOCK_UNIT_LABELS[language][u]}
                 </option>
               ))}
             </select>
@@ -102,7 +105,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Stock quantity</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Количество в запасе' : 'Stock quantity'}</label>
             <input
               style={inputStyle}
               type="number"
@@ -113,7 +116,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Reorder threshold</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Порог закупки' : 'Reorder threshold'}</label>
             <input
               style={inputStyle}
               type="number"
@@ -126,7 +129,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Package size, g</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Размер упаковки, г' : 'Package size, g'}</label>
             <input
               style={inputStyle}
               type="number"
@@ -137,7 +140,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
             />
           </div>
           <div style={{ flex: 1 }}>
-            <label style={labelStyle}>Daily portion, g</label>
+            <label style={labelStyle}>{language === 'ru' ? 'Дневная порция, г' : 'Daily portion, g'}</label>
             <input
               style={inputStyle}
               type="number"
@@ -149,7 +152,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
           </div>
         </div>
         <div>
-          <label style={labelStyle}>Notes</label>
+          <label style={labelStyle}>{language === 'ru' ? 'Заметки' : 'Notes'}</label>
           <textarea
             style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }}
             value={notes}
@@ -157,13 +160,13 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
             maxLength={2000}
           />
         </div>
-        {localError ? <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>{localError}</p> : null}
+        {localError ? <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>{language === 'ru' ? 'Укажите название товара.' : localError}</p> : null}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button type="button" style={cancelBtn} onClick={onClose}>
-            Cancel
+            {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button type="submit" style={primaryBtn} disabled={submitting}>
-            {submitting ? 'Saving…' : 'Save'}
+            {submitting ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : 'Save'}
           </button>
         </div>
       </form>

@@ -1,9 +1,10 @@
+import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
 import { api, ApiError, resolveFileUrl } from '../api/client';
 import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/types';
-import { APPOINTMENT_STATUS_LABELS } from '../api/types';
+import { APPOINTMENT_STATUS_LABELS, ENGLISH_APPOINTMENT_STATUS_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
 import { DetailHeader } from '../components/ScreenHeader';
@@ -16,9 +17,10 @@ interface Props {
 
 /** Sprint 4: merged health chronology (appointments + records), newest event first. */
 export function PetHistoryScreen({ petId, petName }: Props) {
+  const language = useLanguage();
   const navigation = useNavigation();
   const [events, setEvents] = useState<HistoryEventDto[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ ru: string; en: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -27,8 +29,8 @@ export function PetHistoryScreen({ petId, petName }: Props) {
       if (!token) throw new ApiError(401, 'Not authenticated');
       setEvents(await api.getPetHistory(petId, token));
       setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load history');
+    } catch {
+      setError({ ru: 'Не удалось загрузить историю.', en: 'Failed to load history' });
     }
   }, [petId]);
 
@@ -46,12 +48,12 @@ export function PetHistoryScreen({ petId, petName }: Props) {
     const isAppt = event.kind === 'APPOINTMENT';
     const id = isAppt ? event.appointment!.id : event.record!.id;
     Alert.alert(
-      isAppt ? 'Delete appointment' : 'Delete record',
-      isAppt ? 'Remove this appointment permanently?' : 'Remove this record and its attachments?',
+      isAppt ? (language === 'ru' ? 'Удалить визит' : 'Delete appointment') : (language === 'ru' ? 'Удалить запись' : 'Delete record'),
+      isAppt ? (language === 'ru' ? 'Удалить этот визит безвозвратно?' : 'Remove this appointment permanently?') : (language === 'ru' ? 'Удалить эту запись и её вложения?' : 'Remove this record and its attachments?'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: (language === 'ru' ? 'Отмена' : 'Cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: (language === 'ru' ? 'Удалить' : 'Delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -60,8 +62,8 @@ export function PetHistoryScreen({ petId, petName }: Props) {
               if (isAppt) await api.deleteAppointment(id, token);
               else await api.deleteRecord(id, token);
               await load();
-            } catch (e) {
-              Alert.alert('Delete failed', e instanceof Error ? e.message : 'Unknown error');
+            } catch {
+              Alert.alert((language === 'ru' ? 'Не удалось удалить' : 'Delete failed'), language === 'ru' ? 'Попробуйте ещё раз.' : 'Try again.');
             }
           },
         },
@@ -72,9 +74,9 @@ export function PetHistoryScreen({ petId, petName }: Props) {
   if (error && events === null) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>{error[language]}</Text>
         <Pressable style={styles.backBtn} onPress={navigation.pop}>
-          <Text style={styles.backText}>Go back</Text>
+          <Text style={styles.backText}>{language === 'ru' ? 'Назад' : 'Go back'}</Text>
         </Pressable>
       </View>
     );
@@ -85,7 +87,7 @@ export function PetHistoryScreen({ petId, petName }: Props) {
       {/* Shared navigation-shell header (Design Sprint 0, Step 5). */}
       <DetailHeader route={{ name: 'PetHistory', petId, petName }} />
 
-      {error && <Text style={[styles.errorText, styles.banner]}>{error}</Text>}
+      {error && <Text style={[styles.errorText, styles.banner]}>{error[language]}</Text>}
 
       {!events ? (
         <View style={styles.center}>
@@ -100,7 +102,7 @@ export function PetHistoryScreen({ petId, petName }: Props) {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🩺</Text>
-              <Text style={styles.emptyText}>No visits or records yet.</Text>
+              <Text style={styles.emptyText}>{language === 'ru' ? 'Визитов и записей пока нет.' : 'No visits or records yet.'}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -121,16 +123,16 @@ export function PetHistoryScreen({ petId, petName }: Props) {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
           onPress={() => navigation.push({ name: 'AppointmentForm', petId })}
         >
-          <Text style={styles.primaryText}>＋ New appointment</Text>
+          <Text style={styles.primaryText}>{language === 'ru' ? '＋ Новый визит' : '＋ New appointment'}</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
           onPress={() => navigation.push({ name: 'RecordForm', petId })}
         >
-          <Text style={styles.secondaryText}>＋ New medical record</Text>
+          <Text style={styles.secondaryText}>{language === 'ru' ? '＋ Новая медицинская запись' : '＋ New medical record'}</Text>
         </Pressable>
         <Pressable style={styles.back} onPress={navigation.pop}>
-          <Text style={styles.backLink}>← Back to {petName}</Text>
+          <Text style={styles.backLink}>{language === 'ru' ? '← Назад к' : '← Back to'} {petName}</Text>
         </Pressable>
       </View>
     </View>
@@ -143,6 +145,7 @@ function TimelineItem({ event, linkedRecords, onAddRecord, onDelete }: {
   onAddRecord: (appointmentId: number) => void;
   onDelete: () => void;
 }) {
+  const language = useLanguage();
   return (
     <View style={styles.row}>
       <View style={[styles.dot, event.kind === 'APPOINTMENT' ? styles.dotAppt : styles.dotRec]} />
@@ -153,7 +156,7 @@ function TimelineItem({ event, linkedRecords, onAddRecord, onDelete }: {
             {linkedRecords.map((record) => <RecordCard key={record.id} r={record} />)}
             {linkedRecords.length === 0 && (
               <Pressable onPress={() => onAddRecord(event.appointment!.id)} hitSlop={8}>
-                <Text style={styles.backLink}>Добавить запись о визите</Text>
+                <Text style={styles.backLink}>{language === 'ru' ? 'Добавить запись о визите' : 'Add a visit record'}</Text>
               </Pressable>
             )}
           </>
@@ -161,7 +164,7 @@ function TimelineItem({ event, linkedRecords, onAddRecord, onDelete }: {
           <RecordCard r={event.record} />
         ) : null}
         <Pressable onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteLink}>Delete</Text>
+          <Text style={styles.deleteLink}>{language === 'ru' ? 'Удалить' : 'Delete'}</Text>
         </Pressable>
       </View>
     </View>
@@ -169,45 +172,47 @@ function TimelineItem({ event, linkedRecords, onAddRecord, onDelete }: {
 }
 
 function AppointmentCard({ a }: { a: VetAppointmentDto }) {
+  const language = useLanguage();
   const statusColor =
     a.status === 'COMPLETED' ? '#16a34a' : a.status === 'CANCELLED' ? '#dc2626' : '#4f46e5';
   return (
     <>
       <View style={styles.cardHead}>
-        <Text style={styles.kindTag}>📅 Appointment</Text>
+        <Text style={styles.kindTag}>{language === 'ru' ? '📅 Визит' : '📅 Appointment'}</Text>
         <Text style={[styles.statusTag, { color: statusColor }]}>
-          {APPOINTMENT_STATUS_LABELS[a.status]}
+          {(language === 'ru' ? APPOINTMENT_STATUS_LABELS : ENGLISH_APPOINTMENT_STATUS_LABELS)[a.status]}
         </Text>
       </View>
-      <Text style={styles.when}>{new Date(a.scheduledAt).toLocaleString()}</Text>
+      <Text style={styles.when}>{new Date(a.scheduledAt).toLocaleString(language)}</Text>
       <Text style={styles.line}>
         {a.clinicName}
-        {a.doctorName ? ` · ${a.doctorName}` : ''} · {a.durationMinutes} min
+        {a.doctorName ? ` · ${a.doctorName}` : ''} · {a.durationMinutes} {language === 'ru' ? 'мин' : 'min'}
       </Text>
       {a.address ? <Text style={styles.muted}>{a.address}</Text> : null}
-      {a.status === 'SCHEDULED' && <AddToGoogleCalendar title={`Ветеринар: ${a.clinicName} · ${a.petName}`} startsAt={a.scheduledAt} durationMinutes={a.durationMinutes} location={a.address} />}
+      {a.status === 'SCHEDULED' && <AddToGoogleCalendar title={`${language === 'ru' ? 'Ветеринар' : 'Vet'}: ${a.clinicName} · ${a.petName}`} startsAt={a.scheduledAt} durationMinutes={a.durationMinutes} location={a.address} />}
       {a.cost != null ? (
         <Text style={styles.muted}>
           {a.cost.toFixed(2)} {a.currency ?? ''}
         </Text>
       ) : null}
-      {a.reason ? <Text style={styles.line}>Причина визита: {a.reason}</Text> : null}
+      {a.reason ? <Text style={styles.line}>{language === 'ru' ? 'Причина визита:' : 'Reason for visit:'} {a.reason}</Text> : null}
       {a.notes ? <Text style={styles.notes}>{a.notes}</Text> : null}
     </>
   );
 }
 
 function RecordCard({ r }: { r: VetRecordDto }) {
+  const language = useLanguage();
   return (
     <>
       <View style={styles.cardHead}>
-        <Text style={styles.kindTag}>📋 Medical record</Text>
-        {r.appointmentId != null ? <Text style={styles.linkedTag}>linked visit #{r.appointmentId}</Text> : null}
+        <Text style={styles.kindTag}>{language === 'ru' ? '📋 Медицинская запись' : '📋 Medical record'}</Text>
+        {r.appointmentId != null ? <Text style={styles.linkedTag}>{language === 'ru' ? 'Связанный визит №' : 'linked visit #'}{r.appointmentId}</Text> : null}
       </View>
       <Text style={styles.when}>{r.visitDate}</Text>
-      {r.diagnosisText ? <Text style={styles.line}>Diagnosis: {r.diagnosisText}</Text> : null}
-      {r.recommendationsText ? <Text style={styles.muted}>Rec.: {r.recommendationsText}</Text> : null}
-      {r.prescriptionsText ? <Text style={styles.muted}>Rx: {r.prescriptionsText}</Text> : null}
+      {r.diagnosisText ? <Text style={styles.line}>{language === 'ru' ? 'Диагноз:' : 'Diagnosis:'} {r.diagnosisText}</Text> : null}
+      {r.recommendationsText ? <Text style={styles.muted}>{language === 'ru' ? 'Рекомендации:' : 'Rec.:'} {r.recommendationsText}</Text> : null}
+      {r.prescriptionsText ? <Text style={styles.muted}>{language === 'ru' ? 'Назначения:' : 'Rx:'} {r.prescriptionsText}</Text> : null}
       {r.attachments.length > 0 ? (
         <View style={styles.attachWrap}>
           {r.attachments.map((att) => {
@@ -219,7 +224,7 @@ function RecordCard({ r }: { r: VetRecordDto }) {
                 style={styles.attachChip}
               >
                 <Text style={styles.attachText}>
-                  📎 {att.name} ({Math.round(att.size / 1024)} KB)
+                  📎 {att.name} ({Math.round(att.size / 1024)} {language === 'ru' ? 'КБ' : 'KB'})
                 </Text>
               </Pressable>
             );

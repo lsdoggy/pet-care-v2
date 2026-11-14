@@ -1,3 +1,4 @@
+import type { Language } from '../i18n/language'
 /**
  * Design Sprint 2 — Dashboard view-model.
  * Pure presentation helpers: grouping/formatting of existing API DTOs.
@@ -71,11 +72,19 @@ const DAY_MONTH_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 
 const WEEKDAY_FMT = new Intl.DateTimeFormat('ru-RU', { weekday: 'short' })
 
 /** "сегодня, 14:30" / "просрочено · 3 дн. назад" / "5 нояб., 09:00". */
-export function formatDueLabel(iso: string, now: number = Date.now()): string {
+export function formatDueLabel(iso: string, now: number = Date.now(), language: Language = 'ru'): string {
   const d = new Date(iso)
   const dueDay = startOfDay(d)
   const today = startOfDay(new Date(now))
   const diffDays = Math.round((today - dueDay) / MS_IN_DAY) // >0 → overdue
+  if (language === 'en') {
+    if (diffDays > 1) return `overdue · ${new Intl.RelativeTimeFormat(language).format(-diffDays, 'day')}`
+    const time = d.toLocaleTimeString(language, { hour: 'numeric', minute: '2-digit' })
+    if (Math.abs(diffDays) <= 1) {
+      return `${new Intl.RelativeTimeFormat(language, { numeric: 'auto' }).format(-diffDays, 'day')}, ${time}`
+    }
+    return `${d.toLocaleDateString(language, { day: 'numeric', month: 'short' })}, ${time}`
+  }
   if (diffDays === 0) return `сегодня, ${TIME_FMT.format(d)}`
   if (diffDays === 1) return `вчера, ${TIME_FMT.format(d)}`
   if (diffDays > 1) return `просрочено · ${pluralRu(diffDays, ['день', 'дня', 'дней'])} назад`
@@ -84,8 +93,11 @@ export function formatDueLabel(iso: string, now: number = Date.now()): string {
 }
 
 /** Appointment card line: "пт, 7 нояб., 09:00". */
-export function formatVisitLabel(iso: string): string {
+export function formatVisitLabel(iso: string, language: Language = 'ru'): string {
   const d = new Date(iso)
+  if (language === 'en') return d.toLocaleString(language, {
+    weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+  })
   return `${WEEKDAY_FMT.format(d)}, ${DAY_MONTH_FMT.format(d)}, ${TIME_FMT.format(d)}`
 }
 
@@ -121,12 +133,12 @@ export function formatAgeRu(birthDate: string, now: Date = new Date()): string {
 }
 
 /** Time-of-day greeting part: "Доброе утро" / "Добрый день" / "Добрый вечер" / "Доброй ночи". */
-export function greetingWord(now: Date = new Date()): string {
+export function greetingWord(now: Date = new Date(), language: Language = 'ru'): string {
   const h = now.getHours()
-  if (h >= 5 && h < 12) return 'Доброе утро'
-  if (h >= 12 && h < 18) return 'Добрый день'
-  if (h >= 18 && h < 23) return 'Добрый вечер'
-  return 'Доброй ночи'
+  if (h >= 5 && h < 12) return language === 'ru' ? 'Доброе утро' : 'Good morning'
+  if (h >= 12 && h < 18) return language === 'ru' ? 'Добрый день' : 'Good afternoon'
+  if (h >= 18 && h < 23) return language === 'ru' ? 'Добрый вечер' : 'Good evening'
+  return language === 'ru' ? 'Доброй ночи' : 'Good evening'
 }
 
 /** Display name for a user: email local-part before "@", fallback to the whole email. */
@@ -142,7 +154,10 @@ const MONTH_GENITIVE_RU = [
 ]
 
 /** Today's line for the greeting block: "Четверг, 4 ноября". */
-export function todayLabel(now: Date = new Date()): string {
+export function todayLabel(now: Date = new Date(), language: Language = 'ru'): string {
+  if (language === 'en') return new Intl.DateTimeFormat('en', {
+    weekday: 'long', month: 'long', day: 'numeric',
+  }).format(now)
   const wd = new Intl.DateTimeFormat('ru-RU', { weekday: 'long' }).format(now)
   return `${wd[0].toUpperCase()}${wd.slice(1)}, ${now.getDate()} ${MONTH_GENITIVE_RU[now.getMonth()]}`
 }

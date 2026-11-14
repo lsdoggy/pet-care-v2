@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language'
 import { useState } from 'react'
 import Modal from './Modal'
 import { AlertIcon } from './icons'
@@ -28,12 +29,13 @@ export default function ConfirmDialog({
   titleId,
   title,
   description,
-  confirmLabel = 'Удалить',
-  cancelLabel = 'Отмена',
+  confirmLabel,
+  cancelLabel,
   busy = false,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) {
+  const { language } = useLanguage()
   const [pending, setPending] = useState(false)
   const locked = busy || pending
 
@@ -57,10 +59,10 @@ export default function ConfirmDialog({
       <p className="pc-confirm__text">{description}</p>
       <div className="pc-modal__actions">
         <button type="button" className="pc-btn pc-btn--ghost" onClick={onCancel} disabled={locked}>
-          {cancelLabel}
+          {cancelLabel ?? (language === 'ru' ? 'Отмена' : 'Cancel')}
         </button>
         <button type="button" className="pc-btn pc-btn--danger" onClick={() => void handleConfirm()} disabled={locked}>
-          {locked ? 'Выполняется…' : confirmLabel}
+          {locked ? (language === 'ru' ? 'Выполняется…' : 'Working…') : confirmLabel ?? (language === 'ru' ? 'Удалить' : 'Delete')}
         </button>
       </div>
     </Modal>

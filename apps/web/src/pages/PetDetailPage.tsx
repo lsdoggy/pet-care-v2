@@ -1,9 +1,10 @@
+import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { api } from '../api/client'
 import type { CareTaskDto, PetDto, VetAppointmentDto } from '../api/types'
-import { SPECIES_LABELS } from '../api/types'
+import { ENGLISH_SPECIES_LABELS, SPECIES_LABELS } from '../api/types'
 import { tokenStore } from '../auth/tokenStore'
 import { useAuth } from '../auth/useAuth'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -35,6 +36,7 @@ import '../styles/pets.css'
 type DetailTab = 'profile' | 'history'
 
 export default function PetDetailPage() {
+  const { language } = useLanguage()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { loading } = useAuth()
@@ -93,7 +95,7 @@ export default function PetDetailPage() {
           {error}
         </p>
         <button type="button" className="pc-btn pc-btn--ghost" onClick={() => navigate('/')}>
-          ← К списку питомцев
+          {language === 'ru' ? '← К списку питомцев' : '← Back to pets'}
         </button>
       </main>
     )
@@ -106,7 +108,7 @@ export default function PetDetailPage() {
   return (
     <main className="pc-petdetail">
       <button type="button" className="pc-linkbtn pc-petdetail__back" onClick={() => navigate('/')}>
-        ← К списку питомцев
+        {language === 'ru' ? '← К списку питомцев' : '← Back to pets'}
       </button>
 
       <div className="pc-petdetail__header">
@@ -116,22 +118,22 @@ export default function PetDetailPage() {
         <div className="pc-petdetail__ident">
           <h1 className="pc-petdetail__name">{pet.name}</h1>
           <dl className="pc-petdetail__facts">
-            <FactRow label="Вид" value={SPECIES_LABELS[pet.species]} />
-            <FactRow label="Порода" value={formatPetBreed(pet.breed)} />
-            <FactRow label="Возраст" value={pet.birthDate ? formatPetAge(pet.birthDate) : EMPTY_VALUE_PLACEHOLDER} />
-            <FactRow label="Дата рождения" value={formatBirthDateRu(pet.birthDate)} />
-            <FactRow label="Вес" value={formatPetWeight(pet.weightKg)} />
-            <FactRow label="Следующая задача" value={next ? next.fullLabel : 'Не запланирована'} />
+            <FactRow label={language === 'ru' ? 'Вид' : 'Species'} value={(language === 'ru' ? SPECIES_LABELS : ENGLISH_SPECIES_LABELS)[pet.species]} />
+            <FactRow label={language === 'ru' ? 'Порода' : 'Breed'} value={formatPetBreed(pet.breed)} />
+            <FactRow label={language === 'ru' ? 'Возраст' : 'Age'} value={pet.birthDate ? formatPetAge(pet.birthDate, undefined, language) : EMPTY_VALUE_PLACEHOLDER} />
+            <FactRow label={language === 'ru' ? 'Дата рождения' : 'Birth date'} value={formatBirthDateRu(pet.birthDate, language)} />
+            <FactRow label={language === 'ru' ? 'Вес' : 'Weight'} value={formatPetWeight(pet.weightKg, language)} />
+            <FactRow label={language === 'ru' ? 'Следующая задача' : 'Next task'} value={next ? next.fullLabel : language === 'ru' ? 'Не запланирована' : 'None scheduled'} />
           </dl>
 
           <div className="pc-petdetail__actions">
             <button type="button" className="pc-btn pc-btn--primary" onClick={() => setEditing(true)}>
               <PencilIcon size={16} />
-              Редактировать
+              {language === 'ru' ? 'Редактировать' : 'Edit'}
             </button>
             <button type="button" className="pc-btn pc-btn--danger-outline" onClick={() => setConfirmingDelete(true)}>
               <TrashIcon size={16} />
-              Удалить
+              {language === 'ru' ? 'Удалить' : 'Delete'}
             </button>
           </div>
         </div>
@@ -144,7 +146,7 @@ export default function PetDetailPage() {
       )}
 
       {/* Sprint 4: tabs — Профиль / История здоровья */}
-      <div className="pc-tabs" role="tablist" aria-label="Разделы профиля питомца">
+      <div className="pc-tabs" role="tablist" aria-label={language === 'ru' ? 'Разделы профиля питомца' : 'Pet profile sections'}>
         <button
           type="button"
           role="tab"
@@ -154,7 +156,7 @@ export default function PetDetailPage() {
           className={`pc-tabs__tab${tab === 'profile' ? ' pc-tabs__tab--active' : ''}`}
           onClick={() => setTab('profile')}
         >
-          Профиль
+          {language === 'ru' ? 'Профиль' : 'Profile'}
         </button>
         <button
           type="button"
@@ -165,7 +167,7 @@ export default function PetDetailPage() {
           className={`pc-tabs__tab${tab === 'history' ? ' pc-tabs__tab--active' : ''}`}
           onClick={() => setTab('history')}
         >
-          История здоровья
+          {language === 'ru' ? 'История здоровья' : 'Health history'}
         </button>
       </div>
 
@@ -188,8 +190,8 @@ export default function PetDetailPage() {
       {confirmingDelete && (
         <ConfirmDialog
           titleId="pet-delete-title"
-          title={`Удалить питомца ${pet.name}?`}
-          description="История здоровья, задачи и покупки этого питомца будут удалены безвозвратно. Действие нельзя отменить."
+          title={language === 'ru' ? `Удалить питомца ${pet.name}?` : `Delete ${pet.name}?`}
+          description={language === 'ru' ? 'История здоровья, задачи и покупки этого питомца будут удалены безвозвратно. Действие нельзя отменить.' : 'This permanently deletes the pet’s health history, tasks, and purchases. This can’t be undone.'}
           busy={deleting}
           onCancel={() => setConfirmingDelete(false)}
           onConfirm={handleDelete}

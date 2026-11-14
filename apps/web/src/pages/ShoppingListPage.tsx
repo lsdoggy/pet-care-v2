@@ -1,7 +1,8 @@
+import { STOCK_UNIT_LABELS } from '../api/types'
 import { useLanguage } from '../i18n/language'
 import { useCallback, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { api, ApiError } from '../api/client'
+import { api } from '../api/client'
 import type { FoodProductDto, ShoppingItemDto } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
@@ -37,8 +38,8 @@ const smallBtn: React.CSSProperties = {
 }
 
 /** Formats a purchased-at instant for the "bought" section header. */
-function formatPurchasedAt(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+function formatPurchasedAt(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
 }
 
 /**
@@ -52,7 +53,7 @@ export default function ShoppingListPage() {
   const [items, setItems] = useState<ShoppingItemDto[]>([])
   const [suggestions, setSuggestions] = useState<FoodProductDto[]>([])
   const [productNameById, setProductNameById] = useState<Map<number, string>>(new Map())
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Record<'ru' | 'en', string> | null>(null)
   const [quickName, setQuickName] = useState('')
   const [busyId, setBusyId] = useState<number | null>(null)
 
@@ -66,7 +67,7 @@ export default function ShoppingListPage() {
         setProductNameById(new Map(products.map((p) => [p.id, p.name])))
         setError(null)
       })
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load shopping list'))
+      .catch(() => setError({ ru: 'Не удалось загрузить покупки.', en: 'Failed to load shopping list' }))
   }, [])
 
   useEffect(() => {
@@ -86,7 +87,7 @@ export default function ShoppingListPage() {
       setQuickName('')
       load()
     } catch (err: unknown) {
-      setError(err instanceof ApiError ? err.message : 'Failed to add item')
+      setError({ ru: 'Не удалось добавить покупку.', en: 'Failed to add item' })
     }
   }
 
@@ -105,7 +106,7 @@ export default function ShoppingListPage() {
       )
       load()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to mark as purchased')
+      setError({ ru: 'Не удалось отметить покупку.', en: 'Failed to mark as purchased' })
     } finally {
       setBusyId(null)
     }
@@ -117,7 +118,7 @@ export default function ShoppingListPage() {
       await api.deleteShoppingItem(item.id, token)
       setItems((prev) => prev.filter((x) => x.id !== item.id))
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to remove item')
+      setError({ ru: 'Не удалось удалить покупку.', en: 'Failed to remove item' })
     }
   }
 
@@ -127,7 +128,7 @@ export default function ShoppingListPage() {
       await api.createShoppingItem({ productId: product.id }, token)
       load()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to add suggestion')
+      setError({ ru: 'Не удалось добавить предложенный товар.', en: 'Failed to add suggestion' })
     }
   }
 
@@ -139,7 +140,7 @@ export default function ShoppingListPage() {
       <NavTabs />
       <h1 style={{ fontSize: 26 }}>{language === 'ru' ? 'Список покупок' : 'Shopping list'}</h1>
 
-      {error && <p style={{ color: '#c0392b' }}>{error}</p>}
+      {error && <p style={{ color: '#c0392b' }}>{error[language]}</p>}
 
       {/* Low-stock suggestion banner (system offers, user confirms — MVP per sprint spec). */}
       {suggestions.length > 0 && (
@@ -148,7 +149,7 @@ export default function ShoppingListPage() {
           <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
             {suggestions.map((s) => (
               <li key={s.id} style={{ fontSize: 14, marginBottom: 4 }}>
-                {s.name} ({s.stockQuantity} {s.unit.toLowerCase()} left){' '}
+                {s.name} ({s.stockQuantity} {STOCK_UNIT_LABELS[language][s.unit]} {language === 'ru' ? 'осталось' : 'left'}){' '}
                 <button style={smallBtn} onClick={() => addSuggestionToList(s)}>
                   {language === 'ru' ? 'Добавить' : 'Add'}
                 </button>
@@ -186,7 +187,7 @@ export default function ShoppingListPage() {
           <label style={{ width: 44, height: 44, flexShrink: 0, display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
             <input
               type="checkbox"
-              aria-label={`Mark ${item.customName} purchased`}
+              aria-label={language === 'ru' ? `Отметить «${item.customName}» купленным` : `Mark ${item.customName} purchased`}
               checked={false}
               disabled={busyId === item.id}
               onChange={() => markPurchased(item)}
@@ -196,8 +197,8 @@ export default function ShoppingListPage() {
           <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>
             {item.customName}
             <span style={{ color: '#6b7280', fontSize: 13, marginLeft: 6 }}>
-              × {item.quantity} {item.unit.toLowerCase()}
-              {item.productId != null && productNameById.has(item.productId) ? ' · from catalog' : ''}
+              × {item.quantity} {STOCK_UNIT_LABELS[language][item.unit]}
+              {item.productId != null && productNameById.has(item.productId) ? (language === 'ru' ? ' · из каталога' : ' · from catalog') : ''}
             </span>
           </span>
           <button style={smallBtn} onClick={() => removeItem(item)} aria-label={language === 'ru' ? 'Удалить покупку' : 'Remove item'}>
@@ -211,11 +212,11 @@ export default function ShoppingListPage() {
           <h2 style={{ fontSize: 17, margin: '20px 0 8px' }}>{language === 'ru' ? 'Куплено' : 'Purchased'}</h2>
           {purchasedItems.map((item) => (
             <div key={item.id} style={{ ...rowStyle, opacity: 0.7 }}>
-              <input type="checkbox" checked readOnly aria-label={`${item.customName} purchased`} style={{ width: 18, height: 18 }} />
+              <input type="checkbox" checked readOnly aria-label={language === 'ru' ? `Куплено: ${item.customName}` : `${item.customName} purchased`} style={{ width: 18, height: 18 }} />
               <span style={{ flex: 1, textDecoration: 'line-through', color: '#6b7280' }}>
                 {item.customName}
                 <span style={{ fontSize: 12, marginLeft: 8 }}>
-                  {item.purchasedAt ? formatPurchasedAt(item.purchasedAt) : ''}
+                  {item.purchasedAt ? formatPurchasedAt(item.purchasedAt, language) : ''}
                 </span>
               </span>
               <button style={smallBtn} onClick={() => removeItem(item)} aria-label={language === 'ru' ? 'Удалить покупку' : 'Remove item'}>

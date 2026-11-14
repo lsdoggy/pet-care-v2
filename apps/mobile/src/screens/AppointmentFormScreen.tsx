@@ -1,9 +1,10 @@
+import { useLanguage } from '../i18n/language';
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
 import { api, ApiError } from '../api/client';
 import type { AppointmentStatus, CreateAppointmentRequest, VetAppointmentDto } from '../api/types';
-import { APPOINTMENT_STATUS_LABELS } from '../api/types';
+import { APPOINTMENT_STATUS_LABELS, ENGLISH_APPOINTMENT_STATUS_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
 import { useNavigation } from '../navigation/AppStack';
 import { DateField } from '../components/DateField';
@@ -18,6 +19,7 @@ const STATUSES: AppointmentStatus[] = ['SCHEDULED', 'COMPLETED', 'CANCELLED'];
 
 /** Sprint 4: create a veterinary appointment for the given pet. */
 export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
+  const language = useLanguage();
   const navigation = useNavigation();
   const initialDate = appointment ? new Date(appointment.scheduledAt) : null;
   const [clinicName, setClinicName] = useState(appointment?.clinicName ?? '');
@@ -32,20 +34,20 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
   const [reason, setReason] = useState(appointment?.reason ?? '');
   const [notes, setNotes] = useState(appointment?.notes ?? '');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ ru: string; en: string } | null>(null);
 
-  const validate = (): string | null => {
-    if (!clinicName.trim()) return 'Укажите название клиники';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return 'Укажите дату в формате ГГГГ-ММ-ДД';
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(timeStr.trim())) return 'Укажите время в формате ЧЧ:ММ';
+  const validate = () => {
+    if (!clinicName.trim()) return { ru: 'Укажите название клиники', en: 'Enter the clinic name.' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return { ru: 'Укажите дату в формате ГГГГ-ММ-ДД', en: 'Enter a date in YYYY-MM-DD format.' };
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(timeStr.trim())) return { ru: 'Укажите время в формате ЧЧ:ММ', en: 'Enter a time in HH:MM format.' };
     const d = new Date(`${dateStr.trim()}T${timeStr.trim()}:00`);
-    if (Number.isNaN(d.getTime()) || d.getFullYear() !== Number(dateStr.slice(0, 4)) || d.getMonth() + 1 !== Number(dateStr.slice(5, 7)) || d.getDate() !== Number(dateStr.slice(8, 10))) return 'Проверьте дату и время';
+    if (Number.isNaN(d.getTime()) || d.getFullYear() !== Number(dateStr.slice(0, 4)) || d.getMonth() + 1 !== Number(dateStr.slice(5, 7)) || d.getDate() !== Number(dateStr.slice(8, 10))) return { ru: 'Проверьте дату и время', en: 'Check the date and time.' };
     const dur = Number(durationStr);
-    if (!Number.isInteger(dur) || dur < 5 || dur > 480) return 'Длительность должна быть от 5 до 480 минут';
+    if (!Number.isInteger(dur) || dur < 5 || dur > 480) return { ru: 'Длительность должна быть от 5 до 480 минут', en: 'Duration must be between 5 and 480 minutes.' };
     if (costStr.trim()) {
       const c = Number(costStr);
-      if (!Number.isFinite(c) || c < 0) return 'Укажите неотрицательную стоимость';
-      if (!/^[A-Za-z]{3}$/.test(currency.trim())) return 'Укажите код валюты из трёх букв';
+      if (!Number.isFinite(c) || c < 0) return { ru: 'Укажите неотрицательную стоимость', en: 'Enter a non-negative cost.' };
+      if (!/^[A-Za-z]{3}$/.test(currency.trim())) return { ru: 'Укажите код валюты из трёх букв', en: 'Enter a three-letter currency code.' };
     }
     return null;
   };
@@ -79,8 +81,8 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
       if (appointment) await api.updateAppointment(appointment.id, body, token);
       else await api.createAppointment(body, token);
       navigation.pop();
-    } catch (e) {
-      setError('Не удалось сохранить визит. Проверьте соединение и попробуйте ещё раз.');
+    } catch {
+      setError({ ru: 'Не удалось сохранить визит. Проверьте соединение и попробуйте ещё раз.', en: 'Could not save the appointment. Check your connection and try again.' });
     } finally {
       setSaving(false);
     }
@@ -89,41 +91,41 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>{appointment ? 'Перенести визит' : 'Новый визит'}</Text>
-        {petName ? <Text style={styles.subtitle}>Питомец: {petName}</Text> : null}
-        {error && <Text accessibilityRole="alert">{error}</Text>}
+        <Text style={styles.title}>{appointment ? (language === 'ru' ? 'Перенести визит' : 'Reschedule visit') : (language === 'ru' ? 'Новый визит' : 'New visit')}</Text>
+        {petName ? <Text style={styles.subtitle}>{language === 'ru' ? 'Питомец:' : 'Pet:'} {petName}</Text> : null}
+        {error && <Text accessibilityRole="alert">{error[language]}</Text>}
 
-        <Text style={styles.label}>Клиника *</Text>
-        <TextInput style={styles.input} value={clinicName} onChangeText={setClinicName} placeholder="CityVet Clinic" maxLength={150} />
+        <Text style={styles.label}>{language === 'ru' ? 'Клиника *' : 'Clinic *'}</Text>
+        <TextInput style={styles.input} value={clinicName} onChangeText={setClinicName} placeholder={language === 'ru' ? 'Клиника «Ветцентр»' : 'CityVet Clinic'} maxLength={150} />
 
-        <Text style={styles.label}>Врач</Text>
-        <TextInput style={styles.input} value={doctorName} onChangeText={setDoctorName} placeholder="Dr. Smith" maxLength={150} />
+        <Text style={styles.label}>{language === 'ru' ? 'Врач' : 'Veterinarian'}</Text>
+        <TextInput style={styles.input} value={doctorName} onChangeText={setDoctorName} placeholder={language === 'ru' ? 'Иван Иванович' : 'Dr. Smith'} maxLength={150} />
 
         <View style={styles.rowInputs}>
           <View style={styles.flexCol}>
-            <DateField label="Дата визита *" value={dateStr} onChange={setDateStr} disabled={saving} />
+            <DateField label={language === 'ru' ? 'Дата визита *' : 'Visit date *'} value={dateStr} onChange={setDateStr} disabled={saving} />
           </View>
           <View style={styles.flexCol}>
-            <DateField label="Местное время *" mode="time" value={timeStr} onChange={setTimeStr} disabled={saving} />
+            <DateField label={language === 'ru' ? 'Местное время *' : 'Local time *'} mode="time" value={timeStr} onChange={setTimeStr} disabled={saving} />
           </View>
         </View>
 
         <View style={styles.rowInputs}>
           <View style={styles.flexCol}>
-            <Text style={styles.label}>Длительность, мин</Text>
+            <Text style={styles.label}>{language === 'ru' ? 'Длительность, мин' : 'Duration, min'}</Text>
             <TextInput style={styles.input} value={durationStr} onChangeText={setDurationStr} keyboardType="number-pad" />
           </View>
           <View style={styles.flexCol}>
-            <Text style={styles.label}>Стоимость</Text>
+            <Text style={styles.label}>{language === 'ru' ? 'Стоимость' : 'Cost'}</Text>
             <TextInput style={styles.input} value={costStr} onChangeText={setCostStr} keyboardType="decimal-pad" placeholder="45.50" />
           </View>
           <View style={styles.flexColNarrow}>
-            <Text style={styles.label}>Валюта</Text>
+            <Text style={styles.label}>{language === 'ru' ? 'Валюта' : 'Currency'}</Text>
             <TextInput style={styles.input} value={currency} onChangeText={setCurrency} autoCapitalize="characters" maxLength={3} />
           </View>
         </View>
 
-        <Text style={styles.label}>Статус</Text>
+        <Text style={styles.label}>{language === 'ru' ? 'Статус' : 'Status'}</Text>
         <View style={styles.statusRow}>
           {STATUSES.map((s) => (
             <Pressable
@@ -132,25 +134,25 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
               style={[styles.statusChip, status === s && styles.statusChipActive]}
             >
               <Text style={[styles.statusText, status === s && styles.statusTextActive]}>
-                {APPOINTMENT_STATUS_LABELS[s]}
+                {(language === 'ru' ? APPOINTMENT_STATUS_LABELS : ENGLISH_APPOINTMENT_STATUS_LABELS)[s]}
               </Text>
             </Pressable>
           ))}
         </View>
 
-        <Text style={styles.label}>Адрес</Text>
-        <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="Main st 1" maxLength={255} />
+        <Text style={styles.label}>{language === 'ru' ? 'Адрес' : 'Address'}</Text>
+        <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder={language === 'ru' ? 'ул. Центральная, 1' : 'Main st 1'} maxLength={255} />
 
-        <Text style={styles.label}>Причина визита</Text>
+        <Text style={styles.label}>{language === 'ru' ? 'Причина визита' : 'Reason for visit'}</Text>
         <TextInput style={styles.input} value={reason} onChangeText={setReason} maxLength={2000} multiline />
 
-        <Text style={styles.label}>Заметки</Text>
+        <Text style={styles.label}>{language === 'ru' ? 'Заметки' : 'Notes'}</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
           value={notes}
           onChangeText={setNotes}
           multiline
-          placeholder="Vaccination, check-up…"
+          placeholder={language === 'ru' ? 'Вакцинация, осмотр…' : 'Vaccination, check-up…'}
         />
 
         <Pressable
@@ -161,11 +163,11 @@ export function AppointmentFormScreen({ petId, petName, appointment }: Props) {
           }}
           disabled={saving}
         >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Сохранить визит</Text>}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{language === 'ru' ? 'Сохранить визит' : 'Save visit'}</Text>}
         </Pressable>
 
         <Pressable style={styles.cancel} onPress={navigation.pop}>
-          <Text style={styles.cancelText}>Отмена</Text>
+          <Text style={styles.cancelText}>{language === 'ru' ? 'Отмена' : 'Cancel'}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

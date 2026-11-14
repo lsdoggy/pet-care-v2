@@ -1,8 +1,9 @@
+import { useLanguage } from '../i18n/language'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
 import type { CareTaskDto, CareTaskType, PetDto, RecurrenceUnit } from '../api/types'
-import { RECURRENCE_UNITS, TASK_TYPES, TASK_TYPE_LABELS } from '../api/types'
+import { RECURRENCE_UNITS, TASK_TYPES, TASK_TYPE_LABELS, ENGLISH_TASK_TYPE_LABELS } from '../api/types'
 
 interface Props {
   pets: PetDto[]
@@ -45,6 +46,7 @@ function localInputToUtcIso(value: string): string {
 }
 
 export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) {
+  const { language } = useLanguage()
   const [petId, setPetId] = useState<number>(pets[0]?.id ?? 0)
   const [title, setTitle] = useState('')
   const [type, setType] = useState<CareTaskType>('FOOD')
@@ -57,7 +59,7 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
   })
   const [recurrenceUnit, setRecurrenceUnit] = useState<'' | RecurrenceUnit>('')
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<Record<'ru' | 'en', string> | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -71,20 +73,20 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
     setError(null)
 
     if (!title.trim()) {
-      setError('Title is required')
+      setError({ ru: 'Укажите название задачи.', en: 'Title is required' })
       return
     }
     if (!petId) {
-      setError('Please create a pet first — tasks are always attached to a pet')
+      setError({ ru: 'Сначала добавьте питомца, для которого нужна задача.', en: 'Please create a pet first — tasks are always attached to a pet' })
       return
     }
     const dueAt = new Date(dueAtLocal)
     if (Number.isNaN(dueAt.getTime())) {
-      setError('Invalid due date')
+      setError({ ru: 'Проверьте дату и время.', en: 'Invalid due date' })
       return
     }
     if (dueAt.getTime() <= Date.now()) {
-      setError('Due date must be in the future')
+      setError({ ru: 'Укажите дату и время в будущем.', en: 'Due date must be in the future' })
       return
     }
 
@@ -101,8 +103,8 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
         token,
       )
       onSaved(saved)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } catch {
+      setError({ ru: 'Не удалось сохранить задачу.', en: 'Something went wrong' })
     } finally {
       setSaving(false)
     }
@@ -111,16 +113,16 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>New care task</h2>
+        <h2 style={{ margin: 0, fontSize: 20 }}>{language === 'ru' ? 'Новая задача ухода' : 'New care task'}</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label>
-            Pet *
+            {language === 'ru' ? 'Питомец *' : 'Pet *'}
             <select
               style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
               value={petId}
               onChange={(e) => setPetId(Number(e.target.value))}
             >
-              {pets.length === 0 && <option value={0}>No pets available</option>}
+              {pets.length === 0 && <option value={0}>{language === 'ru' ? 'Нет питомцев' : 'No pets available'}</option>}
               {pets.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -130,19 +132,19 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
           </label>
 
           <label>
-            Title *
+            {language === 'ru' ? 'Название *' : 'Title *'}
             <input
               style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
               value={title}
               maxLength={150}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Rabies vaccine"
+              placeholder={language === 'ru' ? 'Прививка от бешенства' : 'Rabies vaccine'}
               autoFocus
             />
           </label>
 
           <label>
-            Type
+            {language === 'ru' ? 'Тип' : 'Type'}
             <select
               style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
               value={type}
@@ -150,14 +152,14 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
             >
               {TASK_TYPES.map((t) => (
                 <option key={t} value={t}>
-                  {TASK_TYPE_LABELS[t]}
+                  {(language === 'ru' ? TASK_TYPE_LABELS : ENGLISH_TASK_TYPE_LABELS)[t]}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            Due date &amp; time (local) *
+            {language === 'ru' ? 'Дата и время (местные) *' : 'Due date & time (local) *'}
             <input
               style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
               type="datetime-local"
@@ -168,23 +170,25 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <label style={{ flex: 1 }}>
-              Repeat
+              {language === 'ru' ? 'Повторять' : 'Repeat'}
               <select
                 style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
                 value={recurrenceUnit}
                 onChange={(e) => setRecurrenceUnit(e.target.value as '' | RecurrenceUnit)}
               >
-                <option value="">Does not repeat</option>
+                <option value="">{language === 'ru' ? 'Без повторения' : 'Does not repeat'}</option>
                 {RECURRENCE_UNITS.map((u) => (
                   <option key={u} value={u}>
-                    {u.charAt(0) + u.slice(1).toLowerCase()}
+                    {language === 'ru'
+                      ? { DAILY: 'Ежедневно', WEEKLY: 'Еженедельно', MONTHLY: 'Ежемесячно', YEARLY: 'Ежегодно' }[u]
+                      : u.charAt(0) + u.slice(1).toLowerCase()}
                   </option>
                 ))}
               </select>
             </label>
             {recurrenceUnit && (
               <label style={{ width: 90 }}>
-                Every
+                {language === 'ru' ? 'Интервал' : 'Every'}
                 <input
                   style={{ ...inputStyle, width: '100%', marginTop: 4, display: 'block' }}
                   type="number"
@@ -197,18 +201,18 @@ export default function TaskFormModal({ pets, token, onClose, onSaved }: Props) 
             )}
           </div>
 
-          {error && <p style={{ color: '#c0392b', margin: 0, fontSize: 14 }}>{error}</p>}
+          {error && <p style={{ color: '#c0392b', margin: 0, fontSize: 14 }} role="alert">{error[language]}</p>}
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
             <button type="button" onClick={onClose} style={{ ...inputStyle, cursor: 'pointer' }}>
-              Cancel
+              {language === 'ru' ? 'Отмена' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={saving}
               style={{ ...inputStyle, cursor: 'pointer', backgroundColor: '#4f46e5', color: '#fff', border: 'none' }}
             >
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : 'Save'}
             </button>
           </div>
         </form>

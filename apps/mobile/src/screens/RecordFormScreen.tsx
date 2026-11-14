@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
@@ -18,6 +19,7 @@ interface Props {
 
 /** Sprint 4: create a medical record, optionally attaching a photo (camera/gallery) or PDF-like document. */
 export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
+  const language = useLanguage();
   const navigation = useNavigation();
   const [visitDate, setVisitDate] = useState(() => localDateValue(new Date()));
   const [diagnosis, setDiagnosis] = useState('');
@@ -30,7 +32,7 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
   const [picked, setPicked] = useState<{ uri: string; name: string; mimeType: string; file?: File } | null>(null);
   const pickPhoto = async (source: 'camera' | 'gallery') => {
     if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
-      Alert.alert('Нет доступа к камере', 'Разрешите доступ к камере в настройках устройства.');
+      Alert.alert((language === 'ru' ? 'Нет доступа к камере' : 'Camera access denied'), (language === 'ru' ? 'Разрешите доступ к камере в настройках устройства.' : 'Allow camera access in device settings.'));
       return;
     }
     const options: ImagePicker.ImagePickerOptions = {
@@ -57,14 +59,14 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
     if (result.canceled) return;
     const asset = result.assets[0];
     if (asset.size != null && (asset.size === 0 || asset.size > 10 * 1024 * 1024)) {
-      Alert.alert('Проверьте файл', 'Можно прикрепить непустой файл размером до 10 МБ.');
+      Alert.alert((language === 'ru' ? 'Проверьте файл' : 'Check the file'), (language === 'ru' ? 'Можно прикрепить непустой файл размером до 10 МБ.' : 'Choose a non-empty file up to 10 MB.'));
       return;
     }
     setPicked({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/octet-stream', file: asset.file });
   };
 
   const openPicker = (pick: () => Promise<void>) => {
-    void pick().catch(() => Alert.alert('Не удалось открыть выбор файла', 'Попробуйте ещё раз.'));
+    void pick().catch(() => Alert.alert((language === 'ru' ? 'Не удалось открыть выбор файла' : 'Could not open the file picker'), (language === 'ru' ? 'Попробуйте ещё раз.' : 'Try again.')));
   };
 
   const askAttachmentSource = () => {
@@ -72,16 +74,16 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
       openPicker(pickDocument);
       return;
     }
-    Alert.alert('Прикрепить файл', 'Выберите источник', [
-      { text: 'Камера', onPress: () => openPicker(() => pickPhoto('camera')) },
-      { text: 'Галерея', onPress: () => openPicker(() => pickPhoto('gallery')) },
+    Alert.alert((language === 'ru' ? 'Прикрепить файл' : 'Attach a file'), (language === 'ru' ? 'Выберите источник' : 'Choose a source'), [
+      { text: (language === 'ru' ? 'Камера' : 'Camera'), onPress: () => openPicker(() => pickPhoto('camera')) },
+      { text: (language === 'ru' ? 'Галерея' : 'Gallery'), onPress: () => openPicker(() => pickPhoto('gallery')) },
       { text: 'PDF', onPress: () => openPicker(pickDocument) },
     ]);
   };
 
   const onSubmit = async () => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate) || visitDate > localDateValue(new Date())) {
-      Alert.alert('Проверьте дату', 'Выберите дату не позднее сегодняшнего дня');
+      Alert.alert((language === 'ru' ? 'Проверьте дату' : 'Check the date'), (language === 'ru' ? 'Выберите дату не позднее сегодняшнего дня' : 'Choose a date on or before today.'));
       return;
     }
     setSaving(true);
@@ -105,8 +107,8 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
         await api.uploadRecordAttachment(recordId, picked.uri, picked.name, picked.mimeType, token, picked.file);
       }
       navigation.pop();
-    } catch (e) {
-      Alert.alert('Save failed', e instanceof Error ? e.message : 'Unknown error');
+    } catch {
+      Alert.alert((language === 'ru' ? 'Не удалось сохранить запись' : 'Save failed'), language === 'ru' ? 'Попробуйте сохранить запись ещё раз.' : 'Try saving the record again.');
     } finally {
       setSaving(false);
     }
@@ -115,31 +117,31 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>New medical record</Text>
-        {petName ? <Text style={styles.subtitle}>For {petName}</Text> : null}
+        <Text style={styles.title}>{language === 'ru' ? 'Новая медицинская запись' : 'New medical record'}</Text>
+        {petName ? <Text style={styles.subtitle}>{language === 'ru' ? 'Питомец:' : 'Pet:'} {petName}</Text> : null}
 
-        <DateField label="Дата медицинской записи *" value={visitDate} onChange={setVisitDate} maximum={localDateValue(new Date())} disabled={saving || savedRecordId != null} />
+        <DateField label={language === 'ru' ? 'Дата медицинской записи *' : 'Record date *'} value={visitDate} onChange={setVisitDate} maximum={localDateValue(new Date())} disabled={saving || savedRecordId != null} />
 
-        <Text style={styles.label}>Diagnosis</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={diagnosis} onChangeText={setDiagnosis} editable={!saving && savedRecordId == null} multiline placeholder="Otitis media, mild" />
+        <Text style={styles.label}>{language === 'ru' ? 'Диагноз' : 'Diagnosis'}</Text>
+        <TextInput style={[styles.input, styles.multiline]} value={diagnosis} onChangeText={setDiagnosis} editable={!saving && savedRecordId == null} multiline placeholder={language === 'ru' ? 'Лёгкий отит' : 'Otitis media, mild'} />
 
-        <Text style={styles.label}>Recommendations</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={recommendations} onChangeText={setRecommendations} editable={!saving && savedRecordId == null} multiline placeholder="Keep ear dry, recheck in 7 days" />
+        <Text style={styles.label}>{language === 'ru' ? 'Рекомендации' : 'Recommendations'}</Text>
+        <TextInput style={[styles.input, styles.multiline]} value={recommendations} onChangeText={setRecommendations} editable={!saving && savedRecordId == null} multiline placeholder={language === 'ru' ? 'Беречь ухо от воды, повторный осмотр через 7 дней' : 'Keep ear dry, recheck in 7 days'} />
 
-        <Text style={styles.label}>Prescriptions</Text>
-        <TextInput style={[styles.input, styles.multiline]} value={prescriptions} onChangeText={setPrescriptions} editable={!saving && savedRecordId == null} multiline placeholder="Amoxicillin 250mg, 2x/day, 7 days" />
+        <Text style={styles.label}>{language === 'ru' ? 'Назначения' : 'Prescriptions'}</Text>
+        <TextInput style={[styles.input, styles.multiline]} value={prescriptions} onChangeText={setPrescriptions} editable={!saving && savedRecordId == null} multiline placeholder={language === 'ru' ? 'Назначения врача' : 'Amoxicillin 250mg, 2x/day, 7 days'} />
 
-        <Text style={styles.label}>Attachments</Text>
+        <Text style={styles.label}>{language === 'ru' ? 'Вложения' : 'Attachments'}</Text>
         {picked ? (
           <View style={styles.pickedRow}>
             <Text style={styles.pickedName} numberOfLines={1}>📎 {picked.name}</Text>
             <Pressable disabled={saving} onPress={() => setPicked(null)} hitSlop={8}>
-              <Text style={styles.removeText}>Remove</Text>
+              <Text style={styles.removeText}>{language === 'ru' ? 'Убрать' : 'Remove'}</Text>
             </Pressable>
           </View>
         ) : (
           <Pressable style={({ pressed }) => [styles.attachBtn, pressed && styles.pressed]} disabled={saving} onPress={askAttachmentSource}>
-            <Text style={styles.attachText}>Прикрепить фото или PDF</Text>
+            <Text style={styles.attachText}>{language === 'ru' ? 'Прикрепить фото или PDF' : 'Attach photo or PDF'}</Text>
           </Pressable>
         )}
 
@@ -151,11 +153,11 @@ export function RecordFormScreen({ petId, petName, appointmentId }: Props) {
           }}
           disabled={saving}
         >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Save record</Text>}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>{language === 'ru' ? 'Сохранить запись' : 'Save record'}</Text>}
         </Pressable>
 
         <Pressable style={styles.cancel} onPress={navigation.pop}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={styles.cancelText}>{language === 'ru' ? 'Отмена' : 'Cancel'}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

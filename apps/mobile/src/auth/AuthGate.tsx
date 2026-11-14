@@ -6,6 +6,7 @@ import { colors, spacing, typography } from '../theme/tokens';
 import { api, ApiError } from '../api/client';
 import type { RegisterProfile } from '../api/client';
 import type { AuthResponse, UserDto } from '../api/types';
+import { useLanguage } from '../i18n/language';
 import { tokenStore } from './tokenStore';
 import { usePushRegistration } from '../notifications/usePushRegistration';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
@@ -24,6 +25,7 @@ import { StockScreen } from '../screens/StockScreen';
 type Phase = 'boot' | 'anon' | 'authed';
 
 export function AuthGate() {
+  const language = useLanguage();
   const [phase, setPhase] = useState<Phase>('boot');
   const [mode, setMode] = useState<AuthMode>('login');
   const [user, setUser] = useState<UserDto | null>(null);
@@ -80,7 +82,7 @@ export function AuthGate() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.bootText}>Checking session…</Text>
+        <Text style={styles.bootText}>{language === 'ru' ? 'Проверяем сессию…' : 'Checking session…'}</Text>
         <StatusBar style="auto" />
       </View>
     );

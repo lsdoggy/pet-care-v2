@@ -1,8 +1,9 @@
+import { useLanguage } from '../i18n/language'
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
 import type { PetDto, PetSpecies } from '../api/types'
-import { SPECIES_LABELS } from '../api/types'
+import { ENGLISH_SPECIES_LABELS, SPECIES_LABELS } from '../api/types'
 import Modal from './Modal'
 import { petInitials } from '../lib/petFormat'
 import {
@@ -41,6 +42,8 @@ interface Props {
 const EMPTY_VALUES: PetFormValues = { name: '', species: '', breed: '', birthDate: '', weightKg: '' }
 
 export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
+  const { language } = useLanguage()
+  const speciesLabels = language === 'ru' ? SPECIES_LABELS : ENGLISH_SPECIES_LABELS
   const [values, setValues] = useState<PetFormValues>(() =>
     pet
       ? {
@@ -111,7 +114,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
   return (
     <Modal labelledBy={titleId} onClose={saving ? () => undefined : onClose} className="pc-modal--form">
       <h2 id={titleId} className="pc-modal__title">
-        {pet ? 'Редактировать питомца' : 'Добавить питомца'}
+        {pet ? (language === 'ru' ? 'Редактировать питомца' : 'Edit pet') : (language === 'ru' ? 'Добавить питомца' : 'Add a pet')}
       </h2>
 
       <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -127,7 +130,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
             )}
           </span>
           <label className="pc-field" style={{ flex: 1 }}>
-            <span className="pc-field__label">Фото</span>
+            <span className="pc-field__label">{language === 'ru' ? 'Фото' : 'Photo'}</span>
             <input
               className="pc-field__input"
               type="file"
@@ -140,7 +143,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
         {/* Имя (обязательно) */}
         <div className="pc-field">
           <label className="pc-field__label" htmlFor="pet-name">
-            Имя <span className="pc-field__required" aria-hidden="true">*</span>
+            {language === 'ru' ? 'Имя' : 'Name'} <span className="pc-field__required" aria-hidden="true">*</span>
           </label>
           <input
             id="pet-name"
@@ -150,7 +153,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
             maxLength={PET_NAME_MAX_LENGTH}
             required
             autoComplete="off"
-            placeholder="Например, Рекс"
+            placeholder={language === 'ru' ? 'Например, Рекс' : 'For example, Rex'}
             aria-invalid={!!fieldError('name')}
             aria-describedby={fieldError('name') ? 'pet-name-error' : undefined}
             onChange={(e) => setValue('name', e.target.value)}
@@ -167,7 +170,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
         <div className="pc-field-row">
           <div className="pc-field">
             <label className="pc-field__label" htmlFor="pet-species">
-              Вид <span className="pc-field__required" aria-hidden="true">*</span>
+              {language === 'ru' ? 'Вид' : 'Species'} <span className="pc-field__required" aria-hidden="true">*</span>
             </label>
             <select
               id="pet-species"
@@ -179,10 +182,10 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
               onChange={(e) => setValue('species', e.target.value as PetSpecies | '')}
               onBlur={() => setTouched((t) => ({ ...t, species: true }))}
             >
-              <option value="">Выберите вид…</option>
-              {(Object.keys(SPECIES_LABELS) as PetSpecies[]).map((s) => (
+              <option value="">{language === 'ru' ? 'Выберите вид…' : 'Select a species…'}</option>
+              {(Object.keys(speciesLabels) as PetSpecies[]).map((s) => (
                 <option key={s} value={s}>
-                  {SPECIES_LABELS[s]}
+                  {speciesLabels[s]}
                 </option>
               ))}
             </select>
@@ -195,14 +198,14 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
 
           <div className="pc-field">
             <label className="pc-field__label" htmlFor="pet-breed">
-              Порода
+              {language === 'ru' ? 'Порода' : 'Breed'}
             </label>
             <input
               id="pet-breed"
               className={`pc-field__input${fieldError('breed') ? ' pc-field__input--invalid' : ''}`}
               value={values.breed}
               maxLength={PET_BREED_MAX_LENGTH}
-              placeholder="Например, лайка"
+              placeholder={language === 'ru' ? 'Например, лайка' : 'For example, husky'}
               autoComplete="off"
               aria-invalid={!!fieldError('breed')}
               aria-describedby={fieldError('breed') ? 'pet-breed-error' : undefined}
@@ -221,7 +224,7 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
         <div className="pc-field-row">
           <div className="pc-field">
             <label className="pc-field__label" htmlFor="pet-birthdate">
-              Дата рождения
+              {language === 'ru' ? 'Дата рождения' : 'Birth date'}
             </label>
             <input
               id="pet-birthdate"
@@ -240,14 +243,14 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
               </p>
             ) : (
               <p id="pet-birthdate-hint" className="pc-field__hint">
-                Возраст посчитаем автоматически.
+                {language === 'ru' ? 'Возраст посчитаем автоматически.' : 'We calculate age automatically.'}
               </p>
             )}
           </div>
 
           <div className="pc-field">
             <label className="pc-field__label" htmlFor="pet-weight">
-              Вес, кг
+              {language === 'ru' ? 'Вес, кг' : 'Weight, kg'}
             </label>
             <input
               id="pet-weight"
@@ -278,10 +281,10 @@ export default function PetFormModal({ pet, token, onClose, onSaved }: Props) {
 
         <div className="pc-modal__actions">
           <button type="button" className="pc-btn pc-btn--ghost" onClick={onClose} disabled={saving}>
-            Отмена
+            {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button type="submit" className="pc-btn pc-btn--primary" disabled={saving}>
-            {saving ? 'Сохранение…' : 'Сохранить'}
+            {saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить' : 'Save')}
           </button>
         </div>
       </form>

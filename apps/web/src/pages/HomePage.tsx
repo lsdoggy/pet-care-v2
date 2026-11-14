@@ -1,9 +1,10 @@
+import { useLanguage, type Language } from '../i18n/language'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import type { CareTaskDto, FoodProductDto, PetDto, VetAppointmentDto } from '../api/types'
-import { TASK_TYPE_LABELS } from '../api/types'
+import { TASK_TYPE_LABELS, ENGLISH_TASK_TYPE_LABELS } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
 import DashboardSkeleton from '../components/DashboardSkeleton'
@@ -64,7 +65,14 @@ interface DeleteTarget {
   pet: PetDto
 }
 
+const dashboardSources = ['pets', 'tasks', 'visits', 'stock'] as const
+const sourceLabels = {
+  ru: { pets: 'питомцев', tasks: 'задачи', visits: 'визиты к врачу', stock: 'запасы' },
+  en: { pets: 'pets', tasks: 'tasks', visits: 'vet visits', stock: 'stock' },
+}
+
 export default function HomePage() {
+  const { language } = useLanguage()
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const now = useDashboardNow()
@@ -75,10 +83,10 @@ export default function HomePage() {
   const [products, setProducts] = useState<FoodProductDto[]>([])
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [warnings, setWarnings] = useState<string[]>([])
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [error, setError] = useState<Record<Language, string> | null>(null)
+  const [warnings, setWarnings] = useState<(typeof dashboardSources)[number][]>([])
+  const [actionError, setActionError] = useState<Record<Language, string> | null>(null)
+  const [notice, setNotice] = useState<Record<Language, string> | null>(null)
   const [busyVisitId, setBusyVisitId] = useState<number | null>(null)
   const [modal, setModal] = useState<Modal>(null)
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null)
@@ -100,8 +108,7 @@ export default function HomePage() {
       api.listFoodProducts(token),
     ])
     const [petsRes, tasksRes, apptRes, prodRes] = results
-    const labels = ['питомцев', 'задачи', 'визиты к врачу', 'запасы']
-    setWarnings(results.flatMap((result, i) => result.status === 'rejected' ? [labels[i]] : []))
+    setWarnings(results.flatMap((result, i) => result.status === 'rejected' ? [dashboardSources[i]] : []))
     if (petsRes.status === 'fulfilled') setPets(petsRes.value)
     if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value)
     if (apptRes.status === 'fulfilled') setAppointments(apptRes.value)
@@ -109,7 +116,7 @@ export default function HomePage() {
 
     // Pets failing is fatal for the dashboard → full error state with retry.
     if (petsRes.status === 'rejected') {
-      setError('Не удалось загрузить питомцев. Проверьте соединение и повторите попытку.')
+      setError({ ru: 'Не удалось загрузить питомцев. Проверьте соединение и повторите попытку.', en: 'Could not load your pets. Check your connection and try again.' })
     }
     setLoading(false)
   }, [token])
@@ -141,13 +148,13 @@ export default function HomePage() {
     setNotice(null)
     try {
       await api.completeTask(task.id, token)
-      setNotice(`Задача «${task.title}» выполнена`)
+      setNotice({ ru: `Задача «${task.title}» выполнена`, en: `Task “${task.title}” completed` })
       // Refetch so a newly spawned recurring task appears immediately.
       const [nextTasks, nextProducts] = await Promise.all([api.listUpcomingTasks(token), api.listFoodProducts(token)])
       setTasks(nextTasks)
       setProducts(nextProducts)
     } catch {
-      setActionError('Не удалось обновить список задач. Повторите загрузку, чтобы проверить результат.')
+      setActionError({ ru: 'Не удалось обновить список задач. Повторите загрузку, чтобы проверить результат.', en: 'Could not refresh tasks. Reload the dashboard to check the result.' })
     } finally {
       setBusyTaskId(null)
     }
@@ -160,9 +167,11 @@ export default function HomePage() {
     try {
       const updated = await api.updateAppointment(visit.id, { status }, token)
       setAppointments((prev) => prev.map((a) => a.id === updated.id ? updated : a))
-      setNotice(status === 'COMPLETED' ? 'Визит отмечен завершённым' : 'Визит отменён')
+      setNotice(status === 'COMPLETED'
+        ? { ru: 'Визит отмечен завершённым', en: 'Visit marked complete' }
+        : { ru: 'Визит отменён', en: 'Visit cancelled' })
     } catch {
-      setActionError('Не удалось изменить статус визита. Попробуйте ещё раз.')
+      setActionError({ ru: 'Не удалось изменить статус визита. Попробуйте ещё раз.', en: 'Could not update the visit status. Try again.' })
     } finally {
       setBusyVisitId(null)
     }
@@ -177,8 +186,8 @@ export default function HomePage() {
       setTasks((prev) => prev.filter((t) => t.petId !== target.pet.id))
       setAppointments((prev) => prev.filter((a) => a.petId !== target.pet.id))
       setDeleteTarget(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось удалить питомца')
+    } catch {
+      setError({ ru: 'Не удалось удалить питомца', en: 'Could not delete the pet.' })
       setDeleteTarget(null)
     } finally {
       setDeleting(false)
@@ -225,37 +234,39 @@ export default function HomePage() {
           <span className="pc-error__icon">
             <AlertIcon size={32} />
           </span>
-          <h1 className="pc-section__title">Что-то пошло не так</h1>
-          <p className="pc-error__text">{error}</p>
+          <h1 className="pc-section__title">{language === 'ru' ? 'Что-то пошло не так' : 'Something went wrong'}</h1>
+          <p className="pc-error__text">{error[language]}</p>
           <button type="button" className="pc-btn pc-btn--primary" onClick={() => void loadAll()}>
             <RefreshIcon size={18} />
-            Повторить
+            {language === 'ru' ? 'Повторить' : 'Retry'}
           </button>
         </div>
       ) : (
         <>
           {warnings.length > 0 && (
             <div className="pc-dashboard-warning" role="alert">
-              Не удалось загрузить: {warnings.join(', ')}. Сводка может быть неполной.
-              <button className="pc-linkbtn" type="button" onClick={() => void loadAll()}>Повторить загрузку</button>
+              {language === 'ru' ? 'Не удалось загрузить:' : 'Could not load:'}{' '}
+              {warnings.map((source) => sourceLabels[language][source]).join(', ')}.{' '}
+              {language === 'ru' ? 'Сводка может быть неполной.' : 'The dashboard may be incomplete.'}
+              <button className="pc-linkbtn" type="button" onClick={() => void loadAll()}>{language === 'ru' ? 'Повторить загрузку' : 'Reload'}</button>
             </div>
           )}
-          {actionError && <div className="pc-dashboard-warning" role="alert">{actionError} <button className="pc-linkbtn" onClick={() => void loadAll()}>Обновить данные</button></div>}
-          {notice && <p className="pc-settings__success" role="status">{notice}</p>}
+          {actionError && <div className="pc-dashboard-warning" role="alert">{actionError[language]} <button className="pc-linkbtn" onClick={() => void loadAll()}>{language === 'ru' ? 'Обновить данные' : 'Refresh'}</button></div>}
+          {notice && <p className="pc-settings__success" role="status">{notice[language]}</p>}
           {/* ---------- 1. Greeting ---------- */}
           <header>
-            <p className="pc-dash__greeting-date">{todayLabel(new Date(now))}</p>
+            <p className="pc-dash__greeting-date">{todayLabel(new Date(now), language)}</p>
             <h1 className="pc-dash__greeting-title">
-              {greetingWord(new Date(now))}, {firstName}!
+              {greetingWord(new Date(now), language)}, {firstName}!
             </h1>
             <p className="pc-dash__greeting-sub">
               {warnings.length > 0
-                ? 'Часть данных недоступна — обновите сводку'
+                ? (language === 'ru' ? 'Часть данных недоступна — обновите сводку' : 'Some data is unavailable. Reload the dashboard.')
                 : attention.overdue.length > 0
-                ? `Просрочено: ${pluralRu(attention.overdue.length, ['задача', 'задачи', 'задач'])} — начните с блока «Требует внимания»`
+                ? (language === 'ru' ? `Просрочено: ${pluralRu(attention.overdue.length, ['задача', 'задачи', 'задач'])} — начните с блока «Требует внимания»` : `Overdue tasks: ${attention.overdue.length}`)
                 : attentionCount > 0
-                  ? `Требуют внимания: ${attentionCount}`
-                  : 'Всё под контролем — срочных дел нет 🐾'}
+                  ? (language === 'ru' ? `Требуют внимания: ${attentionCount}` : `Needs attention: ${attentionCount}`)
+                  : (language === 'ru' ? 'Всё под контролем — срочных дел нет 🐾' : 'Nothing urgent 🐾')}
             </p>
           </header>
 
@@ -269,7 +280,7 @@ export default function HomePage() {
                     <span className="pc-section__title-icon">
                       <AlertIcon size={18} />
                     </span>
-                    Требует внимания
+                    {language === 'ru' ? 'Требует внимания' : 'Needs attention'}
                     {attentionCount > 0 && <span className="pc-section__count">{attentionCount}</span>}
                   </h2>
                 </div>
@@ -277,12 +288,12 @@ export default function HomePage() {
                 {attentionCount === 0 ? (
                   <div className="pc-card pc-attention pc-attention--ok">
                     <CheckIcon size={20} />
-                    {warnings.length > 0 ? 'Не все данные загружены. Пока нельзя проверить, есть ли срочные дела.' : 'Всё спокойно: ничего не просрочено, корм в порядке, визитов на неделе нет.'}
+                    {warnings.length > 0 ? (language === 'ru' ? 'Не все данные загружены. Пока нельзя проверить, есть ли срочные дела.' : 'Some data could not be loaded. Urgent items may be missing.') : (language === 'ru' ? 'Всё спокойно: ничего не просрочено, корм в порядке, визитов на неделе нет.' : 'Nothing is overdue, food stock is sufficient, and there are no visits this week.')}
                   </div>
                 ) : (
                   <div className="pc-card pc-attention">
                     {attention.overdue.length > 0 && (
-                      <AttentionGroup label={`Просрочено · ${attention.overdue.length}`}>
+                      <AttentionGroup label={`${language === 'ru' ? 'Просрочено' : 'Overdue'} · ${attention.overdue.length}`}>
                         {attention.overdue.slice(0, 3).map((t) => (
                           <TaskRow
                             key={t.id}
@@ -297,30 +308,30 @@ export default function HomePage() {
                       </AttentionGroup>
                     )}
                     {attention.missedVisits.length > 0 && (
-                      <AttentionGroup label={`Визиты без отметки о завершении · ${attention.missedVisits.length}`}>
+                      <AttentionGroup label={`${language === 'ru' ? 'Визиты без отметки о завершении' : 'Incomplete visits'} · ${attention.missedVisits.length}`}>
                         {attention.missedVisits.map((visit) => (
                           <div key={visit.id}>
                             <button type="button" className="pc-attention__row" onClick={() => navigate(`/pets/${visit.petId}`)}>
                               <span className="pc-attention__dot pc-attention__dot--danger" aria-hidden="true" />
                               <span className="pc-attention__row-main">
                                 <span className="pc-attention__row-title">{visit.clinicName} · {visit.petName}</span>
-                                <span className="pc-attention__row-meta">{formatVisitLabel(visit.scheduledAt)} · дата визита прошла</span>
+                                <span className="pc-attention__row-meta">{formatVisitLabel(visit.scheduledAt, language)} · {language === 'ru' ? 'дата визита прошла' : 'visit date has passed'}</span>
                               </span>
                             </button>
-                            <div className="pc-visit-actions" role="group" aria-label={`Действия с визитом: ${visit.clinicName}, ${visit.petName}`}>
-                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'COMPLETED')}>Завершить</button>
+                            <div className="pc-visit-actions" role="group" aria-label={`${language === 'ru' ? 'Действия с визитом' : 'Visit actions'}: ${visit.clinicName}, ${visit.petName}`}>
+                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'COMPLETED')}>{language === 'ru' ? 'Завершить' : 'Complete'}</button>
                               <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => {
                                 const pet = pets.find((p) => p.id === visit.petId)
                                 if (pet) setModal({ name: 'appointment', pet, appointment: visit })
-                              }}>Перенести</button>
-                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'CANCELLED')}>Отменить визит</button>
+                              }}>{language === 'ru' ? 'Перенести' : 'Reschedule'}</button>
+                              <button className="pc-linkbtn" disabled={busyVisitId === visit.id} onClick={() => void updateVisit(visit, 'CANCELLED')}>{language === 'ru' ? 'Отменить визит' : 'Cancel visit'}</button>
                             </div>
                           </div>
                         ))}
                       </AttentionGroup>
                     )}
                     {attention.today.length > 0 && (
-                      <AttentionGroup label={`Сегодня · ${attention.today.length}`}>
+                      <AttentionGroup label={`${language === 'ru' ? 'Сегодня' : 'Today'} · ${attention.today.length}`}>
                         {attention.today.slice(0, 3).map((t) => (
                           <TaskRow
                             key={t.id}
@@ -335,7 +346,7 @@ export default function HomePage() {
                       </AttentionGroup>
                     )}
                     {attention.low.length > 0 && (
-                      <AttentionGroup label="Низкий остаток">
+                      <AttentionGroup label={language === 'ru' ? 'Низкий остаток' : 'Low stock'}>
                         {attention.low.slice(0, 3).map((p) => {
                           const d = daysLeft(p)
                           return (
@@ -349,10 +360,10 @@ export default function HomePage() {
                               <span className="pc-attention__row-main">
                                 <span className="pc-attention__row-title">{p.name}</span>
                                 <span className="pc-attention__row-meta">
-                                  {d != null ? `Хватит ещё на ${pluralRu(d, ['день', 'дня', 'дней'])}` : 'Остаток низкий'}
+                                  {d != null ? (language === 'ru' ? `Хватит ещё на ${pluralRu(d, ['день', 'дня', 'дней'])}` : `${d} ${d === 1 ? 'day' : 'days'} left`) : (language === 'ru' ? 'Остаток низкий' : 'Low stock')}
                                 </span>
                               </span>
-                              <span className="pc-badge pc-badge--warning">Пополнить</span>
+                              <span className="pc-badge pc-badge--warning">{language === 'ru' ? 'Пополнить' : 'Restock'}</span>
                               <span className="pc-attention__chevron">
                                 <ChevronRightIcon size={16} />
                               </span>
@@ -362,7 +373,7 @@ export default function HomePage() {
                       </AttentionGroup>
                     )}
                     {attention.visit && (
-                      <AttentionGroup label="Ближайший визит">
+                      <AttentionGroup label={language === 'ru' ? 'Ближайший визит' : 'Next visit'}>
                         <button
                           type="button"
                           className="pc-attention__row"
@@ -373,7 +384,7 @@ export default function HomePage() {
                             <span className="pc-attention__row-title">
                               {attention.visit.clinicName} · {attention.visit.petName}
                             </span>
-                            <span className="pc-attention__row-meta">{formatVisitLabel(attention.visit.scheduledAt)}</span>
+                            <span className="pc-attention__row-meta">{formatVisitLabel(attention.visit.scheduledAt, language)}</span>
                           </span>
                           <span className="pc-attention__chevron">
                             <ChevronRightIcon size={16} />
@@ -392,14 +403,14 @@ export default function HomePage() {
                     <span className="pc-section__title-icon">
                       <PawIcon size={18} />
                     </span>
-                    Быстрые действия
+                    {language === 'ru' ? 'Быстрые действия' : 'Quick actions'}
                   </h2>
                 </div>
                 <div className="pc-quick">
-                  <QuickAction icon={<PlusIcon size={20} />} label="Добавить питомца" onClick={() => setModal({ name: 'pet' })} />
-                  <QuickAction icon={<CheckIcon size={20} />} label="Создать задачу" onClick={startCreateTask} />
-                  <QuickAction icon={<StethoscopeIcon size={20} />} label="Записать к врачу" onClick={startBookVet} />
-                  <QuickAction icon={<CartIcon size={20} />} label="Добавить покупку" onClick={() => setModal({ name: 'purchase' })} />
+                  <QuickAction icon={<PlusIcon size={20} />} label={language === 'ru' ? 'Добавить питомца' : 'Add a pet'} onClick={() => setModal({ name: 'pet' })} />
+                  <QuickAction icon={<CheckIcon size={20} />} label={language === 'ru' ? 'Создать задачу' : 'Create a task'} onClick={startCreateTask} />
+                  <QuickAction icon={<StethoscopeIcon size={20} />} label={language === 'ru' ? 'Записать к врачу' : 'Book a vet visit'} onClick={startBookVet} />
+                  <QuickAction icon={<CartIcon size={20} />} label={language === 'ru' ? 'Добавить покупку' : 'Add a purchase'} onClick={() => setModal({ name: 'purchase' })} />
                 </div>
               </section>
 
@@ -410,7 +421,7 @@ export default function HomePage() {
                     <span className="pc-section__title-icon">
                       <PawIcon size={18} />
                     </span>
-                    Мои питомцы
+                    {language === 'ru' ? 'Мои питомцы' : 'My pets'}
                     {pets.length > 0 && <span className="pc-section__count">{pets.length}</span>}
                   </h2>
                 </div>
@@ -420,13 +431,13 @@ export default function HomePage() {
                     <span className="pc-empty__illustration">
                       <PawIcon size={44} />
                     </span>
-                    <h3 className="pc-empty__title">Пока нет питомцев</h3>
+                    <h3 className="pc-empty__title">{language === 'ru' ? 'Пока нет питомцев' : 'No pets yet'}</h3>
                     <p className="pc-empty__text">
-                      Добавьте первого питомца, чтобы вести историю здоровья, напоминания и список покупок.
+                      {language === 'ru' ? 'Добавьте первого питомца, чтобы вести историю здоровья, напоминания и список покупок.' : 'Add your first pet to track health history, reminders, and purchases.'}
                     </p>
                     <button type="button" className="pc-btn pc-btn--primary" onClick={() => setModal({ name: 'pet' })}>
                       <PlusIcon size={18} />
-                      Добавить питомца
+                      {language === 'ru' ? 'Добавить питомца' : 'Add a pet'}
                     </button>
                   </div>
                 ) : (
@@ -444,10 +455,10 @@ export default function HomePage() {
                       type="button"
                       className="pc-petcard pc-petcard--add"
                       onClick={() => setModal({ name: 'pet' })}
-                      aria-label="Добавить питомца"
+                      aria-label={language === 'ru' ? 'Добавить питомца' : 'Add a pet'}
                     >
                       <PlusIcon size={20} />
-                      Добавить питомца
+                      {language === 'ru' ? 'Добавить питомца' : 'Add a pet'}
                     </button>
                   </div>
                 )}
@@ -462,16 +473,16 @@ export default function HomePage() {
                     <span className="pc-section__title-icon">
                       <CalendarPlusIcon size={18} />
                     </span>
-                    Ближайшие события
+                    {language === 'ru' ? 'Ближайшие события' : 'Upcoming events'}
                   </h2>
                   <button type="button" className="pc-linkbtn" onClick={startCreateTask}>
-                    Создать задачу
+                    {language === 'ru' ? 'Создать задачу' : 'Create a task'}
                   </button>
                 </div>
 
                 <div className="pc-card pc-events">
                   {events.length === 0 ? (
-                    <p className="pc-event__empty">{warnings.includes('задачи') || warnings.includes('визиты к врачу') ? 'Не удалось загрузить все события. Повторите загрузку.' : attention.missedVisits.length > 0 ? 'Будущих событий нет. Проверьте незавершённые визиты в блоке «Требует внимания».' : 'Ближайших событий нет 🐾'}</p>
+                    <p className="pc-event__empty">{warnings.includes('tasks') || warnings.includes('visits') ? (language === 'ru' ? 'Не удалось загрузить все события. Повторите загрузку.' : 'Could not load all events. Reload to try again.') : attention.missedVisits.length > 0 ? (language === 'ru' ? 'Будущих событий нет. Проверьте незавершённые визиты в блоке «Требует внимания».' : 'No upcoming events. Check incomplete visits under Needs attention.') : (language === 'ru' ? 'Ближайших событий нет 🐾' : 'No upcoming events 🐾')}</p>
                   ) : (
                     events.map((ev) =>
                       ev.kind === 'task' ? (
@@ -479,7 +490,7 @@ export default function HomePage() {
                           <input
                             type="checkbox"
                             className="pc-event__check"
-                            aria-label={`Отметить выполненной: ${ev.task.title}`}
+                            aria-label={language === 'ru' ? `Отметить выполненной: ${ev.task.title}` : `Mark complete: ${ev.task.title}`}
                             disabled={busyTaskId === ev.task.id}
                             onChange={(e) => {
                               if (e.target.checked) void completeTask(ev.task)
@@ -495,7 +506,7 @@ export default function HomePage() {
                               )}
                             </span>
                             <span className="pc-event__meta">
-                              {TASK_TYPE_LABELS[ev.task.type]} · {ev.task.petName} · {(classifyTask(ev.task, now) === 'overdue' ? 'Просрочено · ' : '') + formatDueLabel(ev.task.dueAt, now)}
+                              {(language === 'ru' ? TASK_TYPE_LABELS : ENGLISH_TASK_TYPE_LABELS)[ev.task.type]} · {ev.task.petName} · {(classifyTask(ev.task, now) === 'overdue' ? (language === 'ru' ? 'Просрочено · ' : 'Overdue · ') : '') + formatDueLabel(ev.task.dueAt, now, language)}
                             </span>
                           </span>
                         </div>
@@ -512,7 +523,7 @@ export default function HomePage() {
                             <span className="pc-event__title">
                               {ev.appointment.clinicName} · {ev.appointment.petName}
                             </span>
-                            <span className="pc-event__meta">{formatVisitLabel(ev.appointment.scheduledAt)}</span>
+                            <span className="pc-event__meta">{formatVisitLabel(ev.appointment.scheduledAt, language)}</span>
                           </span>
                         </div>
                       ),
@@ -542,10 +553,8 @@ export default function HomePage() {
           {deleteTarget && (
             <ConfirmDialog
               titleId="pet-delete-title"
-              title={`Удалить питомца ${deleteTarget.pet.name}?`}
-              description="История здоровья, задачи и покупки этого питомца будут удалены безвозвратно. Действие нельзя отменить."
-              confirmLabel="Удалить"
-              cancelLabel="Отмена"
+              title={language === 'ru' ? `Удалить питомца ${deleteTarget.pet.name}?` : `Delete ${deleteTarget.pet.name}?`}
+              description={language === 'ru' ? 'История здоровья, задачи и покупки этого питомца будут удалены безвозвратно. Действие нельзя отменить.' : 'This permanently deletes the pet’s health history, tasks, and purchases. This can’t be undone.'}
               busy={deleting}
               onCancel={() => setDeleteTarget(null)}
               onConfirm={() => confirmDeletePet(deleteTarget)}
@@ -555,8 +564,8 @@ export default function HomePage() {
           {modal?.name === 'pickPet' && (
             <PetPickerModal
               pets={pets}
-              title={modal.for === 'task' ? 'Для кого задача?' : 'Кого записываем?'}
-              hint="Выберите питомца"
+              title={modal.for === 'task' ? (language === 'ru' ? 'Для кого задача?' : 'Which pet is this task for?') : (language === 'ru' ? 'Кого записываем?' : 'Which pet needs a visit?')}
+              hint={language === 'ru' ? 'Выберите питомца' : 'Select a pet'}
               onClose={() => setModal(null)}
               onPick={(pet) => setModal(modal.for === 'task' ? { name: 'task', pet } : { name: 'appointment', pet })}
             />
@@ -629,12 +638,13 @@ function TaskRow({
   onComplete: (t: CareTaskDto) => Promise<void>
   onOpen: () => void
 }) {
+  const { language } = useLanguage()
   return (
     <div className="pc-attention__row">
       <input
         type="checkbox"
         className="pc-event__check"
-        aria-label={`Отметить выполненной: ${task.title}`}
+        aria-label={language === 'ru' ? `Отметить выполненной: ${task.title}` : `Mark complete: ${task.title}`}
         disabled={busy}
         onChange={(e) => {
           if (e.target.checked) void onComplete(task)
@@ -653,7 +663,7 @@ function TaskRow({
             aria-hidden="true"
             style={{ display: 'inline-block', marginRight: 6 }}
           />
-          {task.petName} · {(dot === 'danger' ? 'Просрочено · ' : '') + formatDueLabel(task.dueAt, now)}
+          {task.petName} · {(dot === 'danger' ? (language === 'ru' ? 'Просрочено · ' : 'Overdue · ') : '') + formatDueLabel(task.dueAt, now, language)}
         </span>
       </button>
     </div>

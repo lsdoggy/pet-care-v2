@@ -1,3 +1,4 @@
+import type { Language } from '../i18n/language';
 /**
  * Dashboard helpers (mobile) — mirror of apps/web/src/lib/dashboard.ts.
  * Pure functions only: no state, no API calls. Design Sprint 2.
@@ -8,35 +9,40 @@ import type { CareTaskDto, FoodProductDto, VetAppointmentDto } from '../api/type
 /* ---------- Greeting & time ---------- */
 
 /** Time-of-day greeting in Russian ("Доброе утро" / "Добрый день" / ...). */
-export function greetingForNow(now: Date = new Date()): string {
+export function greetingForNow(now: Date = new Date(), language: Language = 'ru'): string {
   const h = now.getHours();
-  if (h >= 5 && h < 12) return 'Доброе утро';
-  if (h >= 12 && h < 18) return 'Добрый день';
-  if (h >= 18 && h < 23) return 'Добрый вечер';
-  return 'Доброй ночи';
+  if (h >= 5 && h < 12) return language === 'ru' ? 'Доброе утро' : 'Good morning';
+  if (h >= 12 && h < 18) return language === 'ru' ? 'Добрый день' : 'Good afternoon';
+  if (h >= 18 && h < 23) return language === 'ru' ? 'Добрый вечер' : 'Good evening';
+  return language === 'ru' ? 'Доброй ночи' : 'Good evening';
 }
 
 /** Short local date, e.g. "4 нояб." */
-export function formatDate(iso: string): string {
+export function formatDate(iso: string, language: Language = 'ru'): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(language, { day: 'numeric', month: 'short' });
 }
 
 /** Short local datetime, e.g. "4 нояб., 15:30" */
-export function formatDateTime(iso: string): string {
+export function formatDateTime(iso: string, language: Language = 'ru'): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(language, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 /** Human-friendly relative label for a due instant: "Сегодня", "Просрочено на 2 дня" etc. */
-export function dueLabel(iso: string, now: Date = new Date()): string {
+export function dueLabel(iso: string, now: Date = new Date(), language: Language = 'ru'): string {
   const due = new Date(iso);
   if (Number.isNaN(due.getTime())) return '';
   const startOfToday = startOfDay(now);
   const startOfDue = startOfDay(due);
   const days = Math.round((startOfDue.getTime() - startOfToday.getTime()) / 86_400_000);
+  if (language === 'en') {
+    if (days === 0 && due < now) return 'Overdue today';
+    if (days < 7) return new Intl.RelativeTimeFormat(language, { numeric: 'auto' }).format(days, 'day');
+    return formatDate(iso, language);
+  }
   if (days < 0) {
     const late = Math.abs(days);
     return late === 1 ? 'Просрочено на 1 день' : `Просрочено на ${pluralRu(late, ['дней', 'день', 'дня'])}`;

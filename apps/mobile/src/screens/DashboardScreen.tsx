@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/language';
 /**
  * DashboardScreen — главный экран мобильного приложения (Design Sprint 2).
  * Mobile-first, WCAG AA (minTouchTarget 44dp, контраст из токенов), system fonts.
@@ -59,6 +60,7 @@ const KIND_STYLE: Record<AttentionItem['kind'], { dot: string; label: string }> 
 };
 
 export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
+  const language = useLanguage();
   const navigation = useNavigation();
   const [phase, setPhase] = useState<Phase>('loading');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -198,7 +200,7 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
         </View>}
         {visitError && <Text style={styles.warnText} accessibilityRole="alert">{visitError}</Text>}
         {notice && <Text style={styles.okText} accessibilityLiveRegion="polite">{notice}</Text>}
-        <Text style={styles.greeting}>{greetingForNow(dashboardDate)}, {user.firstName?.trim() || user.email.split('@')[0]}!</Text>
+        <Text style={styles.greeting}>{greetingForNow(dashboardDate, language)}, {user.firstName?.trim() || user.email.split('@')[0]}!</Text>
         <Text style={styles.greetingSub}>
           {warnings.length > 0
             ? 'Часть данных недоступна — обновите сводку.'

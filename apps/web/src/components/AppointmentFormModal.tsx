@@ -1,8 +1,9 @@
+import { useLanguage } from '../i18n/language'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../api/client'
 import type { AppointmentStatus, CreateAppointmentRequest, VetAppointmentDto } from '../api/types'
-import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABELS } from '../api/types'
+import { APPOINTMENT_STATUSES, APPOINTMENT_STATUS_LABELS, ENGLISH_APPOINTMENT_STATUS_LABELS } from '../api/types'
 
 interface Props {
   petId: number
@@ -62,6 +63,7 @@ function utcIsoToLocalInput(iso: string): string {
 }
 
 export default function AppointmentFormModal({ petId, token, appointment, onClose, onSaved }: Props) {
+  const { language } = useLanguage()
   const [clinicName, setClinicName] = useState(appointment?.clinicName ?? '')
   const [doctorName, setDoctorName] = useState(appointment?.doctorName ?? '')
   const [scheduledAtLocal, setScheduledAtLocal] = useState(() => {
@@ -77,7 +79,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
   const [currency, setCurrency] = useState(appointment?.currency ?? '')
   const [reason, setReason] = useState(appointment?.reason ?? '')
   const [notes, setNotes] = useState(appointment?.notes ?? '')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{ ru: string; en: string } | null>(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -91,29 +93,29 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
     setError(null)
 
     if (!clinicName.trim()) {
-      setError('Укажите название клиники')
+      setError({ ru: 'Укажите название клиники', en: 'Enter the clinic name.' })
       return
     }
     const when = new Date(scheduledAtLocal)
     if (Number.isNaN(when.getTime())) {
-      setError('Укажите корректные дату и время')
+      setError({ ru: 'Укажите корректные дату и время', en: 'Enter a valid date and time.' })
       return
     }
     if (durationMinutes < 5 || durationMinutes > 480) {
-      setError('Длительность должна быть от 5 до 480 минут')
+      setError({ ru: 'Длительность должна быть от 5 до 480 минут', en: 'Duration must be between 5 and 480 minutes.' })
       return
     }
     let costValue: number | undefined
     if (cost.trim() !== '') {
       const parsed = Number(cost)
       if (Number.isNaN(parsed) || parsed < 0) {
-        setError('Стоимость должна быть неотрицательным числом')
+        setError({ ru: 'Стоимость должна быть неотрицательным числом', en: 'Enter a non-negative cost.' })
         return
       }
       costValue = parsed
     }
     if (currency.trim() !== '' && !/^[A-Za-z]{3}$/.test(currency.trim())) {
-      setError('Укажите код валюты из трёх букв, например RUB')
+      setError({ ru: 'Укажите код валюты из трёх букв, например RUB', en: 'Enter a three-letter currency code, such as RUB.' })
       return
     }
 
@@ -137,8 +139,8 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
         ? await api.updateAppointment(appointment.id, body, token)
         : await api.createAppointment(body, token)
       onSaved(saved)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось сохранить визит')
+    } catch {
+      setError({ ru: 'Не удалось сохранить визит', en: 'Could not save the appointment.' })
     } finally {
       setSaving(false)
     }
@@ -147,18 +149,18 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
   return (
     <div style={overlayStyle} onClick={onClose}>
       <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>{appointment ? 'Редактировать визит' : 'Запись к ветеринару'}</h2>
+        <h2 style={{ margin: 0, fontSize: 20 }}>{appointment ? (language === 'ru' ? 'Редактировать визит' : 'Edit visit') : (language === 'ru' ? 'Запись к ветеринару' : 'Book a vet visit')}</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label style={labelStyle}>
-            Клиника *
+            {language === 'ru' ? 'Клиника *' : 'Clinic *'}
             <input style={inputStyle} value={clinicName} onChange={(e) => setClinicName(e.target.value)} maxLength={150} />
           </label>
           <label style={labelStyle}>
-            Врач
+            {language === 'ru' ? 'Врач' : 'Veterinarian'}
             <input style={inputStyle} value={doctorName} onChange={(e) => setDoctorName(e.target.value)} maxLength={150} />
           </label>
           <label style={labelStyle}>
-            Дата и время *
+            {language === 'ru' ? 'Дата и время *' : 'Date and time *'}
             <input
               style={inputStyle}
               type="datetime-local"
@@ -168,7 +170,7 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
           </label>
           <div style={{ display: 'flex', gap: 12 }}>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Длительность, мин
+              {language === 'ru' ? 'Длительность, мин' : 'Duration, min'}
               <input
                 style={inputStyle}
                 type="number"
@@ -179,51 +181,51 @@ export default function AppointmentFormModal({ petId, token, appointment, onClos
               />
             </label>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Статус
+              {language === 'ru' ? 'Статус' : 'Status'}
               <select style={inputStyle} value={status} onChange={(e) => setStatus(e.target.value as AppointmentStatus)}>
                 {APPOINTMENT_STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {APPOINTMENT_STATUS_LABELS[s]}
+                    {(language === 'ru' ? APPOINTMENT_STATUS_LABELS : ENGLISH_APPOINTMENT_STATUS_LABELS)[s]}
                   </option>
                 ))}
               </select>
             </label>
           </div>
           <label style={labelStyle}>
-            Адрес
+            {language === 'ru' ? 'Адрес' : 'Address'}
             <input style={inputStyle} value={address} onChange={(e) => setAddress(e.target.value)} maxLength={255} />
           </label>
           <div style={{ display: 'flex', gap: 12 }}>
             <label style={{ ...labelStyle, flex: 1 }}>
-              Стоимость
+              {language === 'ru' ? 'Стоимость' : 'Cost'}
               <input style={inputStyle} type="number" min={0} step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
             </label>
             <label style={{ ...labelStyle, width: 90 }}>
-              Валюта
+              {language === 'ru' ? 'Валюта' : 'Currency'}
               <input style={inputStyle} value={currency} onChange={(e) => setCurrency(e.target.value)} maxLength={3} placeholder="USD" />
             </label>
           </div>
           <label style={labelStyle}>
-            Причина визита
+            {language === 'ru' ? 'Причина визита' : 'Reason for visit'}
             <textarea style={inputStyle} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={2000} />
           </label>
           <label style={labelStyle}>
-            Заметки
+            {language === 'ru' ? 'Заметки' : 'Notes'}
             <textarea style={{ ...inputStyle, minHeight: 60 }} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} />
           </label>
 
-          {error && <p style={{ color: '#c0392b', margin: 0 }}>{error}</p>}
+          {error && <p style={{ color: '#c0392b', margin: 0 }} role="alert">{error[language]}</p>}
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose} style={{ padding: '8px 16px', borderRadius: 6, border: '1px solid #cbd5e1', backgroundColor: '#fff', cursor: 'pointer' }}>
-              Отмена
+              {language === 'ru' ? 'Отмена' : 'Cancel'}
             </button>
             <button
               type="submit"
               disabled={saving}
               style={{ padding: '8px 20px', borderRadius: 6, border: 'none', backgroundColor: '#4f46e5', color: '#fff', cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
             >
-              {saving ? 'Сохранение…' : 'Сохранить'}
+              {saving ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить' : 'Save')}
             </button>
           </div>
         </form>

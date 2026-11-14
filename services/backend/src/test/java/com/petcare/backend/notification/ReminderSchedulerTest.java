@@ -52,7 +52,7 @@ class ReminderSchedulerTest {
 
         owner.setDayReminderEnabled(true);
         scheduler.remindUpcomingTasks();
-        verify(notifications).push(eq(owner), eq("Care reminder"), any(), any());
+        verify(notifications).push(eq(owner), eq("Напоминание об уходе"), any(), any());
         verify(day).markDayReminderSent();
         verify(overdue, never()).markOverdueReminderSent();
     }
