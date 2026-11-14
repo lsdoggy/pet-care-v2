@@ -76,15 +76,18 @@ export function PetsHomeScreen({ user, onLogout }: Props) {
         accessibilityRole="button"
         accessibilityLabel={`Открыть карточку: ${item.name}`}
       >
-        {photo ? (
-          <View style={styles.photoWrap}>
-            <PetPhoto path={photo} style={styles.photo} resizeMode="cover" />
-          </View>
-        ) : (
-          <View style={[styles.photoWrap, styles.photoPlaceholder]}>
-            <Text style={styles.placeholderText}>{petInitials(item.name) || '🐾'}</Text>
-          </View>
-        )}
+        <View style={styles.photoWrap}>
+          <PetPhoto
+            path={photo}
+            style={styles.photo}
+            resizeMode="cover"
+            fallback={(
+              <View style={[styles.photo, styles.photoPlaceholder]}>
+                <Text style={styles.placeholderText}>{petInitials(item.name) || '🐾'}</Text>
+              </View>
+            )}
+          />
+        </View>
         <View style={styles.info}>
           <Text style={styles.name}>{item.name}</Text>
           <Text style={styles.facts} numberOfLines={2}>

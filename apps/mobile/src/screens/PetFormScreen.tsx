@@ -172,10 +172,13 @@ export function PetFormScreen({ petId }: Props) {
         >
           {pickedPhotoUri ? (
             <Image source={{ uri: pickedPhotoUri }} style={styles.photoImage} resizeMode="cover" />
-          ) : existingPhotoPath ? (
-            <PetPhoto path={existingPhotoPath} style={styles.photoImage} resizeMode="cover" />
           ) : (
-            <Text style={styles.photoHint}>Нажмите, чтобы выбрать фото из галереи</Text>
+            <PetPhoto
+              path={existingPhotoPath}
+              style={styles.photoImage}
+              resizeMode="cover"
+              fallback={<Text style={styles.photoHint}>Нажмите, чтобы выбрать фото из галереи</Text>}
+            />
           )}
         </Pressable>
         {shownError('photo' as keyof PetFormValues) || fieldErrors.photo ? (

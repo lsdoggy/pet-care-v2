@@ -271,15 +271,18 @@ export function DashboardScreen({ user, onLogout, onTabChange }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={`Профиль питомца ${pet.name}`}
               >
-                {photo ? (
-                  <PetPhoto path={photo} style={styles.petPhoto} resizeMode="cover" />
-                ) : (
-                  <View style={styles.petPhotoPlaceholder}>
-                    <Text style={styles.petPhotoEmoji} importantForAccessibility="no">
-                      🐾
-                    </Text>
-                  </View>
-                )}
+                <PetPhoto
+                  path={photo}
+                  style={styles.petPhoto}
+                  resizeMode="cover"
+                  fallback={(
+                    <View style={styles.petPhotoPlaceholder}>
+                      <Text style={styles.petPhotoEmoji} importantForAccessibility="no">
+                        🐾
+                      </Text>
+                    </View>
+                  )}
+                />
                 <View style={styles.petInfo}>
                   <Text style={styles.petName}>{pet.name}</Text>
                   <Text style={styles.petMeta}>

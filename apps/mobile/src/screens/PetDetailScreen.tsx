@@ -100,13 +100,16 @@ export function PetDetailScreen({ petId }: Props) {
       <Text style={styles.title}>{pet.name}</Text>
 
       <View style={styles.photoWrap}>
-        {photo ? (
-          <PetPhoto path={photo} style={styles.photo} resizeMode="cover" />
-        ) : (
-          <View style={styles.photoPlaceholder}>
-            <Text style={styles.placeholderText}>{petInitials(pet.name) || '🐾'}</Text>
-          </View>
-        )}
+        <PetPhoto
+          path={photo}
+          style={styles.photo}
+          resizeMode="cover"
+          fallback={(
+            <View style={styles.photoPlaceholder}>
+              <Text style={styles.placeholderText}>{petInitials(pet.name) || '🐾'}</Text>
+            </View>
+          )}
+        />
       </View>
 
       <View style={styles.fieldRow}>
