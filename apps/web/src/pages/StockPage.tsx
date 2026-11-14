@@ -7,6 +7,7 @@ import type { CreateFoodProductRequest, FoodProductDto } from '../api/types'
 import { FOOD_CATEGORY_LABELS, ENGLISH_FOOD_CATEGORY_LABELS } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { tokenStore } from '../auth/tokenStore'
+import ConfirmDialog from '../components/ConfirmDialog'
 import NavTabs from '../components/NavTabs'
 import ProductFormModal from '../components/ProductFormModal'
 
@@ -70,6 +71,7 @@ export default function StockPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [editing, setEditing] = useState<FoodProductDto | 'new' | null>(null)
+  const [deleting, setDeleting] = useState<FoodProductDto | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const load = useCallback(() => {
@@ -136,13 +138,14 @@ export default function StockPage() {
   }
 
   const removeProduct = async (p: FoodProductDto) => {
-    if (!window.confirm(`Delete "${p.name}"? Its shopping-list history will be kept but unlinked.`)) return
     const token = tokenStore.get() ?? ''
     try {
       await api.deleteFoodProduct(p.id, token)
       setProducts((prev) => prev.filter((x) => x.id !== p.id))
     } catch (err: unknown) {
       setError(language === 'ru' ? 'Не удалось удалить товар' : 'Failed to delete product')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -243,7 +246,7 @@ export default function StockPage() {
                 </button>
                 <button
                   style={{ ...smallBtn, borderColor: '#c0392b', color: '#c0392b' }}
-                  onClick={() => removeProduct(p)}
+                  onClick={() => setDeleting(p)}
                 >
                   {language === 'ru' ? 'Удалить' : 'Delete'}
                 </button>
@@ -252,6 +255,18 @@ export default function StockPage() {
           )
         })}
       </div>
+
+      {deleting && (
+        <ConfirmDialog
+          titleId="delete-product-title"
+          title={language === 'ru' ? `Удалить «${deleting.name}»?` : `Delete "${deleting.name}"?`}
+          description={language === 'ru'
+            ? 'История покупок сохранится, но связь с товаром будет удалена.'
+            : 'Its shopping-list history will be kept but unlinked.'}
+          onCancel={() => setDeleting(null)}
+          onConfirm={() => removeProduct(deleting)}
+        />
+      )}
 
       {editing && (
         <ProductFormModal
