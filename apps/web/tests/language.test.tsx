@@ -6,6 +6,7 @@ import { LanguageSwitcher } from '../src/i18n/LanguageSwitcher'
 import { notificationText } from '../src/i18n/notificationText'
 import type { NotificationDto } from '../src/api/types'
 import AppointmentFormModal from '../src/components/AppointmentFormModal'
+import ProductFormModal from '../src/components/ProductFormModal'
 import { useLanguage } from '../src/i18n/language'
 import { localizeAuthError, validateEmail } from '../src/validation/auth'
 
@@ -69,4 +70,21 @@ it('localizes structured feed notifications and preserves legacy text', () => {
     title: 'Low food stock',
     body: '“Лакомство” has reached its reorder threshold.',
   })
+})
+
+it('localizes the new product dialog in both languages', () => {
+  render(
+    <LanguageProvider>
+      <LanguageSwitcher />
+      <ProductFormModal submitting={false} onSubmit={() => {}} onClose={() => {}} />
+    </LanguageProvider>,
+  )
+  expect(screen.getByRole('heading', { name: 'Новый товар' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Отмена' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Сохранить' })).toBeTruthy()
+
+  fireEvent.change(screen.getByRole('combobox', { name: 'Язык' }), { target: { value: 'en' } })
+  expect(screen.getByRole('heading', { name: 'New product' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
 })

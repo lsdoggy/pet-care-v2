@@ -71,7 +71,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
 
   return (
     <Modal labelledBy={titleId} onClose={onClose}>
-      <h2 id={titleId} className="pc-modal__title">{initial ? (language === 'ru' ? 'Редактировать товар' : 'Edit product') : 'New product'}</h2>
+      <h2 id={titleId} className="pc-modal__title">{initial ? (language === 'ru' ? 'Редактировать товар' : 'Edit product') : (language === 'ru' ? 'Новый товар' : 'New product')}</h2>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
           <label style={labelStyle}>{language === 'ru' ? 'Название *' : 'Name *'}</label>
@@ -166,7 +166,7 @@ export default function ProductFormModal({ initial, submitting, onSubmit, onClos
             {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button type="submit" style={primaryBtn} disabled={submitting}>
-            {submitting ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : 'Save'}
+            {submitting ? (language === 'ru' ? 'Сохранение…' : 'Saving…') : (language === 'ru' ? 'Сохранить' : 'Save')}
           </button>
         </div>
       </form>

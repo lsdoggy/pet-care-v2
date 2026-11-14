@@ -116,6 +116,26 @@
 - **WHEN** у питомца существуют визиты и медицинские записи
 - **THEN** каждый визит представлен kind APPOINTMENT, eventAt=scheduledAt и объектом appointment; каждая запись представлена kind RECORD, eventAt=visitDate в 00:00 UTC и объектом record; будущие визиты включаются и могут быть первыми, связи appointmentId не объединяют два события в одно.
 
+### Requirement: Причина визита
+
+API визитов SHALL принимать, сохранять и возвращать необязательное поле `reason` длиной до 2000 символов.
+
+#### Scenario: Изменение причины визита
+- **WHEN** PATCH передаёт `reason` с текстом, пустой или пробельной строкой либо null
+- **THEN** текст сохраняется после trim, пустая или пробельная строка очищает причину, а null сохраняет предыдущее значение.
+
+### Requirement: Приём записи от клиники
+
+Backend SHALL предоставлять POST `/api/v1/vetinfo` для роли `VET_CLINIC`. Питомец и имя клиники SHALL определяться конфигурацией сервера. Запрос SHALL содержать `scheduledAt` и может содержать остальные данные визита, включая причину.
+
+#### Scenario: Создание запланированного визита клиникой
+- **WHEN** клиника отправляет валидный запрос и в конфигурации указан активный питомец и допустимое имя клиники
+- **THEN** API создаёт визит со статусом SCHEDULED для владельца питомца и возвращает 201 с `appointmentId`.
+
+#### Scenario: Конфигурация клиники недоступна
+- **WHEN** идентификатор питомца неположителен либо имя клиники отсутствует или длиннее 150 символов
+- **THEN** API возвращает 503.
+
 ## Implementation references
 
 - [VetController](../../../services/backend/src/main/java/com/petcare/backend/vet/VetController.java), [VetService](../../../services/backend/src/main/java/com/petcare/backend/vet/VetService.java).
