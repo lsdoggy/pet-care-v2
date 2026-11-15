@@ -57,7 +57,13 @@ docker compose --env-file .env -f compose.vps.yml start backend
 snapshot=/absolute/path/to/alpha-backup
 (cd "$snapshot" && sha256sum -c SHA256SUMS)
 
-restore=(docker compose --env-file .env -f compose.vps.yml -p petcare-restore-drill-01)
+restore=(
+  env MAIL_HOST= MAIL_USERNAME= MAIL_PASSWORD= MAIL_FROM=
+  EXPO_PUSH_ENABLED=false EXPO_PUSH_ACCESS_TOKEN=
+  WEB_PUSH_VAPID_PUBLIC_KEY= WEB_PUSH_VAPID_PRIVATE_KEY= WEB_PUSH_VAPID_SUBJECT=
+  APP_ACCOUNT_RECOVERY_PAGE= APP_PASSWORD_RESET_PAGE=
+  docker compose --env-file .env -f compose.vps.yml -p petcare-restore-drill-01
+)
 "${restore[@]}" up -d --wait postgres
 
 "${restore[@]}" exec -T postgres sh -ec '
@@ -73,7 +79,9 @@ restore=(docker compose --env-file .env -f compose.vps.yml -p petcare-restore-dr
 ```
 
 Продолжайте только после успешного завершения каждой команды. Caddy в проекте
-восстановления не запускайте. На изолированном стенде проверьте вход тестовых
+восстановления не запускайте. Перед восстановлением копии с реальными данными
+дополнительно запретите исходящий трафик стенда к внешним SMTP и push-сервисам.
+На изолированном стенде проверьте вход тестовых
 пользователей, существующие записи, открытие PDF и фото владельцем и изоляцию
 между аккаунтами. Запишите ревизию кода, версии образов, дату копии, длительность
 восстановления и результаты проверок.

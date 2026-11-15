@@ -13,7 +13,6 @@ import '../styles/settings.css'
 
 const SETTINGS_MESSAGES = {
   profileSaved: { ru: 'Данные профиля сохранены', en: 'Profile saved' },
-  signOutFailed: { ru: 'Не удалось отключить Web Push. Проверьте соединение и повторите выход.', en: 'Could not disconnect Web Push. Check your connection and try signing out again.' },
   saveFailed: { ru: 'Не удалось сохранить изменения. Проверьте соединение и попробуйте ещё раз.', en: 'Could not save changes. Check your connection and try again.' },
   deactivationFailed: { ru: 'Не удалось деактивировать аккаунт. Попробуйте позже.', en: 'Could not deactivate the account. Try again later.' },
   notificationsSaved: { ru: 'Настройки уведомлений сохранены', en: 'Notification settings saved' },
@@ -76,11 +75,9 @@ export default function SettingsPage() {
     setError(null)
     try {
       const token = tokenStore.get()
-      if (token) await disconnectWebPush(token)
-      logout()
-    } catch {
-      setError('signOutFailed')
+      if (token) await disconnectWebPush(token).catch(() => {})
     } finally {
+      logout()
       setSaving(false)
     }
   }

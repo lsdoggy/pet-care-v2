@@ -21,20 +21,31 @@ export function decodeVapidKey(publicKey: string) {
 
 export async function disconnectWebPush(token: string) {
   if (!canUseWebPush()) return
-  const registration = await navigator.serviceWorker.getRegistration('/')
-  const subscription = await registration?.pushManager.getSubscription()
-  if (!subscription) return
 
   const controller = new AbortController()
-  const timer = window.setTimeout(() => controller.abort(), 5000)
-  try {
-    const outcomes = await Promise.allSettled([
+  let timer: number | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => {
+      controller.abort()
+      reject(new Error('Web Push cleanup timed out'))
+    }, 5000)
+  })
+
+  async function disconnect() {
+    const registration = await navigator.serviceWorker.getRegistration('/')
+    const subscription = await registration?.pushManager.getSubscription()
+    if (!subscription || controller.signal.aborted) return
+
+    await Promise.any([
       api.unsubscribeFromWebPush(subscription.endpoint, token, controller.signal),
-      subscription.unsubscribe(),
+      subscription.unsubscribe().then((removed) => {
+        if (!removed) throw new Error('Could not unsubscribe this browser')
+      }),
     ])
-    if (outcomes.every((outcome) => outcome.status === 'rejected')) {
-      throw new Error('Could not disconnect Web Push')
-    }
+  }
+
+  try {
+    await Promise.race([disconnect(), timeout])
   } finally {
     window.clearTimeout(timer)
   }
