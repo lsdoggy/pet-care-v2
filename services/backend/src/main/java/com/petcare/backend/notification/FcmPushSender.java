@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * Sprint 6: optional fallback transport for RAW FCM registration tokens (native builds).
  *
  * <p>Per the approved plan the primary push path is {@link ExpoPushSender} (Expo Push Service
- * forwards to FCM/APNs), so NO firebase-admin dependency and no google-services.json are needed.
+ * forwards to FCM/APNs), so the backend does not require Firebase credentials.
  * This bean only activates when {@code app.notifications.fcm.enabled=true}; without it the
  * application runs with zero Firebase credentials, which keeps dev/test environments clean.
  * A full firebase-admin HTTP v1 client can be dropped in here later without touching
@@ -33,7 +33,7 @@ public class FcmPushSender implements PushSender {
     @Override
     public boolean supports(String token) {
         // Anything that is not an Expo token is assumed to be a raw FCM registration token.
-        return token != null && !token.startsWith("ExponentPushToken[");
+        return token != null && !token.startsWith("ExponentPushToken[") && !token.startsWith("ExpoPushToken[");
     }
 
     @Override

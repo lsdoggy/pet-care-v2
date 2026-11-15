@@ -15,7 +15,8 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-font",
-      "expo-localization"
+      "expo-localization",
+      ["expo-notifications", { "defaultChannel": "reminders" }]
     ],
     "ios": {
       "supportsTablet": true

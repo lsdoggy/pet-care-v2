@@ -24,6 +24,7 @@ import type {
 
 /** Design Sprint 1: optional profile fields sent alongside {email,password}. */
 export interface RegisterProfile {
+  inviteCode?: string
   firstName?: string
   phone?: string
 }
@@ -79,15 +80,27 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 
 export const api = {
+  fetchRecordAttachment: async (path: string, token: string): Promise<Blob> => {
+    if (!/^\/(?:api\/v1\/record-attachments|files\/records)\/[\w.-]+$/.test(path)) {
+      throw new Error('Invalid attachment path')
+    }
+    const response = await fetch(path, { headers: { Authorization: `Bearer ${token}` }, redirect: 'error' })
+    if (!response.ok) throw new ApiError(response.status, 'Could not load attachment')
+    return response.blob()
+  },
   restoreAccount: (token: string) =>
     request<void>('/auth/restore-account', { method: 'POST', body: JSON.stringify({ token }) }),
   deactivateAccount: (token: string) =>
     request<void>('/users/me/deactivate', { method: 'POST' }, token),
+  requestAccessLink: (email: string) =>
+    request<void>('/auth/request-access-link', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  resetPassword: (token: string, password: string) =>
+    request<void>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, password }) }),
+
   register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      // Design Sprint 1: firstName/phone are optional in the backend DTO —
-      // old contract {email,password} stays valid (backward compatible).
       body: JSON.stringify({ email, password, ...profile }),
     }),
 
@@ -218,6 +231,28 @@ export const api = {
     request<HistoryEventDto[]>(`/pets/${petId}/history`, { method: 'GET' }, token),
 
   /* ---------- Notifications (Sprint 6) ---------- */
+
+  webPushConfig: (token: string) =>
+    request<{ publicKey: string }>('/web-push/config', {}, token),
+
+  webPushStatus: (endpoint: string, token: string) =>
+    request<{ subscribed: boolean }>('/web-push/status', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint }),
+    }, token),
+
+  subscribeToWebPush: (endpoint: string, token: string) =>
+    request<void>('/web-push/subscription', {
+      method: 'PUT',
+      body: JSON.stringify({ endpoint }),
+    }, token),
+
+  unsubscribeFromWebPush: (endpoint: string, token: string, signal: AbortSignal) =>
+    request<void>('/web-push/subscription', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+      signal,
+    }, token),
 
   listNotifications: (token: string) =>
     request<NotificationDto[]>('/notifications', { method: 'GET' }, token),

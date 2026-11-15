@@ -2,8 +2,12 @@ package com.petcare.backend.device;
 
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.petcare.backend.device.dto.DeviceDto;
 import com.petcare.backend.device.dto.RegisterDeviceRequest;
@@ -20,27 +24,40 @@ public class DeviceService {
 
     private final UserDeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final TransactionTemplate registrationTransaction;
 
-    public DeviceService(UserDeviceRepository deviceRepository, UserRepository userRepository) {
+    public DeviceService(UserDeviceRepository deviceRepository, UserRepository userRepository,
+                         PlatformTransactionManager transactionManager) {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.registrationTransaction = new TransactionTemplate(transactionManager);
+        this.registrationTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
      * Idempotent registration: re-sending the same token from the same user refreshes
-     * last_seen_at instead of creating a duplicate row.
+     * last_seen_at instead of creating a duplicate row. Switching accounts transfers ownership.
      */
-    @Transactional
     public DeviceDto register(RegisterDeviceRequest request, String email) {
-        UserEntity user = resolveUser(email);
         String token = request.token().trim();
-        UserDeviceEntity device = deviceRepository.findByUserIdAndToken(user.getId(), token)
-                .orElseGet(() -> deviceRepository.save(
-                        new UserDeviceEntity(user.getId(), token, request.normalizedPlatform())));
-        // Token survives an OS reinstall/permission change — make sure it can receive pushes again.
-        if (!device.isPushEnabled()) {
-            device.setPushEnabled(true);
+        String platform = request.normalizedPlatform();
+        try {
+            return registrationTransaction.execute(status -> register(token, platform, email, null));
+        } catch (DataIntegrityViolationException race) {
+            // A first registration in another transaction may have inserted the same token.
+            return registrationTransaction.execute(status -> register(token, platform, email, race));
         }
+    }
+
+    private DeviceDto register(String token, String platform, String email, DataIntegrityViolationException race) {
+        Long userId = resolveUser(email).getId();
+        UserDeviceEntity device = deviceRepository.findByToken(token).orElseGet(() -> {
+            if (race != null) {
+                throw race;
+            }
+            return deviceRepository.save(new UserDeviceEntity(userId, token, platform));
+        });
+        device.register(userId, platform);
         return DeviceDto.from(device);
     }
 
@@ -56,9 +73,9 @@ public class DeviceService {
     @Transactional
     public void unregister(Long deviceId, String email) {
         UserEntity user = resolveUser(email);
-        UserDeviceEntity device = deviceRepository.findByIdAndUserId(deviceId, user.getId())
-                .orElseThrow(() -> new DeviceNotFoundException(deviceId));
-        deviceRepository.delete(device);
+        if (deviceRepository.deleteOwnedDevice(deviceId, user.getId()) == 0) {
+            throw new DeviceNotFoundException(deviceId);
+        }
     }
 
     private UserEntity resolveUser(String email) {

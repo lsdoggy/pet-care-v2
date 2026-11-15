@@ -1,8 +1,12 @@
+import { Directory, File, Paths } from 'expo-file-system';
+import { getContentUriAsync } from 'expo-file-system/legacy';
+import { startActivityAsync } from 'expo-intent-launcher';
+import * as Sharing from 'expo-sharing';
 import { useLanguage } from '../i18n/language';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { Text } from '../components/Typography';
-import { api, ApiError, resolveFileUrl } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { HistoryEventDto, VetAppointmentDto, VetRecordDto } from '../api/types';
 import { APPOINTMENT_STATUS_LABELS, ENGLISH_APPOINTMENT_STATUS_LABELS } from '../api/types';
 import { tokenStore } from '../auth/tokenStore';
@@ -203,6 +207,55 @@ function AppointmentCard({ a }: { a: VetAppointmentDto }) {
 
 function RecordCard({ r }: { r: VetRecordDto }) {
   const language = useLanguage();
+  const [opening, setOpening] = useState(false);
+
+  async function openAttachment(att: VetRecordDto['attachments'][number]) {
+    if (opening) return;
+    setOpening(true);
+    try {
+      const token = await tokenStore.get();
+      if (!token) throw new ApiError(401, 'Not authenticated');
+      const response = await api.fetchRecordAttachment(att.url, token);
+      if (Platform.OS === 'web') {
+        const url = URL.createObjectURL(await response.blob());
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = att.name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        return;
+      }
+
+      const directory = new Directory(Paths.cache, 'record-attachments', String(Date.now()));
+      directory.create({ intermediates: true });
+      const file = new File(directory, att.url.slice(att.url.lastIndexOf('/') + 1));
+      try {
+        file.create();
+        file.write(new Uint8Array(await response.arrayBuffer()));
+        const mimeType = response.headers.get('Content-Type') ?? undefined;
+        if (Platform.OS === 'android') {
+          try {
+            await startActivityAsync('android.intent.action.VIEW', {
+              data: await getContentUriAsync(file.uri),
+              type: mimeType,
+              flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+            });
+            return;
+          } catch {
+            // Offer export through the system chooser when no viewer can open the file.
+          }
+        }
+        await Sharing.shareAsync(file.uri, { mimeType });
+      } finally {
+        directory.delete();
+      }
+    } catch {
+      Alert.alert(language === 'ru' ? 'Не удалось открыть вложение' : 'Could not open attachment');
+    } finally {
+      setOpening(false);
+    }
+  }
+
   return (
     <>
       <View style={styles.cardHead}>
@@ -216,11 +269,11 @@ function RecordCard({ r }: { r: VetRecordDto }) {
       {r.attachments.length > 0 ? (
         <View style={styles.attachWrap}>
           {r.attachments.map((att) => {
-            const url = resolveFileUrl(att.url);
             return (
               <Pressable
                 key={att.url}
-                onPress={() => url && void Linking.openURL(url)}
+                disabled={opening}
+                onPress={() => void openAttachment(att)}
                 style={styles.attachChip}
               >
                 <Text style={styles.attachText}>

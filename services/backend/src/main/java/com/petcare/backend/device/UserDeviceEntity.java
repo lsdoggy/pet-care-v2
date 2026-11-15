@@ -83,8 +83,11 @@ public class UserDeviceEntity {
         return pushEnabled;
     }
 
-    public void setPushEnabled(boolean pushEnabled) {
-        this.pushEnabled = pushEnabled;
+    public void register(Long userId, String platform) {
+        this.userId = userId;
+        this.platform = platform;
+        this.pushEnabled = true;
+        this.lastSeenAt = Instant.now();
     }
 
     public Instant getCreatedAt() {

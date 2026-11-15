@@ -1,3 +1,13 @@
 https://{$API_DOMAIN} {
-	reverse_proxy backend:8080
+	@backend path /api/* /files/*
+	handle @backend {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		header /manifest.webmanifest Content-Type application/manifest+json
+		root * /srv/petcare
+		try_files {path} /index.html
+		file_server
+	}
 }

@@ -15,7 +15,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TextInput } from '../components/Typography';
-import { ApiError } from '../api/client';
+import { api, ApiError } from '../api/client';
 import type { RegisterProfile } from '../api/client';
 import { colors, spacing, stack, radius, layout, typography, fontSize } from '../theme/tokens';
 import {
@@ -51,6 +51,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
   const language = useLanguage();
   const isLogin = mode === 'login';
 
+  const [inviteCode, setInviteCode] = useState('');
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -61,6 +62,26 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
   const [touched, setTouched] = useState<TouchedState>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [accessStatus, setAccessStatus] = useState<'idle' | 'sent' | 'failed'>('idle');
+
+  const requestAccessLink = async () => {
+    const message = validateEmail(email);
+    markTouched('email');
+    setErrorFor('email', message);
+    setFormError(null);
+    setAccessStatus('idle');
+    if (message) return;
+
+    setBusy(true);
+    try {
+      await api.requestAccessLink(email.trim());
+      setAccessStatus('sent');
+    } catch {
+      setAccessStatus('failed');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const fieldError = (name: AuthFieldName): string | undefined =>
     touched[name] ? errors[name] : undefined;
@@ -154,12 +175,15 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
         ? undefined
         : {
             firstName: firstName.trim(),
+            inviteCode: inviteCode.trim(),
             ...(phone.trim() ? { phone: phone.trim() } : {}),
           };
       await onSubmit(email.trim().toLowerCase(), password, profile);
       // Успех обрабатывает родитель (AuthGate): экран заменяется Home/Dashboard.
     } catch (e) {
-      setFormError(mapApiError(e));
+      setFormError(!isLogin && e instanceof ApiError && e.status === 403
+        ? (language === 'ru' ? 'Регистрация закрыта или код приглашения недействителен.' : 'Registration is closed or the invitation code is invalid.')
+        : mapApiError(e));
     } finally {
       setBusy(false);
     }
@@ -180,6 +204,14 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
           </Text>
           <Text style={styles.title}>{isLogin ? (language === 'ru' ? 'Вход в аккаунт' : 'Sign in') : (language === 'ru' ? 'Создание аккаунта' : 'Create an account')}</Text>
           <Text style={styles.subtitle}>{language === 'ru' ? 'Pet Care — забота о питомце без напоминаний вслух' : 'Pet Care — keep track of your pet’s care'}</Text>
+
+          {!isLogin && (
+            <Field label={language === 'ru' ? 'Код приглашения' : 'Invitation code'}>
+              <TextInput style={styles.input} value={inviteCode} onChangeText={setInviteCode}
+                autoCapitalize="none" autoCorrect={false}
+                accessibilityLabel={language === 'ru' ? 'Код приглашения' : 'Invitation code'} />
+            </Field>
+          )}
 
           {!isLogin && (
             <Field label={language === 'ru' ? 'Имя' : 'First name'} error={fieldError('firstName')}>
@@ -210,6 +242,7 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
               value={email}
               onChangeText={(v) => {
                 setEmail(v);
+                setAccessStatus('idle');
                 if (touched.email) setErrorFor('email', validateEmail(v));
               }}
               onBlur={handleBlur('email')}
@@ -342,6 +375,28 @@ export function AuthScreen({ mode, onSubmit, onSwitchMode }: Props) {
               <Text style={styles.buttonText}>{isLogin ? (language === 'ru' ? 'Войти' : 'Sign in') : (language === 'ru' ? 'Создать аккаунт' : 'Create account')}</Text>
             )}
           </Pressable>
+
+          {isLogin && (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => void requestAccessLink()}
+                style={styles.switchLink}
+              >
+                <Text style={styles.switchText}>
+                  {language === 'ru' ? 'Запросить ссылку на указанный email' : 'Send access link to the email above'}
+                </Text>
+              </Pressable>
+              {accessStatus !== 'idle' && (
+                <Text accessibilityLiveRegion="polite">
+                  {accessStatus === 'sent'
+                    ? (language === 'ru' ? 'Если аккаунт существует, проверьте почту.' : 'If the account exists, check your email.')
+                    : (language === 'ru' ? 'Попробуйте запросить ссылку позже.' : 'Try requesting the link again later.')}
+                </Text>
+              )}
+            </>
+          )}
 
           <Pressable
             onPress={onSwitchMode}

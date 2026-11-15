@@ -70,18 +70,31 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 /** Design Sprint 1: optional profile fields accepted by the backend RegisterRequest. */
 export interface RegisterProfile {
+  inviteCode?: string;
   firstName?: string;
   phone?: string;
 }
 
 export const api = {
+  fetchRecordAttachment: async (path: string, token: string): Promise<Response> => {
+    if (!/^\/(?:api\/v1\/record-attachments|files\/records)\/[\w.-]+$/.test(path)) {
+      throw new Error('Invalid attachment path');
+    }
+    const response = await fetch(`${API_URL}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: 'error',
+    });
+    if (!response.ok) throw new ApiError(response.status, 'Could not load attachment');
+    return response;
+  },
   deactivateAccount: (token: string) =>
     request<void>('/users/me/deactivate', { method: 'POST' }, token),
+  requestAccessLink: (email: string) =>
+    request<void>('/auth/request-access-link', { method: 'POST', body: JSON.stringify({ email }) }),
+
   register: (email: string, password: string, profile?: RegisterProfile) =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      // Design Sprint 1: firstName/phone are optional in the backend DTO —
-      // old contract {email,password} stays valid (backward compatible).
       body: JSON.stringify({ email, password, ...profile }),
     }),
 
@@ -225,6 +238,9 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ token, platform }) },
       jwt,
     ),
+
+  unregisterDevice: (id: number, jwt: string) =>
+    request<void>(`/devices/${id}`, { method: 'DELETE' }, jwt),
 
   listDevices: (jwt: string) => request<DeviceDto[]>('/devices', { method: 'GET' }, jwt),
 

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -62,6 +63,23 @@ public class VetService {
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.idempotency = idempotency;
+    }
+
+    @Transactional(readOnly = true)
+    public Resource loadAttachment(String filename, String email) {
+        if (!filename.matches("[a-fA-F0-9-]+\\.(pdf|jpg|jpeg|png|webp)")) {
+            throw new AccessDeniedForResourceException("Attachment not found");
+        }
+        String path = FileStorageService.RECORD_ATTACHMENT_PREFIX + filename;
+        String legacyPath = FileStorageService.LEGACY_RECORD_ATTACHMENT_PREFIX + filename;
+        boolean ownsAttachment = recordRepository.findAttachmentCandidates(resolveUser(email).getId(), filename)
+                .stream()
+                .flatMap(json -> RecordDto.parseAttachments(json).stream())
+                .anyMatch(attachment -> path.equals(attachment.url()) || legacyPath.equals(attachment.url()));
+        if (!ownsAttachment) {
+            throw new AccessDeniedForResourceException("Attachment not found");
+        }
+        return fileStorageService.loadRecordAttachment(filename);
     }
 
     /* ---------- Appointments ---------- */

@@ -32,6 +32,9 @@ class PetFlowTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     private String uniqueEmail() {
         return "petuser" + System.nanoTime() + "@example.com";
     }
@@ -40,7 +43,7 @@ class PetFlowTest {
     private String registerAndLogin(String email) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(JSON.writeValueAsString(Map.of("email", email, "password", "Secret123!"))))
+                        .content(JSON.writeValueAsString(Map.of("inviteCode", TestInvites.issue(jdbc), "email", email, "password", "Secret123!"))))
                 .andExpect(status().isCreated());
         String loginBody = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

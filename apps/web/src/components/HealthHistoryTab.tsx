@@ -90,20 +90,42 @@ export default function HealthHistoryTab({ petId, token }: Props) {
 
   const linkedRecordIds = events.filter((e) => e.kind === 'RECORD' && e.record?.appointmentId != null).map((e) => e.record!.appointmentId as number)
 
+  async function openAttachment(att: VetRecordDto['attachments'][number], download: boolean) {
+    const preview = download ? null : window.open()
+    if (preview) preview.opener = null
+    try {
+      if (!download && !preview) throw new Error('Popup blocked')
+      const blob = await api.fetchRecordAttachment(att.url, token)
+      const url = URL.createObjectURL(blob)
+      if (preview) {
+        preview.location.replace(url)
+      } else {
+        const link = document.createElement('a')
+        link.href = url
+        link.download = att.name
+        link.click()
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch {
+      preview?.close()
+      setError({ ru: 'Не удалось открыть вложение.', en: 'Failed to open attachment.' })
+    }
+  }
+
   function renderAttachments(record: VetRecordDto) {
     return record.attachments.length > 0 && (
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
-        {record.attachments.map((att) =>
-          att.type === 'pdf' ? (
-            <a key={att.url} href={att.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: '#4f46e5' }}>
-              📄 {att.name} ({formatFileSize(att.size)})
-            </a>
-          ) : (
-            <a key={att.url} href={att.url} target="_blank" rel="noreferrer" title={att.name} style={{ display: 'inline-block' }}>
-              <img src={att.url} alt={att.name} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0' }} />
-            </a>
-          ),
-        )}
+        {record.attachments.map((att) => (
+          <div key={att.url}>
+            <span>📎 {att.name} ({formatFileSize(att.size)})</span>{' '}
+            <button type="button" onClick={() => void openAttachment(att, false)}>
+              {language === 'ru' ? 'Открыть' : 'Open'}
+            </button>{' '}
+            <button type="button" onClick={() => void openAttachment(att, true)}>
+              {language === 'ru' ? 'Скачать' : 'Download'}
+            </button>
+          </div>
+        ))}
       </div>
     )
   }
