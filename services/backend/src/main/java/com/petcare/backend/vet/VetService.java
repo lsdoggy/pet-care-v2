@@ -72,14 +72,14 @@ public class VetService {
         }
         String path = FileStorageService.RECORD_ATTACHMENT_PREFIX + filename;
         String legacyPath = FileStorageService.LEGACY_RECORD_ATTACHMENT_PREFIX + filename;
-        boolean ownsAttachment = recordRepository.findAttachmentCandidates(resolveUser(email).getId(), filename)
+        String storedUrl = recordRepository.findAttachmentCandidates(resolveUser(email).getId(), filename)
                 .stream()
                 .flatMap(json -> RecordDto.parseAttachments(json).stream())
-                .anyMatch(attachment -> path.equals(attachment.url()) || legacyPath.equals(attachment.url()));
-        if (!ownsAttachment) {
-            throw new AccessDeniedForResourceException("Attachment not found");
-        }
-        return fileStorageService.loadRecordAttachment(filename);
+                .map(attachment -> attachment.url())
+                .filter(url -> path.equals(url) || legacyPath.equals(url))
+                .findFirst()
+                .orElseThrow(() -> new AccessDeniedForResourceException("Attachment not found"));
+        return fileStorageService.loadRecordAttachment(storedUrl);
     }
 
     /* ---------- Appointments ---------- */

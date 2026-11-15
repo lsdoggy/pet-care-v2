@@ -116,11 +116,16 @@ public class FileStorageService {
         }
     }
 
-    public Resource loadRecordAttachment(String filename) {
+    public Resource loadRecordAttachment(String storedUrl) {
+        String filename = generatedAttachmentName(storedUrl);
+        if (filename == null) {
+            throw new AccessDeniedForResourceException("Attachment not found");
+        }
+
         Path recordsDir = rootDir.resolve("records");
         Path target = recordsDir.resolve(filename).normalize();
-        if (!recordsDir.equals(target.getParent()) || !filename.equals(target.getFileName().toString())
-                || !ALLOWED_ATTACHMENT_EXTENSIONS.contains(extractExtension(filename))
+        if (!recordsDir.equals(target.getParent())
+                || !Files.isDirectory(recordsDir, LinkOption.NOFOLLOW_LINKS)
                 || !Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS)) {
             throw new AccessDeniedForResourceException("Attachment not found");
         }
@@ -136,14 +141,8 @@ public class FileStorageService {
         if (url == null) {
             return;
         }
-        String prefix = url.startsWith(RECORD_ATTACHMENT_PREFIX)
-                ? RECORD_ATTACHMENT_PREFIX : LEGACY_RECORD_ATTACHMENT_PREFIX;
-        if (!url.startsWith(prefix)) {
-            return;
-        }
-        String filename = url.substring(prefix.length());
-        // Generated names are "<uuid>-<hex>.<ext>" — refuse anything else (no traversal).
-        if (!filename.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-[0-9a-f]+\\.(pdf|jpg|jpeg|png|webp)$")) {
+        String filename = generatedAttachmentName(url);
+        if (filename == null) {
             return;
         }
         try {
@@ -155,6 +154,16 @@ public class FileStorageService {
             // Non-fatal: DB row is already gone; leave an orphan file for manual cleanup.
             log.warn("Failed to delete attachment {}: {}", url, e.getMessage());
         }
+    }
+
+    private static String generatedAttachmentName(String url) {
+        String prefix = url.startsWith(RECORD_ATTACHMENT_PREFIX)
+                ? RECORD_ATTACHMENT_PREFIX : LEGACY_RECORD_ATTACHMENT_PREFIX;
+        if (!url.startsWith(prefix)) {
+            return null;
+        }
+        String filename = url.substring(prefix.length());
+        return filename.matches("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-[0-9a-f]+\\.(pdf|jpg|jpeg|png|webp)$") ? filename : null;
     }
 
     /** Original user-visible file name, stripped of paths/control chars for safe storage in JSONB. */
