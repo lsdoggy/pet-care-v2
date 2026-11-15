@@ -7,6 +7,8 @@ import { api } from '../api/client'
 import { tokenStore } from '../auth/tokenStore'
 import { useAuth } from '../auth/useAuth'
 import ConfirmDialog from '../components/ConfirmDialog'
+import WebPushSettings from '../notifications/WebPushSettings'
+import { disconnectWebPush } from '../notifications/webPush'
 import '../styles/settings.css'
 
 const SETTINGS_MESSAGES = {
@@ -68,12 +70,27 @@ export default function SettingsPage() {
     }
   }
 
+  async function signOut() {
+    setSaving(true)
+    setError(null)
+    try {
+      const token = tokenStore.get()
+      if (token) await disconnectWebPush(token).catch(() => {})
+    } finally {
+      logout()
+      setSaving(false)
+    }
+  }
+
   async function deactivateAccount() {
     setSaving(true)
     setError(null)
     setSaved(null)
     try {
-      await api.deactivateAccount(tokenStore.get() ?? '')
+      const token = tokenStore.get() ?? ''
+      await api.deactivateAccount(token)
+      // The API already suppresses delivery to the deactivated account.
+      await disconnectWebPush(token).catch(() => {})
       logout()
     } catch {
       setError('deactivationFailed')
@@ -144,9 +161,10 @@ export default function SettingsPage() {
       <section className="pc-settings__card" aria-labelledby="profile-notifications-title" aria-busy={saving}>
         <h2 id="profile-notifications-title">{language === 'ru' ? 'Уведомления' : 'Notifications'}</h2>
         <label className="pc-settings__row">
-          <span><strong>{language === 'ru' ? 'Push-уведомления' : 'Push notifications'}</strong><small>{language === 'ru' ? 'Напоминания на мобильных устройствах, подключённых через приложение.' : 'Reminders on mobile devices linked through the app.'}</small></span>
+          <span><strong>{language === 'ru' ? 'Push-уведомления' : 'Push notifications'}</strong><small>{language === 'ru' ? 'Напоминания на подключённых устройствах.' : 'Reminders on connected devices.'}</small></span>
           <input type="checkbox" role="switch" checked={user.pushNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('push', e.target.checked)} />
         </label>
+        <WebPushSettings key={user.id} busy={saving} enabled={user.pushNotificationsEnabled} onBusyChange={setSaving} />
         <label className="pc-settings__row">
           <span><strong>{language === 'ru' ? 'Письма на почту' : 'Email notifications'}</strong><small>{language === 'ru' ? 'Напоминания о лекарствах, вакцинации и низком остатке корма.' : 'Reminders for medications, vaccinations, and low food stock.'}</small></span>
           <input type="checkbox" role="switch" checked={user.emailNotificationsEnabled} disabled={saving} onChange={(e) => void toggle('email', e.target.checked)} />
@@ -171,7 +189,7 @@ export default function SettingsPage() {
       <section className="pc-settings__card" aria-labelledby="profile-session-title">
         <h2 id="profile-session-title">{language === 'ru' ? 'Аккаунт' : 'Account'}</h2>
         <p className="pc-settings__hint">{language === 'ru' ? 'Вы вошли как' : 'Signed in as'} {user.email}</p>
-        <button className="pc-btn" disabled={saving} type="button" onClick={logout}>{language === 'ru' ? 'Выйти из аккаунта' : 'Sign out'}</button>
+        <button className="pc-btn" disabled={saving} type="button" onClick={() => void signOut()}>{language === 'ru' ? 'Выйти из аккаунта' : 'Sign out'}</button>
         <button className="pc-btn pc-btn--danger" disabled={saving} type="button" onClick={() => setConfirmDeactivation(true)}>{language === 'ru' ? 'Деактивировать аккаунт' : 'Deactivate account'}</button>
       </section>
       {confirmDeactivation && (

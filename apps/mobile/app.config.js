@@ -11,5 +11,12 @@ module.exports = ({ config }) => {
       throw new Error('Use an HTTPS origin without a path or trailing slash for EXPO_PUBLIC_API_URL.');
     }
   }
-  return config;
+  const googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
+  if (!googleServicesFile && process.env.EAS_BUILD === 'true' &&
+      process.env.EAS_BUILD_PROFILE === 'preview' && process.env.EAS_BUILD_PLATFORM === 'android') {
+    throw new Error('Set the GOOGLE_SERVICES_JSON file environment variable for the preview build.');
+  }
+  return googleServicesFile
+    ? { ...config, android: { ...config.android, googleServicesFile } }
+    : config;
 };

@@ -9,6 +9,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,8 +24,52 @@ class AuthFlowTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private com.petcare.backend.notification.MailSender mailSender;
+
+    @Test
+    void inviteCanBeRedeemedOnlyOnceEvenWithConcurrentRequests() throws Exception {
+        String code = TestInvites.issue(jdbc);
+        try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var start = new java.util.concurrent.CyclicBarrier(2);
+            java.util.concurrent.Callable<Integer> register = () -> {
+                start.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                return registerStatus(uniqueEmail(), code);
+            };
+            var first = executor.submit(register);
+            var second = executor.submit(register);
+            assertEquals(java.util.Set.of(201, 403),
+                    java.util.Set.copyOf(java.util.List.of(
+                            first.get(20, java.util.concurrent.TimeUnit.SECONDS),
+                            second.get(20, java.util.concurrent.TimeUnit.SECONDS))));
+        }
+        assertEquals(403, registerStatus(uniqueEmail(), code));
+        assertEquals(403, registerStatus(uniqueEmail(), ""));
+    }
+
+    @Test
+    void revokedInviteIsRejectedAndFailedRegistrationDoesNotConsumeAnotherInvite() throws Exception {
+        String revoked = TestInvites.issue(jdbc);
+        TestInvites.revoke(jdbc, revoked);
+        assertEquals(403, registerStatus(uniqueEmail(), revoked));
+
+        String existingAccount = uniqueEmail();
+        assertEquals(201, registerStatus(existingAccount, TestInvites.issue(jdbc)));
+        String unused = TestInvites.issue(jdbc);
+        assertEquals(409, registerStatus(existingAccount, unused));
+        assertEquals(201, registerStatus(uniqueEmail(), unused));
+    }
+
+    private int registerStatus(String email, String code) throws Exception {
+        return mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(JSON.writeValueAsString(java.util.Map.of(
+                                "email", email, "password", "Secret123!", "inviteCode", code))))
+                .andReturn().getResponse().getStatus();
+    }
 
     @Test
     void deactivateAndRestoreInvalidatesOldSessionsAndConsumesLink() throws Exception {
@@ -61,7 +106,7 @@ class AuthFlowTest {
         return mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(JSON.writeValueAsString(
-                                java.util.Map.of("email", email, "password", password))))
+                                java.util.Map.of("inviteCode", TestInvites.issue(jdbc), "email", email, "password", password))))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
     }
@@ -129,7 +174,7 @@ class AuthFlowTest {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(JSON.writeValueAsString(
-                                java.util.Map.of("email", email.toUpperCase(), "password", "Secret456!"))))
+                                java.util.Map.of("inviteCode", TestInvites.issue(jdbc), "email", email.toUpperCase(), "password", "Secret456!"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
     }

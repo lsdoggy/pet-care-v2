@@ -34,6 +34,7 @@ export default function AuthPage({ mode }: Props) {
   const { user, loading, login, register } = useAuth()
   const navigate = useNavigate()
 
+  const [inviteCode, setInviteCode] = useState('')
   const [firstName, setFirstName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -102,6 +103,7 @@ export default function AuthPage({ mode }: Props) {
       } else {
         await register(email.trim(), password, {
           firstName: firstName.trim(),
+          inviteCode: inviteCode.trim(),
           phone: phone.trim() || undefined,
         })
       }
@@ -118,7 +120,9 @@ export default function AuthPage({ mode }: Props) {
 
         // Сообщения уровня формы (401/409 и т.п.).
         let message: string | null = null
-        if (err.status === 409 && !mapped.email) {
+        if (err.status === 403 && !isLogin) {
+          message = language === 'ru' ? 'Регистрация закрыта или код приглашения недействителен.' : 'Registration is closed or the invitation code is invalid.'
+        } else if (err.status === 409 && !mapped.email) {
           message = 'Эта почта уже зарегистрирована. Попробуйте войти.'
         } else if (err.status === 401) {
           message = 'Неверная почта или пароль. Проверьте данные и попробуйте ещё раз.'
@@ -159,6 +163,16 @@ export default function AuthPage({ mode }: Props) {
             <div className="auth-banner" role="alert" id="auth-form-alert">
               <AlertIcon size={18} />
               <span>{localizeAuthError(formError, language)}</span>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="auth-field auth-field--full">
+              <label className="auth-label" htmlFor="inviteCode">
+                {language === 'ru' ? 'Код приглашения' : 'Invitation code'}
+              </label>
+              <input className="auth-input" id="inviteCode" value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)} autoComplete="off" spellCheck={false} />
             </div>
           )}
 
@@ -336,6 +350,12 @@ export default function AuthPage({ mode }: Props) {
                 : (language === 'ru' ? 'Зарегистрироваться' : 'Sign up')}
           </button>
         </form>
+
+        {isLogin && (
+          <p className="auth-switch">
+            <Link to="/account-access">{language === 'ru' ? 'Восстановить доступ' : 'Recover access'}</Link>
+          </p>
+        )}
 
         <p className="auth-switch">
           {isLogin ? (

@@ -15,7 +15,7 @@ import { AddToGoogleCalendar } from '../components/AddToGoogleCalendar';
  * Completion is done via a tap on the ✓ button (swipe would require an extra
  * native gesture library, which was excluded from this sprint's approved plan).
  */
-export function TasksScreen() {
+export function TasksScreen({ notifiedTaskId }: { notifiedTaskId?: number } = {}) {
   const language = useLanguage();
   const [tasks, setTasks] = useState<CareTaskDto[] | null>(null);
   const [error, setError] = useState<Record<'ru' | 'en', string> | null>(null);
@@ -60,10 +60,15 @@ export function TasksScreen() {
     [load],
   );
 
+  const notifiedTask = tasks?.find((task) => task.id === notifiedTaskId);
+  const displayedTasks = tasks && notifiedTask
+    ? [notifiedTask, ...tasks.filter((task) => task.id !== notifiedTaskId)]
+    : tasks;
+
   const renderItem = ({ item }: { item: CareTaskDto }) => {
     const busy = busyId === item.id;
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, item.id === notifiedTaskId && styles.notifiedCard]}>
         <View style={styles.infoWrap}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.meta}>
@@ -101,16 +106,16 @@ export function TasksScreen() {
 
       {error ? <Text style={styles.error}>{error[language]}</Text> : null}
 
-      {tasks === null ? (
+      {displayedTasks === null ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#4f46e5" />
         </View>
       ) : (
         <FlatList
-          data={tasks}
+          data={displayedTasks}
           keyExtractor={(t) => String(t.id)}
           renderItem={renderItem}
-          contentContainerStyle={tasks.length === 0 ? styles.emptyWrap : styles.list}
+          contentContainerStyle={displayedTasks.length === 0 ? styles.emptyWrap : styles.list}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>🎉</Text>
@@ -143,6 +148,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
+  notifiedCard: { borderWidth: 2, borderColor: colors.primary },
   infoWrap: { flex: 1, gap: 3 },
   title: { fontSize: 16, fontWeight: '600', color: '#111827' },
   meta: { fontSize: 13, color: '#6b7280' },

@@ -33,9 +33,21 @@ services:
       DB_USER: petcare
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in infra/.env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in infra/.env}
+      APP_REGISTRATION_ENABLED: ${APP_REGISTRATION_ENABLED:-true}
       UPLOAD_DIR: /app/uploads
       SERVER_FORWARD_HEADERS_STRATEGY: framework
-      EXPO_PUSH_ENABLED: "false"
+      EXPO_PUSH_ENABLED: ${EXPO_PUSH_ENABLED:-false}
+      EXPO_PUSH_ACCESS_TOKEN: ${EXPO_PUSH_ACCESS_TOKEN:-}
+      WEB_PUSH_VAPID_PUBLIC_KEY: ${WEB_PUSH_VAPID_PUBLIC_KEY:-}
+      WEB_PUSH_VAPID_PRIVATE_KEY: ${WEB_PUSH_VAPID_PRIVATE_KEY:-}
+      WEB_PUSH_VAPID_SUBJECT: ${WEB_PUSH_VAPID_SUBJECT:-}
+      APP_ACCOUNT_RECOVERY_PAGE: ${APP_ACCOUNT_RECOVERY_PAGE:-}
+      APP_PASSWORD_RESET_PAGE: ${APP_PASSWORD_RESET_PAGE:-}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     volumes:
       - uploads:/app/uploads
     healthcheck:
@@ -48,7 +60,7 @@ services:
 
   caddy:
     <<: *service
-    image: caddy:2-alpine
+    build: ../apps/web
     depends_on:
       backend:
         condition: service_healthy

@@ -100,6 +100,12 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
     }
 
+    @ExceptionHandler(DeviceNotFoundException.class)
+    ResponseEntity<ApiError> handleDeviceNotFound(DeviceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), List.of()));
+    }
+
     @ExceptionHandler(InvalidPurchaseOperationException.class)
     ResponseEntity<ApiError> handleInvalidPurchase(InvalidPurchaseOperationException ex) {
         // 400 per approved plan (decision #2): restocking a custom item is rejected explicitly.

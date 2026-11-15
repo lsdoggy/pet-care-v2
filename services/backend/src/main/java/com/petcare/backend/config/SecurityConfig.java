@@ -32,7 +32,6 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/api/v1/health").permitAll()
-                        .requestMatchers("/files/records/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/vetinfo").hasRole("VET_CLINIC")
                         .anyRequest().hasRole("USER"))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

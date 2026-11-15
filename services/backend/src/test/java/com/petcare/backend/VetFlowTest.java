@@ -60,7 +60,7 @@ class VetFlowTest {
     private String registerAndLogin(String email) throws Exception {
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(JSON.writeValueAsString(Map.of("email", email, "password", "Secret123!"))))
+                        .content(JSON.writeValueAsString(Map.of("inviteCode", TestInvites.issue(jdbc), "email", email, "password", "Secret123!"))))
                 .andExpect(status().isCreated());
         String loginBody = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -435,6 +435,17 @@ class VetFlowTest {
                 .andReturn().getResponse().getContentAsString();
     }
 
+    private void assertAttachmentAccess(String path, String owner, String other, MockMultipartFile file)
+            throws Exception {
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mockMvc.perform(get(path).header("Authorization", "Bearer " + other))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(get(path).header("Authorization", "Bearer " + owner))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .bytes(file.getBytes()));
+    }
+
     @Test
     void uploadAttachmentAppendsToJsonbAndRejectsBadTypes() throws Exception {
         String token = registerAndLogin(uniqueEmail());
@@ -444,13 +455,24 @@ class VetFlowTest {
         MockMultipartFile pdf = new MockMultipartFile(
                 "file", "blood-test.pdf", "application/pdf", "%PDF-1.4 fake".getBytes());
 
-        mockMvc.perform(multipart("/api/v1/records/" + recordId + "/attachments").file(pdf)
+        String uploaded = mockMvc.perform(multipart("/api/v1/records/" + recordId + "/attachments").file(pdf)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.attachments.length()").value(1))
                 .andExpect(jsonPath("$.attachments[0].name").value("blood-test.pdf"))
                 .andExpect(jsonPath("$.attachments[0].type").value("pdf"))
-                .andExpect(jsonPath("$.attachments[0].url").value(org.hamcrest.Matchers.startsWith("/files/records/")));
+                .andExpect(jsonPath("$.attachments[0].url").value(org.hamcrest.Matchers.startsWith("/api/v1/record-attachments/")))
+                .andReturn().getResponse().getContentAsString();
+
+        String currentPath = JSON.readTree(uploaded).at("/attachments/0/url").asText();
+        String legacyPath = currentPath.replace("/api/v1/record-attachments/", "/files/records/");
+        String otherToken = registerAndLogin(uniqueEmail());
+        assertAttachmentAccess(currentPath, token, otherToken, pdf);
+        assertAttachmentAccess(legacyPath, token, otherToken, pdf);
+        jdbc.update("update veterinary_records set attachments_jsonb = ? where id = ?",
+                JSON.readTree(uploaded).get("attachments").toString().replace(currentPath, legacyPath), recordId);
+        assertAttachmentAccess(currentPath, token, otherToken, pdf);
+        assertAttachmentAccess(legacyPath, token, otherToken, pdf);
 
         // second upload appends
         MockMultipartFile png = new MockMultipartFile(
@@ -473,11 +495,11 @@ class VetFlowTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isBadRequest());
 
-        // attached file is publicly served
+        // The second file also requires the record owner's JWT.
         String body = mockMvc.perform(get("/api/v1/records/" + recordId).header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
-        String url = JSON.readTree(body).get("attachments").get(0).get("url").asText();
-        mockMvc.perform(get(url)).andExpect(status().isOk());
+        String url = JSON.readTree(body).get("attachments").get(1).get("url").asText();
+        assertAttachmentAccess(url, token, otherToken, png);
     }
 }

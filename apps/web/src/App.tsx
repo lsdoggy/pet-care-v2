@@ -2,6 +2,7 @@ import { LanguageProvider } from './i18n/LanguageProvider'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import AppShell from './components/layout/AppShell'
+import AccountAccessPage from './pages/AccountAccessPage'
 import AuthPage from './pages/AuthPage'
 import RestoreAccountPage from './pages/RestoreAccountPage'
 import HomePage from './pages/HomePage'
@@ -19,6 +20,8 @@ export default function App() {
             {/* Public auth routes: no shell (no user context yet) */}
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/restore-account" element={<RestoreAccountPage />} />
+            <Route path="/account-access" element={<AccountAccessPage key="request" />} />
+            <Route path="/reset-password" element={<AccountAccessPage key="reset" reset />} />
             <Route path="/register" element={<AuthPage mode="register" />} />
 
             {/* Design Sprint 0: AppShell layout wrapper around existing pages.

@@ -43,3 +43,6 @@ yarn-error.*
 
 # Local environment overrides
 .env.local
+
+# Firebase Android build configuration
+google-services.json

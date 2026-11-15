@@ -33,7 +33,7 @@ public class SmtpMailSender implements MailSender {
     public boolean send(String to, String subject, String body) {
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
         if (sender == null) {
-            log.info("SMTP not configured (spring.mail.host missing) — email to {} skipped: \"{}\"", to, subject);
+            log.warn("SMTP not configured (spring.mail.host missing) — email skipped");
             return false;
         }
         try {

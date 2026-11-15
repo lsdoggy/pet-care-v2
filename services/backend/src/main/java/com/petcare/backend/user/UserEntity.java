@@ -2,6 +2,8 @@ package com.petcare.backend.user;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -11,6 +13,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
+@DynamicUpdate
 @Table(name = "users")
 public class UserEntity {
 
@@ -46,6 +49,15 @@ public class UserEntity {
     @Column(name = "recovery_token_hash", length = 64)
     private String recoveryTokenHash;
 
+    @Column(name = "recovery_token_expires_at")
+    private Instant recoveryTokenExpiresAt;
+
+    @Column(name = "password_reset_token_hash", length = 64)
+    private String passwordResetTokenHash;
+
+    @Column(name = "password_reset_token_expires_at")
+    private Instant passwordResetTokenExpiresAt;
+
     @Column(name = "session_version", nullable = false)
     private int sessionVersion;
 
@@ -57,9 +69,25 @@ public class UserEntity {
         return sessionVersion;
     }
 
-    public void deactivate(String tokenHash) {
-        recoveryTokenHash = tokenHash;
+    public void deactivate(String tokenHash, Instant expiresAt) {
+        setRecoveryToken(tokenHash, expiresAt);
+        passwordResetTokenHash = null;
+        passwordResetTokenExpiresAt = null;
         sessionVersion++;
+    }
+
+    void setRecoveryToken(String tokenHash, Instant expiresAt) {
+        recoveryTokenHash = tokenHash;
+        recoveryTokenExpiresAt = expiresAt;
+    }
+
+    void setPasswordResetToken(String tokenHash, Instant expiresAt) {
+        passwordResetTokenHash = tokenHash;
+        passwordResetTokenExpiresAt = expiresAt;
+    }
+
+    Instant emailLinkExpiresAt() {
+        return isDeactivated() ? recoveryTokenExpiresAt : passwordResetTokenExpiresAt;
     }
 
     protected UserEntity() {

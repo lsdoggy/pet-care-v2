@@ -37,6 +37,9 @@ export default function RestoreAccountPage() {
           </button>
         ) : <p role="alert">{language === 'ru' ? 'Ссылка для восстановления недействительна.' : 'The recovery link is invalid.'}</p>}
         {status === 'failed' && <p role="alert">{language === 'ru' ? 'Не удалось восстановить аккаунт. Проверьте ссылку и попробуйте ещё раз.' : 'Could not restore the account. Check the link and try again.'}</p>}
+        {status !== 'restored' && (
+          <p><Link to="/account-access">{language === 'ru' ? 'Запросить новую ссылку' : 'Request a new link'}</Link></p>
+        )}
         <Link to="/login">{language === 'ru' ? 'Перейти ко входу' : 'Go to sign in'}</Link>
       </section>
     </main>

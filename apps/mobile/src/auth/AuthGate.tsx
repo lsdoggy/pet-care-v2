@@ -9,6 +9,7 @@ import type { AuthResponse, UserDto } from '../api/types';
 import { useLanguage } from '../i18n/language';
 import { tokenStore } from './tokenStore';
 import { usePushRegistration } from '../notifications/usePushRegistration';
+import type { NotificationDestination } from '../notifications/notificationRoute';
 import { AuthScreen, type AuthMode } from '../screens/AuthScreen';
 import { AppStack, type Route, type TabName } from '../navigation/AppStack';
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -32,8 +33,22 @@ export function AuthGate() {
   const [activeTab, setActiveTab] = useState<TabName>('Home');
   const jwtRef = useRef<string | null>(null);
 
-  // Sprint 6: register this device's Expo push token on every cold start.
-  usePushRegistration(phase === 'authed' ? jwtRef.current : null);
+  const [notificationNavigation, setNotificationNavigation] = useState(0);
+  const [notifiedTask, setNotifiedTask] = useState<number>();
+  const switchTab = useCallback((tab: TabName) => {
+    setNotifiedTask(undefined);
+    setActiveTab(tab);
+  }, []);
+  const openNotificationTab = useCallback((destination: NotificationDestination) => {
+    setActiveTab(destination.tab);
+    setNotifiedTask(destination.tab === 'Tasks' ? destination.taskId : undefined);
+    setNotificationNavigation((value) => value + 1);
+  }, []);
+  const unregisterPush = usePushRegistration(
+    phase === 'authed' ? jwtRef.current : null,
+    user?.id,
+    openNotificationTab,
+  );
 
   useEffect(() => {
     (async () => {
@@ -70,13 +85,15 @@ export function AuthGate() {
   );
 
   const handleLogout = useCallback(async () => {
+    await unregisterPush();
     await tokenStore.clear();
     jwtRef.current = null;
     setUser(null);
     setMode('login');
     setActiveTab('Home');
+    setNotifiedTask(undefined);
     setPhase('anon');
-  }, []);
+  }, [unregisterPush]);
 
   if (phase === 'boot') {
     return (
@@ -93,7 +110,7 @@ export function AuthGate() {
       <>
         {/* Keyed by route identity so each screen re-mounts on navigation —
             Home reloads its pet list when we pop back from form/detail. */}
-        <AppStack activeTab={activeTab} onTabChange={setActiveTab}>
+        <AppStack key={notificationNavigation} activeTab={activeTab} onTabChange={switchTab}>
           {(top: Route) => {
             switch (top.name) {
               case 'PetForm':
@@ -107,7 +124,7 @@ export function AuthGate() {
               case 'RecordForm':
                 return <RecordFormScreen key={`record-${top.petId}`} petId={top.petId} petName={top.petName} appointmentId={top.appointmentId} />;
               case 'Tasks':
-                return <TasksScreen key="tasks" />;
+                return <TasksScreen key="tasks" notifiedTaskId={notifiedTask} />;
               case 'Settings':
                 return <SettingsScreen key="settings" user={user} onUserChange={setUser} onLogout={handleLogout} />;
               case 'Shopping':
@@ -117,7 +134,7 @@ export function AuthGate() {
               case 'Home':
               default:
                 return (
-                  <DashboardScreen key="home" user={user} onLogout={handleLogout} onTabChange={setActiveTab} />
+                  <DashboardScreen key="home" user={user} onLogout={handleLogout} onTabChange={switchTab} />
                 );
             }
           }}

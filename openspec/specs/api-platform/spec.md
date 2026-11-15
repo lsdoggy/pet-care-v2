@@ -20,12 +20,14 @@ Backend SHALL использовать stateless security без серверн�
 - **WHEN** неаутентифицированный клиент запрашивает защищённый ресурс
 - **THEN** Spring Security отклоняет запрос с 401.
 
-### Requirement: Публичные медицинские вложения
-Backend SHALL отдавать медицинские вложения из подкаталога `records` настроенного `app.upload.dir` (по умолчанию `uploads`) через `/files/records/**` без JWT.
+### Requirement: Защищённые медицинские вложения
 
-#### Scenario: Доступ к известному URL вложения
-- **WHEN** клиент без JWT запрашивает существующий файл через разрешённый статический URL
-- **THEN** аутентификация не требуется для его получения.
+Backend SHALL обслуживать `GET /api/v1/record-attachments/{filename}` и прежний `GET /files/records/{filename}` только с JWT владельца медицинской записи, к которой привязан файл. Ответ с файлом SHALL содержать `Cache-Control: no-store`.
+
+#### Scenario: Доступ по новому или прежнему URL
+
+- **WHEN** клиент запрашивает любой из двух URL
+- **THEN** владелец получает файл, аноним получает 401, чужой пользователь получает 404.
 
 ### Requirement: Локальные CORS origins
 Текущая конфигурация SHALL разрешать CORS для `http://localhost:5173` и `http://localhost:8081` на `/api/**` и `/files/**`, с методами GET, POST, PATCH, DELETE, OPTIONS и заголовками Authorization, Content-Type и Idempotency-Key.

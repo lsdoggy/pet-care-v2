@@ -34,18 +34,21 @@ public class NotificationService {
     private final UserRepository userRepository;
     private final List<PushSender> pushSenders;
     private final MailSender mailSender;
+    private final WebPushSubscriptions webPush;
     private final ObjectMapper mapper = new ObjectMapper();
 
     public NotificationService(NotificationRepository notificationRepository,
                                UserDeviceRepository deviceRepository,
                                UserRepository userRepository,
                                List<PushSender> pushSenders,
-                               MailSender mailSender) {
+                               MailSender mailSender,
+                               WebPushSubscriptions webPush) {
         this.notificationRepository = notificationRepository;
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
         this.pushSenders = pushSenders;
         this.mailSender = mailSender;
+        this.webPush = webPush;
     }
 
     /** Per-user feed for web/mobile (newest first). */
@@ -95,11 +98,6 @@ public class NotificationService {
         NotificationEntity notification = notificationRepository.save(
                 new NotificationEntity(user.getId(), NotificationType.PUSH, title, body, payloadJson));
 
-        if (devices.isEmpty()) {
-            // Nothing to deliver to — keep as pending; the retry pass gives the user a chance
-            // to register a device before the row is finally marked failed.
-            return;
-        }
         deliverPush(notification, devices.stream().map(UserDeviceEntity::getToken).toList());
     }
 
@@ -135,16 +133,16 @@ public class NotificationService {
                 continue;
             }
             if (n.getType() == NotificationType.PUSH) {
+                if (!owner.isPushNotificationsEnabled()) {
+                    continue;
+                }
                 List<String> tokens = deviceRepository
                         .findByUserIdAndPushEnabledTrue(n.getUserId()).stream()
                         .map(UserDeviceEntity::getToken).toList();
-                if (tokens.isEmpty()) {
-                    bumpAttempt(n, now);
-                    continue;
+                if (deliverPush(n, tokens)) {
+                    retried++;
                 }
-                deliverPush(n, tokens);
                 bumpAttempt(n, now);
-                retried++;
             } else {
                 if (mailSender.send(owner.getEmail(), n.getTitle(), n.getBody())) {
                     applyDeliveryResult(n, true);
@@ -157,7 +155,7 @@ public class NotificationService {
         return retried;
     }
 
-    private void deliverPush(NotificationEntity notification, List<String> tokens) {
+    private boolean deliverPush(NotificationEntity notification, List<String> tokens) {
         // Route each token to the sender that supports it (Expo first, raw FCM as fallback).
         Map<PushSender, List<String>> bySender = new HashMap<>();
         for (String token : tokens) {
@@ -166,7 +164,11 @@ public class NotificationService {
                             () -> log.warn("No push sender available for token type of notification {}",
                                     notification.getId()));
         }
-        boolean anyDelivered = false;
+        var webDelivery = webPush.deliver(notification.getUserId(), notification.getCreatedAt());
+        if (tokens.isEmpty() && !webDelivery.attempted()) {
+            return false;
+        }
+        boolean anyDelivered = webDelivery.accepted();
         for (var entry : bySender.entrySet()) {
             List<String> failedTokens = entry.getKey().send(entry.getValue(),
                     notification.getTitle(), notification.getBody(), notification.getPayloadJson());
@@ -174,6 +176,7 @@ public class NotificationService {
             anyDelivered |= delivered > 0;
         }
         applyDeliveryResult(notification, anyDelivered);
+        return true;
     }
 
     private void applyDeliveryResult(NotificationEntity notification, boolean delivered) {

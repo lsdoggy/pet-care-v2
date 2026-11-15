@@ -249,7 +249,7 @@ export interface CreateAppointmentRequest {
 }
 
 export interface AttachmentDto {
-  /** Backend-relative URL, e.g. /files/records/<uuid>.pdf */
+  /** Protected backend-relative URL; legacy /files/records/ URLs also require authentication */
   url: string;
   name: string;
   /** Extension without dot: pdf | jpg | jpeg | png | webp */
