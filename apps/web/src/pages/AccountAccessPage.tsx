@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
@@ -7,13 +7,23 @@ import { useLanguage } from '../i18n/language'
 import '../styles/auth.css'
 
 export default function AccountAccessPage({ reset = false }: { reset?: boolean }) {
+  const { pathname, hash } = useLocation()
+  return <AccountAccessForm key={reset ? hash : 'request'} reset={reset} pathname={pathname} hash={hash} />
+}
+
+function AccountAccessForm({ reset, pathname, hash }: { reset: boolean; pathname: string; hash: string }) {
   const { language } = useLanguage()
   const ru = language === 'ru'
-  const { hash } = useLocation()
   const token = hash.slice(1)
   const validLink = /^[0-9a-f]{64}$/.test(token)
   const [value, setValue] = useState('')
   const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle')
+
+  useEffect(() => {
+    if (reset && status === 'done' && window.location.pathname === pathname && window.location.hash === hash) {
+      window.history.replaceState(window.history.state, '', pathname)
+    }
+  }, [reset, status, pathname, hash])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -21,7 +31,6 @@ export default function AccountAccessPage({ reset = false }: { reset?: boolean }
     try {
       if (reset) {
         await api.resetPassword(token, value)
-        window.history.replaceState(window.history.state, '', window.location.pathname)
       } else {
         await api.requestAccessLink(value.trim())
       }
