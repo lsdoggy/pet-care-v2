@@ -1,21 +1,30 @@
 import { useLanguage } from '../i18n/language'
 import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { api } from '../api/client'
 import '../styles/settings.css'
 
 export default function RestoreAccountPage() {
+  const { pathname, hash } = useLocation()
+  return <RestoreAccountForm key={hash} pathname={pathname} hash={hash} />
+}
+
+function RestoreAccountForm({ pathname, hash }: { pathname: string; hash: string }) {
   const { language } = useLanguage()
-  const { hash } = useLocation()
   const token = hash.slice(1)
   const [status, setStatus] = useState<'idle' | 'pending' | 'restored' | 'failed'>('idle')
+
+  useEffect(() => {
+    if (status === 'restored' && window.location.pathname === pathname && window.location.hash === hash) {
+      window.history.replaceState(window.history.state, '', pathname)
+    }
+  }, [status, pathname, hash])
 
   async function restore() {
     setStatus('pending')
     try {
       await api.restoreAccount(token)
-      window.history.replaceState(window.history.state, '', window.location.pathname)
       setStatus('restored')
     } catch {
       setStatus('failed')
