@@ -1,0 +1,103 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/mobile
+    env:
+      PETCARE_ANDROID_CI: 'true'
+      EXPO_PUBLIC_API_URL: https://petcare-ci.invalid
+      EXPO_NO_DOTENV: '1'
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - name: Prepare diagnostic directory
+        working-directory: ${{ runner.temp }}
+        run: mkdir -p "$RUNNER_TEMP/android-apk/logs"
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci 2>&1 | tee "$RUNNER_TEMP/android-apk/logs/npm-ci.log"
+
+      - name: Check TypeScript
+        run: npm run typecheck 2>&1 | tee "$RUNNER_TEMP/android-apk/logs/typecheck.log"
+
+      - name: Run mobile tests
+        run: npm test 2>&1 | tee "$RUNNER_TEMP/android-apk/logs/tests.log"
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Generate the Android project
+        run: npx --no-install expo prebuild --platform android --no-install 2>&1 | tee "$RUNNER_TEMP/android-apk/logs/prebuild.log"
+
+      - name: Assemble the standalone APK
+        working-directory: apps/mobile/android
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon --console=plain --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a,x86_64 2>&1 | tee "$RUNNER_TEMP/android-apk/logs/gradle.log"
+
+      - name: Verify signature, package and bundled JavaScript
+        run: |
+          apk=android/app/build/outputs/apk/release/app-release.apk
+          build_tools="$ANDROID_HOME/build-tools/37.0.0"
+          output="$RUNNER_TEMP/android-apk"
+          {
+            "$build_tools/apksigner" verify --verbose "$apk"
+            "$build_tools/aapt" dump badging "$apk" > "$output/logs/apk-badging.txt"
+            grep "^package: name='com.lsdoggy.petcare.ci'" "$output/logs/apk-badging.txt"
+            grep '^launchable-activity:' "$output/logs/apk-badging.txt"
+            grep "^native-code:.*'arm64-v8a'" "$output/logs/apk-badging.txt"
+            grep "^native-code:.*'x86_64'" "$output/logs/apk-badging.txt"
+            unzip -t "$apk" assets/index.android.bundle
+          } 2>&1 | tee "$output/logs/apk-verification.log"
+          cp "$apk" "$output/pet-care-ci.apk"
+          cd "$output"
+          sha256sum pet-care-ci.apk > SHA256SUMS
+
+      - name: Upload APK
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: pet-care-android-apk
+          path: |
+            ${{ runner.temp }}/android-apk/pet-care-ci.apk
+            ${{ runner.temp }}/android-apk/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Upload diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: pet-care-android-diagnostics
+          path: ${{ runner.temp }}/android-apk/logs/
+          if-no-files-found: ignore
+          retention-days: 7

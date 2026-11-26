@@ -111,6 +111,8 @@ docker compose --env-file .env -f compose.vps.yml exec -T postgres \
 
 ### 4. Android APK
 
+Для автономной тестовой сборки см. [Android APK в GitHub Actions](docs/android-apk-ci.md).
+
 После проверки HTTPS откройте `apps/mobile`. Профиль `preview` формирует APK
 для установки на Android без Google Play и Metro. Выбран идентификатор `com.lsdoggy.petcare`.
 

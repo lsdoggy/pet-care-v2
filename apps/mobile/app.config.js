@@ -16,6 +16,13 @@ module.exports = ({ config }) => {
       process.env.EAS_BUILD_PROFILE === 'preview' && process.env.EAS_BUILD_PLATFORM === 'android') {
     throw new Error('Set the GOOGLE_SERVICES_JSON file environment variable for the preview build.');
   }
+  if (process.env.PETCARE_ANDROID_CI === 'true') {
+    return {
+      ...config,
+      name: 'Pet Care CI',
+      android: { ...config.android, package: `${config.android.package}.ci` },
+    };
+  }
   return googleServicesFile
     ? { ...config, android: { ...config.android, googleServicesFile } }
     : config;
