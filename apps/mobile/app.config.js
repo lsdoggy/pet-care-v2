@@ -1,11 +1,4 @@
 module.exports = ({ config }) => {
-  if (process.env.PETCARE_ANDROID_CI === 'true') {
-    return {
-      ...config,
-      name: 'Pet Care CI',
-      android: { ...config.android, package: `${config.android.package}.ci` },
-    };
-  }
   if (process.env.EAS_BUILD_PROFILE === 'preview') {
     const value = process.env.EXPO_PUBLIC_API_URL;
     let url;
@@ -22,6 +15,13 @@ module.exports = ({ config }) => {
   if (!googleServicesFile && process.env.EAS_BUILD === 'true' &&
       process.env.EAS_BUILD_PROFILE === 'preview' && process.env.EAS_BUILD_PLATFORM === 'android') {
     throw new Error('Set the GOOGLE_SERVICES_JSON file environment variable for the preview build.');
+  }
+  if (process.env.PETCARE_ANDROID_CI === 'true') {
+    return {
+      ...config,
+      name: 'Pet Care CI',
+      android: { ...config.android, package: `${config.android.package}.ci` },
+    };
   }
   return googleServicesFile
     ? { ...config, android: { ...config.android, googleServicesFile } }
