@@ -1,4 +1,11 @@
 module.exports = ({ config }) => {
+  if (process.env.PETCARE_ANDROID_CI === 'true') {
+    return {
+      ...config,
+      name: 'Pet Care CI',
+      android: { ...config.android, package: `${config.android.package}.ci` },
+    };
+  }
   if (process.env.EAS_BUILD_PROFILE === 'preview') {
     const value = process.env.EXPO_PUBLIC_API_URL;
     let url;
